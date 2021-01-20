@@ -243,7 +243,7 @@
   )
 
   (module Package_TO_SOT_SMD:SOT-23-6 (layer F.Cu) (tedit 5A02FF57) (tstamp 600819E6)
-    (at 115 111 180)
+    (at 112 120 180)
     (descr "6-pin SOT-23 package")
     (tags SOT-23-6)
     (path /5CC26308)
@@ -411,7 +411,7 @@
   )
 
   (module Resistor_SMD:R_0805_2012Metric (layer F.Cu) (tedit 5B36C52B) (tstamp 60081994)
-    (at 119 109 270)
+    (at 116 118 270)
     (descr "Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing), generated with kicad-footprint-generator")
     (tags resistor)
     (path /5CC6B922)
@@ -447,7 +447,7 @@
   )
 
   (module Resistor_SMD:R_0805_2012Metric (layer F.Cu) (tedit 5B36C52B) (tstamp 60081983)
-    (at 119 113 270)
+    (at 116 122 270)
     (descr "Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing), generated with kicad-footprint-generator")
     (tags resistor)
     (path /5CC4FC6C)
@@ -663,7 +663,7 @@
   )
 
   (module Resistor_SMD:R_0805_2012Metric (layer F.Cu) (tedit 5B36C52B) (tstamp 6008191D)
-    (at 111 111 270)
+    (at 108 120 270)
     (descr "Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing), generated with kicad-footprint-generator")
     (tags resistor)
     (path /5CC3BF06)
@@ -743,7 +743,7 @@
   )
 
   (module device.farm:CKCS6028 (layer F.Cu) (tedit 6005FB71) (tstamp 600818F3)
-    (at 115 120)
+    (at 112 129)
     (descr "Inductor, Taiyo Yuden, NR series, Taiyo-Yuden_NR-60xx, 6.0mmx6.0mm")
     (tags "inductor taiyo-yuden nr smd")
     (path /5CC48C37)
@@ -1229,7 +1229,7 @@
   )
 
   (module Capacitor_SMD:CP_Elec_6.3x5.4 (layer F.Cu) (tedit 5BCA39D0) (tstamp 600817BC)
-    (at 115 128 180)
+    (at 112 137 180)
     (descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
     (tags "capacitor electrolytic")
     (path /5CC90415)
@@ -1324,7 +1324,7 @@
   )
 
   (module Capacitor_SMD:C_0805_2012Metric (layer F.Cu) (tedit 5B36C52B) (tstamp 60081783)
-    (at 115 115 180)
+    (at 112 124 180)
     (descr "Capacitor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing), generated with kicad-footprint-generator")
     (tags capacitor)
     (path /5CC3BFCE)
@@ -1396,7 +1396,7 @@
   )
 
   (module Capacitor_SMD:C_0805_2012Metric (layer F.Cu) (tedit 5B36C52B) (tstamp 60081761)
-    (at 115 107 180)
+    (at 112 116 180)
     (descr "Capacitor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing), generated with kicad-footprint-generator")
     (tags capacitor)
     (path /5CC2AC38)
@@ -1491,7 +1491,7 @@
   )
 
   (module Capacitor_SMD:CP_Elec_6.3x5.4 (layer F.Cu) (tedit 5BCA39D0) (tstamp 60081728)
-    (at 115 102)
+    (at 112 111)
     (descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
     (tags "capacitor electrolytic")
     (path /5CC2AB6A)
