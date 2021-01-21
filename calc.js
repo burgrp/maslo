@@ -1,5 +1,8 @@
-let pos1 = { x: 900, y: 1000 };
-let pos2 = { x: 1500, y: 300 };
+let pos1 = { x: 1900, y: 1000 };
+
+let relMove = { x: 500, y: -800 };
+let pos2 = { x: pos1.x + relMove.x, y: pos1.y + relMove.y };
+//let pos2 = { x: 1500, y: 300 };
 let span = 2500;
 
 console.info("Start position", pos1);

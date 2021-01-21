@@ -1,0 +1,10 @@
+{
+    "webserver": {
+        "module": "@device.farm/webglue",
+        "modules": [
+            {
+                "module": "./ui.js"
+            }
+        ]
+    }
+}
