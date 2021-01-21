@@ -35,6 +35,18 @@ button:active {
     top: .2em;
 }
 
+.dimension {
+    display: inline;
+}
+
+.dimension::after {
+    content: "mm";
+    font-weight: lighter;
+    font-size: smaller;
+    margin-left: 0.08em;
+    ;
+}
+
 
 /*---------------------------------------------------------------*/
 
@@ -90,6 +102,12 @@ button:active {
     margin-bottom: 0.3em;
 }
 
+.page .navigation>a:active .icon {
+    position: relative;
+    left: .1em;
+    top: .1em;
+}
+
 
 /*---------------------------------------------------------------*/
 
@@ -113,6 +131,7 @@ button:active {
     justify-content: center;
     margin: 1em;
     color: #019e72;
+    font-weight: bold;
 }
 
 .page.home .controls button .icon {
@@ -121,6 +140,7 @@ button:active {
 
 .page.home .controls .group {
     background-color: #292929;
+    padding-bottom: 0.3em;
     margin-bottom: 1em;
 }
 
@@ -238,4 +258,47 @@ button:active {
 
 .page.home .controls .xyaxis .dir315 .icon {
     transform: rotate(315deg);
+}
+
+.page.home .controls .xyaxis .position {
+    grid-row: 2;
+    grid-column: 2;
+}
+
+.page.home .controls .xyaxis .position .x {
+    color: red;
+}
+
+
+/*---------------------------------------------------------------*/
+
+.page.home .controls .zaxis .start {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.page.home .controls .zaxis .spindle {
+    grid-row: 2;
+    grid-column: 1;
+}
+
+.page.home .controls .zaxis .stop {
+    grid-row: 3;
+    grid-column: 1;
+    color: red;
+}
+
+.page.home .controls .zaxis .up {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+.page.home .controls .zaxis .position {
+    grid-row: 2;
+    grid-column: 2;
+}
+
+.page.home .controls .zaxis .down {
+    grid-row: 3;
+    grid-column: 2;
 }

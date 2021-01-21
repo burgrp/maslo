@@ -51,21 +51,25 @@ wg.pages.home = {
                         BUTTON("dir180", [ICON("caret-up")]),
                         BUTTON("dir225", [ICON("caret-up")]),
                         BUTTON("dir270", [ICON("caret-up")]),
-                        BUTTON("dir315", [ICON("caret-up")])
+                        BUTTON("dir315", [ICON("caret-up")]),
+                        BUTTON("position", [
+                            DIV("x dimension").text("-"),
+                            DIV("y dimension").text("-")
+                        ])
+
                     ])
                 ]),
-                // DIV("zaxis", [
-                //     DIV("title").text("Z axis"),
-                //     DIV("motor", [
-                //         DIV("title").text("spindle"),
-                //         BUTTON().text("START"),
-                //         BUTTON().text("STOP")
-                //     ]),
-                //     DIV("zaxis", [
-                //         BUTTON([ICON("caret-up")]),
-                //         BUTTON([ICON("caret-down")])
-                //     ])
-                // ])
+                DIV("group zaxis", [
+                    DIV("title").text("Z axis"),
+                    DIV("buttons", [
+                        BUTTON("start").text("START"),
+                        DIV("spindle").text("-"),
+                        BUTTON("stop").text("STOP"),
+                        BUTTON("up", [ICON("caret-up")]),
+                        DIV("position dimension").text("-"),
+                        BUTTON("down", [ICON("caret-down")])
+                    ])
+                ])
             ])
         ])
     }
