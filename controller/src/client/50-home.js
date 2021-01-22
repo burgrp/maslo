@@ -15,7 +15,7 @@ wg.common = {
                 link("settings", "settings", "tools"),
                 DIV("end", [
                     BUTTON("stop", [
-                        ICON("hand-paper"),
+                        ICON("exclamation-triangle"),
                         DIV().text("STOP")
                     ])
                 ])
@@ -42,7 +42,7 @@ wg.pages.home = {
                     ])
                 ]),
                 DIV("group xyaxis", [
-                    DIV("title").text("X/Y axis"),
+                    DIV("title").text("X,Y axis"),
                     DIV("buttons", [
                         BUTTON("dir0", [ICON("caret-up")]),
                         BUTTON("dir45", [ICON("caret-up")]),
@@ -63,10 +63,10 @@ wg.pages.home = {
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
                         BUTTON("start").text("START"),
-                        DIV("spindle").text("-"),
                         BUTTON("stop").text("STOP"),
-                        BUTTON("up", [ICON("caret-up")]),
+                        DIV("spindle on", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
+                        BUTTON("up", [ICON("caret-up")]),
                         BUTTON("down", [ICON("caret-down")])
                     ])
                 ])
