@@ -1,12 +1,21 @@
-module.exports = async ({}) => {
+const machine = require("./machine")
+
+module.exports = async({ machine }) => {
+    let events = {
+        machine: {
+            stateChanged: undefined
+        }
+    };
+
+    machine.onStateChanged(state => {
+        events.machine.stateChanged(state);
+    });
+
     return {
+        events,
         client: __dirname + "/client",
         api: {
-            controller: {
-                version(neco) {
-                    return("1.0");
-                }
-            }
+            machine: machine.api
         }
     }
 }

@@ -1,10 +1,15 @@
 {
+    "machine": {
+        "module": "./machine.js",
+        "driver": {
+            "module": "./virtual.js"
+        }
+    },
     "webserver": {
         "module": "@device.farm/webglue",
-        "modules": [
-            {
-                "module": "./ui.js"
-            }
-        ]
+        "modules": [{
+            "module": "./ui.js",
+            "machine": "-> machine"
+        }]
     }
 }

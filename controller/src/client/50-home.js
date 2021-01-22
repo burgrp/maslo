@@ -10,8 +10,8 @@ wg.common = {
         container.append(DIV("page " + name, [
             DIV("navigation", [
                 link("home", "/", "home"),
-                link("jobs", "jobs", "briefcase"),
-                link("calibration", "calibration", "compress"),
+                link("jobs", "jobs", "folder-open"),
+                link("calibration", "calibration", "ruler-combined"),
                 link("settings", "settings", "tools"),
                 DIV("end", [
                     BUTTON("stop", [
@@ -22,56 +22,110 @@ wg.common = {
             ]),
             DIV("content", content)
         ]));
+    },
+
+    showError(error) {
+        alert(error);
+        console.error("showError", error);
+    },
+
+    async check(asyncAction) {
+        try {
+            await asyncAction();
+        } catch (error) {
+            wg.common.showError(error);
+        }
     }
 }
 
 wg.pages.home = {
     async render(container, pageName) {
+
+        function updateMachineState(state) {
+            console.info("Machine state changed:", state);
+            $(".xyaxis .position .x").text(state.posX);
+            $(".xyaxis .position .y").text(state.posY);
+            $(".zaxis .spindle").toggleClass("on", state.spindleOn);
+
+        }
+
+
+        function moveButton(clazz, icon, ...moveArgs) {
+            let button = BUTTON(clazz, [ICON(icon)]);
+            let isDown = false;
+
+            function down() {
+                if (!isDown) {
+                    isDown = true;
+                    console.info("start move", ...moveArgs);
+                    wg.common.check(async() => await wg.machine.move(true, ...moveArgs));
+                }
+            }
+            button.mousedown(down);
+            button.keydown(e => {
+                if (e.key === " ") {
+                    down();
+                }
+            });
+            button.click(() => {
+                if (isDown) {
+                    isDown = false;
+                    console.info("stop move", ...moveArgs);
+                    wg.common.check(async() => await wg.machine.move(false, ...moveArgs));
+                }
+            });
+            button.contextmenu(e => {
+                e.preventDefault();
+            });
+            return button;
+        }
+
         wg.common.page(container, pageName, [
             DIV("scene").text("SCENE"),
             DIV("controls", [
-                DIV("group abmotors", [
-                    DIV("title").text("motors"),
+                DIV("group abchains", [
+                    DIV("title").text("chains"),
                     DIV("buttons", [
                         DIV("a side").text("A"),
-                        BUTTON("a up", [ICON("caret-up")]),
-                        BUTTON("a down", [ICON("caret-down")]),
+                        moveButton("a up", "caret-up", "a", -1),
+                        moveButton("a down", "caret-down", "a", 1),
                         DIV("b side").text("B"),
-                        BUTTON("b up", [ICON("caret-up")]),
-                        BUTTON("b down", [ICON("caret-down")])
+                        moveButton("b up", "caret-up", "b", -1),
+                        moveButton("b down", "caret-down", "b", 1)
                     ])
                 ]),
                 DIV("group xyaxis", [
                     DIV("title").text("X,Y axis"),
                     DIV("buttons", [
-                        BUTTON("dir0", [ICON("caret-up")]),
-                        BUTTON("dir45", [ICON("caret-up")]),
-                        BUTTON("dir90", [ICON("caret-up")]),
-                        BUTTON("dir135", [ICON("caret-up")]),
-                        BUTTON("dir180", [ICON("caret-up")]),
-                        BUTTON("dir225", [ICON("caret-up")]),
-                        BUTTON("dir270", [ICON("caret-up")]),
-                        BUTTON("dir315", [ICON("caret-up")]),
+                        moveButton("dir0", "caret-up", "xy", 0, -1),
+                        moveButton("dir45", "caret-up", "xy", 1, -1),
+                        moveButton("dir90", "caret-up", "xy", 1, 0),
+                        moveButton("dir135", "caret-up", "xy", 1, 1),
+                        moveButton("dir180", "caret-up", "xy", 0, 1),
+                        moveButton("dir225", "caret-up", "xy", -1, 1),
+                        moveButton("dir270", "caret-up", "xy", -1, 0),
+                        moveButton("dir315", "caret-up", "xy", -1, -1),
                         BUTTON("position", [
                             DIV("x dimension").text("-"),
                             DIV("y dimension").text("-")
-                        ])
-
+                        ]).click(() => wg.common.check(async() => await wg.machine.resetOrigin()))
                     ])
                 ]),
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START"),
-                        BUTTON("stop").text("STOP"),
-                        DIV("spindle on", [ICON("asterisk")]),
+                        BUTTON("start").text("START").click(() => wg.common.check(async() => await wg.machine.switchSpindle(true))),
+                        BUTTON("stop").text("STOP").click(() => wg.common.check(async() => await wg.machine.switchSpindle(false))),
+                        DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
-                        BUTTON("up", [ICON("caret-up")]),
-                        BUTTON("down", [ICON("caret-down")])
+                        moveButton("up", "caret-up", "z", -1),
+                        moveButton("down", "caret-down", "z", 1)
                     ])
                 ])
-            ])
-        ])
+            ]).onMachineStateChanged(updateMachineState)
+        ]);
+
+        updateMachineState(await wg.machine.getState());
     }
 }
 
