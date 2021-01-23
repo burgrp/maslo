@@ -1,6 +1,6 @@
 const machine = require("./machine")
 
-module.exports = async({ machine }) => {
+module.exports = async ({ machine }) => {
     let events = {
         machine: {
             stateChanged: undefined
@@ -15,7 +15,13 @@ module.exports = async({ machine }) => {
         events,
         client: __dirname + "/client",
         api: {
-            machine: machine.api
+            machine: {
+                getState: machine.getState,
+                moveStart: machine.moveStart,
+                moveStop: machine.moveStop,
+                switch: machine.switch,
+                resetOrigin: machine.resetOrigin
+            }
         }
     }
 }

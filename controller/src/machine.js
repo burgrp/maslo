@@ -61,34 +61,31 @@ module.exports = async ({
             stateChangedListeners.push(listener);
         },
 
-        api: {
-            getState() {
-                return state;
-            },
+        getState() {
+            return state;
+        },
 
-            async moveStart(kind, direction) {
-                if (motors[kind]) {
-                    let speedPps = calcMotorSpeed(motors[kind]);
-                    await motors[kind].move(direction * speedPps);
-                }
-            },
-
-            async moveStop(kind) {
-                if (motors[kind]) {
-                    await motors[kind].stop();
-                }
-            },
-
-            async switch(relay, state) {
-                await relays[relay].switch(state);
-            },
-
-            async resetOrigin() {
-                state.posX = 0;
-                state.posY = 0;
-                checkState();
+        async moveStart(kind, direction, pulses = Infinity) {
+            if (motors[kind]) {
+                let speedPps = calcMotorSpeed(motors[kind]);
+                await motors[kind].move(direction, speedPps, pulses);
             }
-        }
+        },
 
+        async moveStop(kind) {
+            if (motors[kind]) {
+                await motors[kind].stop();
+            }
+        },
+
+        async switch(relay, state) {
+            await relays[relay].switch(state);
+        },
+
+        async resetOrigin() {
+            state.xPosMm = 0;
+            state.yPosMm = 0;
+            checkState();
+        }
     }
 }

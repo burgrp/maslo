@@ -12,45 +12,59 @@ module.exports = async ({ }) => {
 
             let endTimeout;
             let resolveMove;
-            let pulses = 0;
+            let pulseCounter = 0;
+            let moving = false;
 
             return {
                 name,
                 ...config,
 
                 getPulses() {
-                    return pulses
+                    return pulseCounter
                 },
 
-                async move(speedPps, maxPulses = Infinity) {
+                isMoving() {
+                    return moving;
+                },
 
-                    let runTimeMs = maxPulses / Math.abs(speedPps) * 1000;
-                    log(`move ${speedPps} pps, ${maxPulses} pulses (${runTimeMs} ms)`);
+                async move(direction, speedPps, pulses) {
+
+                    if (moving) {
+                        throw new Error("Already moving");
+                    }
+
+                    let runTimeMs = pulses / speedPps * 1000;
+                    log(`move ${direction?"forward": "backward"} ${speedPps} pps, ${pulses} pulses (${runTimeMs} ms)`);
 
                     let startedAtMs = now();
-                    let startedPulses = pulses;
+                    let startedPulses = pulseCounter;
 
                     function update() {
                         let actualRunTimeMs = now() - startedAtMs;
-                        pulses = startedPulses + Math.ceil(actualRunTimeMs * speedPps / 1000);
-                        log(`pulses: ${pulses}`);
+                        pulseCounter = startedPulses + direction * Math.ceil(actualRunTimeMs * speedPps / 1000);
+                        log(`pulses: ${pulseCounter}`);
                         listener();
                     }
 
                     let updateInterval = setInterval(update, 100);
 
-                    await new Promise((resolve, reject) => {
-                        resolveMove = resolve;
-                        if (runTimeMs !== Infinity) {
-                            endTimeout = setTimeout(resolve, runTimeMs);
-                        }
-                    });
+                    try {
 
-                    clearInterval(updateInterval);
+                        await new Promise((resolve, reject) => {
+                            resolveMove = resolve;
+                            if (runTimeMs !== Infinity) {
+                                endTimeout = setTimeout(resolve, runTimeMs);
+                            }
+                        });
 
-                    update();
+                    } finally {
+                        clearInterval(updateInterval);
 
-                    log(`move finished`, Math.ceil(pulses));
+                        update();
+
+                        log(`move finished`, Math.ceil(pulseCounter));
+                        moving = false;
+                    }
                 },
 
                 async stop() {

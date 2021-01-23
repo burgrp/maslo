@@ -47,7 +47,7 @@ wg.pages.home = {
             $(".xyaxis .position .y").text(state.yPosMm);
             $(".zaxis .position").text(state.zPosMm);
             $(".zaxis .spindle").toggleClass("on", state.spindleOn);
-            //$(".scene").text(JSON.stringify(state, null, 2));
+            $(".scene").text(JSON.stringify(state, null, 2));
 
         }
 
@@ -83,36 +83,16 @@ wg.pages.home = {
             button.contextmenu(e => {
                 e.preventDefault();
             });
+            
+            button.on("touchstart", () => {
+                console.info("1");
+            })
+
             return button;
         }
 
         wg.common.page(container, pageName, [
-            DIV("scene", sceneDiv => {
-
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
-
-                const renderer = new THREE.WebGLRenderer();
-                //renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.setSize(600, 600);
-                sceneDiv.append(renderer.domElement);
-
-                const geometry = new THREE.BoxGeometry();
-                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const cube = new THREE.Mesh(geometry, material);
-                scene.add(cube);
-
-                camera.position.z = 5;
-
-                function animate() {
-                    requestAnimationFrame( animate );
-                    cube.rotation.x += 0.01;
-                    cube.rotation.y += 0.01;
-                    renderer.render( scene, camera );
-                }
-                animate();
-
-            }),
+            DIV("scene"),
             DIV("controls", [
                 DIV("group abchains", [
                     DIV("title").text("chains"),
