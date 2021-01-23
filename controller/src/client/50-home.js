@@ -43,14 +43,16 @@ wg.pages.home = {
 
         function updateMachineState(state) {
             console.info("Machine state changed:", state);
-            $(".xyaxis .position .x").text(state.posX);
-            $(".xyaxis .position .y").text(state.posY);
+            $(".xyaxis .position .x").text(state.xPosMm);
+            $(".xyaxis .position .y").text(state.yPosMm);
+            $(".zaxis .position").text(state.zPosMm);
             $(".zaxis .spindle").toggleClass("on", state.spindleOn);
+            //$(".scene").text(JSON.stringify(state, null, 2));
 
         }
 
 
-        function moveButton(clazz, icon, ...moveArgs) {
+        function moveButton(clazz, icon, kind, ...moveArgs) {
             let button = BUTTON(clazz, [ICON(icon)]);
             let isDown = false;
 
@@ -58,22 +60,26 @@ wg.pages.home = {
                 if (!isDown) {
                     isDown = true;
                     console.info("start move", ...moveArgs);
-                    wg.common.check(async() => await wg.machine.move(true, ...moveArgs));
+                    wg.common.check(async () => await wg.machine.moveStart(kind, ...moveArgs));
                 }
             }
+
+            function up() {
+                if (isDown) {
+                    isDown = false;
+                    console.info("stop move", ...moveArgs);
+                    wg.common.check(async () => await wg.machine.moveStop(kind));
+                }
+            }
+
             button.mousedown(down);
             button.keydown(e => {
                 if (e.key === " ") {
                     down();
                 }
             });
-            button.click(() => {
-                if (isDown) {
-                    isDown = false;
-                    console.info("stop move", ...moveArgs);
-                    wg.common.check(async() => await wg.machine.move(false, ...moveArgs));
-                }
-            });
+            button.mouseleave(up);
+            button.click(up);
             button.contextmenu(e => {
                 e.preventDefault();
             });
@@ -81,7 +87,32 @@ wg.pages.home = {
         }
 
         wg.common.page(container, pageName, [
-            DIV("scene").text("SCENE"),
+            DIV("scene", sceneDiv => {
+
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 100);
+
+                const renderer = new THREE.WebGLRenderer();
+                //renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setSize(600, 600);
+                sceneDiv.append(renderer.domElement);
+
+                const geometry = new THREE.BoxGeometry();
+                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const cube = new THREE.Mesh(geometry, material);
+                scene.add(cube);
+
+                camera.position.z = 5;
+
+                function animate() {
+                    requestAnimationFrame( animate );
+                    cube.rotation.x += 0.01;
+                    cube.rotation.y += 0.01;
+                    renderer.render( scene, camera );
+                }
+                animate();
+
+            }),
             DIV("controls", [
                 DIV("group abchains", [
                     DIV("title").text("chains"),
@@ -108,14 +139,14 @@ wg.pages.home = {
                         BUTTON("position", [
                             DIV("x dimension").text("-"),
                             DIV("y dimension").text("-")
-                        ]).click(() => wg.common.check(async() => await wg.machine.resetOrigin()))
+                        ]).click(() => wg.common.check(async () => await wg.machine.resetOrigin()))
                     ])
                 ]),
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async() => await wg.machine.switchSpindle(true))),
-                        BUTTON("stop").text("STOP").click(() => wg.common.check(async() => await wg.machine.switchSpindle(false))),
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.switch("spindle", true))),
+                        BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.switch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
                         moveButton("up", "caret-up", "z", -1),

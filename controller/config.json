@@ -1,15 +1,44 @@
 {
     "machine": {
         "module": "./machine.js",
-        "driver": {
-            "module": "./virtual.js"
+        "drivers": {
+            "virtual": {
+                "module": "./driver-virtual.js"
+            }
+        },
+        "driver": "-> $.MACHINE_DRIVER || 'virtual'",
+        "rapidMoveSpeedMmpmin": 700,
+        "cuttingMoveSpeedMmpmin": 500,
+        "motors": {
+            "a": {
+                "maxRpm": 7800,
+                "encoderPpr": 17,
+                "gearRatio": 280
+            },
+            "b": {
+                "maxRpm": 7800,
+                "encoderPpr": 17,
+                "gearRatio": 280
+            },
+            "z": {
+                "maxRpm": 9900,
+                "encoderPpr": 11,
+                "gearRatio": 90
+            }
+        },
+        "relays": {
+            "spindle": {
+
+            }
         }
     },
     "webserver": {
         "module": "@device.farm/webglue",
-        "modules": [{
-            "module": "./ui.js",
-            "machine": "-> machine"
-        }]
+        "modules": [
+            {
+                "module": "./ui.js",
+                "machine": "-> machine"
+            }
+        ]
     }
 }
