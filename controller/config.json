@@ -9,6 +9,10 @@
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
         "rapidMoveSpeedMmpmin": 700,
         "cuttingMoveSpeedMmpmin": 500,
+        "motorShaftDistanceMm": 3500,
+        "workspaceWidthMm": 2500,
+        "workspaceHeightMm": 1250,
+        "motorToWorkspaceVerticalMm": 500,
         "motors": {
             "a": {
                 "maxRpm": 7800,

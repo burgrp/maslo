@@ -6,21 +6,73 @@ module.exports = async ({
     motors,
     relays,
     rapidMoveSpeedMmpmin,
-    cuttingMoveSpeedMmpmin
+    cuttingMoveSpeedMmpmin,
+    motorShaftDistanceMm,
+    workspaceWidthMm,
+    workspaceHeightMm,
+    motorToWorkspaceVerticalMm
 }) => {
 
     let state = {
-        xPosMm: 1500,
-        yPosMm: 1000,
-        zPosMm: 0
+        motorPulses: {
+        },
+        userOrigin: {
+            xmm: 0,
+            ymm: motorToWorkspaceVerticalMm + workspaceHeightMm
+        },
+        positionReference: {
+            xmm: -1000,
+            ymm: 700,
+            ap: 0,
+            bp: 0
+        },
+        spindle: {},
+        motorShaftDistanceMm,
+        workspaceWidthMm,
+        workspaceHeightMm,
+        motorToWorkspaceVerticalMm
     };
 
     let stateChangedListeners = [];
-    let oldState = {};
+    let oldStateJson;
+
+    let p2 = a => a * a;
+    let sqrt = Math.sqrt;
+    let pulses2mm = pulses => pulses / 100;
+    let mm2pulse = mm => mm * 100;
+
+    let calcC = (a, b, base) => (p2(a) - p2(b) + p2(base)) / (2 * base);
 
     function checkState() {
-        if (!deepEqual(state, oldState)) {
-            oldState = { ...state };
+
+        if (state.positionReference) {
+
+            // calculate pulse counter as sled would be at motor A
+            let originAp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
+            let originBp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
+
+            // a is length of A chain
+            let a = pulses2mm(state.motorPulses.a + originAp);
+
+            // c is the upper arm of left (motor A) triangle
+            let c = calcC(
+                a,
+                pulses2mm(state.motorPulses.b + originBp),
+                state.motorShaftDistanceMm
+            );
+
+            state.sledPosition = {
+                xmm: c - state.motorShaftDistanceMm / 2,
+                ymm: sqrt(p2(a) - p2(c))
+            };
+
+        } else {
+            delete state.sledPosition;
+        }
+
+        let stateJson = JSON.stringify(state);
+        if (stateJson !== oldStateJson) {
+            oldStateJson = stateJson;
             for (let listener of stateChangedListeners) {
                 try {
                     listener(state);
@@ -35,7 +87,7 @@ module.exports = async ({
 
     for (let name in motors) {
         function update() {
-            state[`${name}Pulses`] = motors[name].getPulses();
+            state.motorPulses[name] = motors[name].getPulses();
             checkState();
         }
         motors[name] = await driver.createMotor(name, motors[name], update);
@@ -44,7 +96,7 @@ module.exports = async ({
 
     for (let name in relays) {
         function update() {
-            state[`${name}On`] = relays[name].isOn();
+            state[name].on = relays[name].isOn();
             checkState();
         }
         relays[name] = await driver.createRelay(name, relays[name], update);
@@ -82,9 +134,8 @@ module.exports = async ({
             await relays[relay].switch(state);
         },
 
-        async resetOrigin() {
-            state.xPosMm = 0;
-            state.yPosMm = 0;
+        async setUserOrigin(xmm, ymm) {
+            state.userOrigin = { xmm, ymm };
             checkState();
         }
     }

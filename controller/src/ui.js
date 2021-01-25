@@ -20,7 +20,16 @@ module.exports = async ({ machine }) => {
                 moveStart: machine.moveStart,
                 moveStop: machine.moveStop,
                 switch: machine.switch,
-                resetOrigin: machine.resetOrigin
+                async resetUserOrigin() {
+                    let state = machine.getState();
+                    if (state.sledPosition) {
+                        if (state.userOrigin.xmm === state.sledPosition.xmm && state.userOrigin.ymm === state.sledPosition.ymm) {
+                            await machine.setUserOrigin(0, state.motorToWorkspaceVerticalMm + state.workspaceHeightMm);
+                        } else {
+                            await machine.setUserOrigin(state.sledPosition.xmm, state.sledPosition.ymm);
+                        }
+                    }
+                }
             }
         }
     }

@@ -42,13 +42,77 @@ wg.pages.home = {
     async render(container, pageName) {
 
         function updateMachineState(state) {
-            console.info("Machine state changed:", state);
-            $(".xyaxis .position .x").text(state.xPosMm);
-            $(".xyaxis .position .y").text(state.yPosMm);
-            $(".zaxis .position").text(state.zPosMm);
-            $(".zaxis .spindle").toggleClass("on", state.spindleOn);
-            $(".scene").text(JSON.stringify(state, null, 2));
 
+            let sledX = state.sledPosition && state.sledPosition.xmm;
+            let sledY = state.sledPosition && state.sledPosition.ymm;
+
+            console.info("Machine state changed:", state);
+
+            $(".xyaxis .position .x").text(sledX === undefined? "?":Math.round((sledX - state.userOrigin.xmm)*10)/10);
+            $(".xyaxis .position .y").text(sledY === undefined? "?":-Math.round((sledY - state.userOrigin.ymm)*10)/10);
+            $(".zaxis .position").text(state.zPosMm);
+            $(".zaxis .spindle").toggleClass("on", state.spindle.on);
+
+            $(".scene svg").attr({ viewBox: `-${state.motorShaftDistanceMm / 2 + 100} -100 ${state.motorShaftDistanceMm + 200} 1` });
+
+            $(".scene .motor.a").attr({
+                cx: -state.motorShaftDistanceMm / 2
+            });
+
+            $(".scene .motor.b").attr({
+                cx: state.motorShaftDistanceMm / 2
+            });
+
+            $(".scene .workspace").attr({
+                x: -state.workspaceWidthMm / 2,
+                y: state.motorToWorkspaceVerticalMm,
+                width: state.workspaceWidthMm,
+                height: state.workspaceHeightMm
+            });
+
+            $(".scene .sled").attr({
+                cx: sledX,
+                cy: sledY,
+            });
+
+            $(".scene .userorigin.x").attr({
+                x1: state.userOrigin.xmm - 30,
+                y1: state.userOrigin.ymm,
+                x2: state.userOrigin.xmm + 100,
+                y2: state.userOrigin.ymm
+            });
+
+            $(".scene .userorigin.y").attr({
+                x1: state.userOrigin.xmm,
+                y1: state.userOrigin.ymm - 100,
+                x2: state.userOrigin.xmm,
+                y2: state.userOrigin.ymm + 30
+            });
+
+            $(".scene .chain, .scene .sled").attr({
+                visibility: state.sledPosition? "visible": "hidden"
+            });
+            
+
+            $(".scene .chain.a").attr({
+                x1: -state.motorShaftDistanceMm / 2,
+                y1: 0,
+                x2: sledX,
+                y2: sledY,
+            });
+
+            $(".scene .chain.b").attr({
+                x1: state.motorShaftDistanceMm / 2,
+                y1: 0,
+                x2: sledX,
+                y2: sledY
+            });
+
+            $(".scene").css({visibility: "visible"});
+
+            $(".state").text(JSON.stringify(state, null, 2));
+
+        
         }
 
 
@@ -83,7 +147,7 @@ wg.pages.home = {
             button.contextmenu(e => {
                 e.preventDefault();
             });
-            
+
             button.on("touchstart", () => {
                 console.info("1");
             })
@@ -92,7 +156,20 @@ wg.pages.home = {
         }
 
         wg.common.page(container, pageName, [
-            DIV("scene"),
+            DIV("scene", [$(`
+            <svg preserveAspectRatio="xMinYMin" width="100%" xmlns="http://www.w3.org/2000/svg">
+                <circle class="motor a" cy="0" r="50" fill="red"/>
+                <circle class="motor b" cy="0" r="50" fill="red"/>
+                <rect class="workspace" fill="none" stroke="silver" stroke-width="10"/>
+                <circle class="sled center" r="50" fill="red"/>
+                <circle class="sled outline" r="125" fill="none" stroke="gray" stroke-width="20"/>
+                <line class="chain a" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
+                <line class="chain b" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
+                <line class="userorigin x" stroke="yellow" stroke-width="10"/>
+                <line class="userorigin y" stroke="yellow" stroke-width="10"/>
+            </svg>                      
+            `)]).css({visibility: "hidden"}),
+            DIV("state"),
             DIV("controls", [
                 DIV("group abchains", [
                     DIV("title").text("chains"),
@@ -119,7 +196,7 @@ wg.pages.home = {
                         BUTTON("position", [
                             DIV("x dimension").text("-"),
                             DIV("y dimension").text("-")
-                        ]).click(() => wg.common.check(async () => await wg.machine.resetOrigin()))
+                        ]).click(() => wg.common.check(async () => await wg.machine.resetUserOrigin()))
                     ])
                 ]),
                 DIV("group zaxis", [

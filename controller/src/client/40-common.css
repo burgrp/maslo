@@ -118,11 +118,21 @@ button:active {
 
 .page.home .scene {
     flex-grow: 1;
-    xbackground-color: white;
-    margin-right: 2em;
+    margin-right: 1em;
+}
 
+.page.home .content {
+    position: relative;
+}
+
+.page.home .state {
     font-family: monospace;
-    white-space: pre;    
+    white-space: pre;
+    position: absolute;
+    left: 3em;
+    top: 3em;
+    font-size: smaller;
+    color: #999;
 }
 
 /*---------------------------------------------------------------*/
