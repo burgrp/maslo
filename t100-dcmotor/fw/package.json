@@ -1,0 +1,12 @@
+{
+  "name": "maslo.dcmotor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@device.farm/si-atsamd11c14a": "2.0.1",
+    "@device.farm/si-atsamd-safeboot": "1.0.1"
+  }
+}

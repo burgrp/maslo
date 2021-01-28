@@ -51,19 +51,23 @@ module.exports = async ({
             let originAp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
             let originBp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
 
-            // a is length of A chain
+            // chain lengths
             let a = pulses2mm(state.motorPulses.a + originAp);
+            let b = pulses2mm(state.motorPulses.b + originBp);
 
-            // c is the upper arm of left (motor A) triangle
-            let c = calcC(
+            // let's have triangle MotorA-MotorB-Sled, then:
+            // a is MotorA-Sled, i.e. chain length a
+            // b is MotorA-Sled, i.e. chain length b
+            // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+            let aa = calcC(
                 a,
-                pulses2mm(state.motorPulses.b + originBp),
+                b,
                 state.motorShaftDistanceMm
             );
 
             state.sledPosition = {
-                xmm: c - state.motorShaftDistanceMm / 2,
-                ymm: sqrt(p2(a) - p2(c))
+                xmm: aa - state.motorShaftDistanceMm / 2,
+                ymm: sqrt(p2(a) - p2(aa))
             };
 
         } else {
