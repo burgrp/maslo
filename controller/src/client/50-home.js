@@ -48,8 +48,8 @@ wg.pages.home = {
 
             console.info("Machine state changed:", state);
 
-            $(".xyaxis .position .x").text(sledX === undefined? "?":Math.round((sledX - state.userOrigin.xmm)*10)/10);
-            $(".xyaxis .position .y").text(sledY === undefined? "?":-Math.round((sledY - state.userOrigin.ymm)*10)/10);
+            $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xmm) * 10) / 10);
+            $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.ymm) * 10) / 10);
             $(".zaxis .position").text(state.zPosMm);
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
@@ -90,29 +90,29 @@ wg.pages.home = {
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: state.sledPosition? "visible": "hidden"
+                visibility: state.sledPosition ? "visible" : "hidden"
             });
-            
+
 
             $(".scene .chain.a").attr({
-                x1: -state.motorShaftDistanceMm / 2,
-                y1: 0,
-                x2: sledX,
-                y2: sledY,
+                x1: sledX,
+                y1: sledY,
+                x2: -state.motorShaftDistanceMm / 2,
+                y2: 0
             });
 
             $(".scene .chain.b").attr({
-                x1: state.motorShaftDistanceMm / 2,
-                y1: 0,
-                x2: sledX,
-                y2: sledY
+                x1: sledX,
+                y1: sledY,
+                x2: state.motorShaftDistanceMm / 2,
+                y2: 0
             });
 
-            $(".scene").css({visibility: "visible"});
+            $(".scene").css({ visibility: "visible" });
 
             $(".state").text(JSON.stringify(state, null, 2));
 
-        
+
         }
 
 
@@ -124,7 +124,7 @@ wg.pages.home = {
                 if (!isDown) {
                     isDown = true;
                     console.info("start move", ...moveArgs);
-                    wg.common.check(async () => await wg.machine.moveStart(kind, ...moveArgs));
+                    wg.common.check(async () => await wg.machine.manualMoveStart(kind, ...moveArgs));
                 }
             }
 
@@ -132,7 +132,7 @@ wg.pages.home = {
                 if (isDown) {
                     isDown = false;
                     console.info("stop move", ...moveArgs);
-                    wg.common.check(async () => await wg.machine.moveStop(kind));
+                    wg.common.check(async () => await wg.machine.manualMoveStop(kind));
                 }
             }
 
@@ -168,7 +168,7 @@ wg.pages.home = {
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>
                 <line class="userorigin y" stroke="yellow" stroke-width="10"/>
             </svg>                      
-            `)]).css({visibility: "hidden"}),
+            `)]).css({ visibility: "hidden" }),
             DIV("state"),
             DIV("controls", [
                 DIV("group abchains", [
@@ -202,8 +202,8 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.switch("spindle", true))),
-                        BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.switch("spindle", false))),
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
+                        BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
                         moveButton("up", "caret-up", "z", -1),

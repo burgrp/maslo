@@ -109,7 +109,8 @@ module.exports = async ({
 
 
     function calcMotorSpeed(motor) {
-        return rapidMoveSpeedMmpmin * motor.encoderPpr * motor.gearRatio / 60;
+        let speedMmpmin = rapidMoveSpeedMmpmin; // or cuttingMoveSpeedMmpmin if z not at home
+        return speedMmpmin * motor.encoderPpr * motor.gearRatio / 60;
     }
 
     return {
@@ -121,20 +122,20 @@ module.exports = async ({
             return state;
         },
 
-        async moveStart(kind, direction, pulses = Infinity) {
+        async manualMoveStart(kind, direction) {
             if (motors[kind]) {
                 //let speedPps = calcMotorSpeed(motors[kind]);
                 await motors[kind].move(direction * 10000, 10000);
             }
         },
 
-        async moveStop(kind) {
+        async manualMoveStop(kind) {
             if (motors[kind]) {
                 await motors[kind].stop();
             }
         },
 
-        async switch(relay, state) {
+        async manualSwitch(relay, state) {
             await relays[relay].switch(state);
         },
 
