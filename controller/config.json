@@ -13,6 +13,7 @@
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
+        "manualMoveMm": 100,
         "motors": {
             "a": {
                 "maxRpm": 7800,

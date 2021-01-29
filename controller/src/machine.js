@@ -1,7 +1,7 @@
 const deepEqual = require("fast-deep-equal");
 
 function distanceToPulses(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount));
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount);
 }
 
 function pulsesToDistance(motorConfig, pulses) {
@@ -18,7 +18,8 @@ module.exports = async ({
     motorsShaftDistanceMm,
     workspaceWidthMm,
     workspaceHeightMm,
-    motorsToWorkspaceVerticalMm
+    motorsToWorkspaceVerticalMm,
+    manualMoveMm
 }) => {
 
     let state = {
@@ -115,6 +116,44 @@ module.exports = async ({
         update();
     }
 
+    async function moveRelativeAB(motor, speedMmpmin, distanceMm) {
+
+        let timeMs = 60000 * Math.abs(distanceMm) / speedMmpmin;
+
+        await motorDrivers[motor].move(
+            distanceToPulses(motorConfigs[motor], distanceMm),
+            timeMs
+        );
+    }
+
+    async function moveAbsoluteXY(speedMmpmin, xmm, ymm) {
+
+        let base = (a, b) => Math.sqrt(a * a + b * b);
+
+        let length = pos => ({
+            a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
+            b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
+        });
+
+        let pos1 = { x: state.sledPosition.xmm, y: state.sledPosition.ymm };
+        let pos2 = { x: xmm, y: ymm };
+
+        let len1 = length(pos1);
+        let len2 = length(pos2);
+
+        let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmpmin;
+
+        await Promise.allSettled([
+            motorDrivers.a.move(distanceToPulses(motorConfigs.a, len2.a - len1.a), timeMs),
+            motorDrivers.b.move(distanceToPulses(motorConfigs.b, len2.b - len1.b), timeMs)
+        ]);
+
+    }
+
+    async function moveRelativeXY(speedMmpmin, xmm, ymm) {
+        await moveAbsoluteXY(speedMmpmin, state.sledPosition.xmm + xmm, state.sledPosition.ymm + ymm);
+    }
+
     return {
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
@@ -124,39 +163,27 @@ module.exports = async ({
             return state;
         },
 
+        moveRelativeAB,
+        moveAbsoluteXY,
+        moveRelativeXY,
+
         async manualMoveStart(kind, ...direction) {
 
-            let distanceMm = 100;
-            let timeMs = 60000 * distanceMm / rapidMoveSpeedMmpmin;
-
             if (kind == "a" || kind == "b") {
-                
-                await motorDrivers[kind].move(
-                    direction[0] * distanceToPulses(motorConfigs[kind], distanceMm),
-                    timeMs
+
+                await moveRelativeAB(
+                    kind,
+                    rapidMoveSpeedMmpmin, direction[0] * manualMoveMm
                 );
 
             } else if (kind === "xy") {
-                
-                let base = (a, b) => Math.sqrt(a * a + b * b);
-                //let arm = (c, a) => Math.sqrt(c * c - a * a);
-                
-                let length = pos => ({
-                    a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
-                    b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
-                });
-                
-                let pos1 = {
-                    x: state.sledPosition.xmm, 
-                    y: state.sledPosition.ymm
-                };
-                let len1 = length(pos1);
-                let len2 = length({x: pos1.x + direction[0] * distanceMm, y: pos1.y + direction[1] * distanceMm});
-                
-                await Promise.allSettled([
-                    motorDrivers.a.move(distanceToPulses(motorConfigs.a, len2.a - len1.a), timeMs),
-                    motorDrivers.b.move(distanceToPulses(motorConfigs.b, len2.b - len1.b), timeMs)
-                ]);
+
+                await moveRelativeXY(
+                    rapidMoveSpeedMmpmin,
+                    direction[0] * manualMoveMm,
+                    direction[1] * manualMoveMm
+                );
+
             }
         },
 
