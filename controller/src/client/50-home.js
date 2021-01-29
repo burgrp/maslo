@@ -53,19 +53,19 @@ wg.pages.home = {
             $(".zaxis .position").text(state.zPosMm);
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
-            $(".scene svg").attr({ viewBox: `-${state.motorShaftDistanceMm / 2 + 100} -100 ${state.motorShaftDistanceMm + 200} 1` });
+            $(".scene svg").attr({ viewBox: `-${state.motorsShaftDistanceMm / 2 + 100} -100 ${state.motorsShaftDistanceMm + 200} 1` });
 
             $(".scene .motor.a").attr({
-                cx: -state.motorShaftDistanceMm / 2
+                cx: -state.motorsShaftDistanceMm / 2
             });
 
             $(".scene .motor.b").attr({
-                cx: state.motorShaftDistanceMm / 2
+                cx: state.motorsShaftDistanceMm / 2
             });
 
             $(".scene .workspace").attr({
                 x: -state.workspaceWidthMm / 2,
-                y: state.motorToWorkspaceVerticalMm,
+                y: state.motorsToWorkspaceVerticalMm,
                 width: state.workspaceWidthMm,
                 height: state.workspaceHeightMm
             });
@@ -97,14 +97,14 @@ wg.pages.home = {
             $(".scene .chain.a").attr({
                 x1: sledX,
                 y1: sledY,
-                x2: -state.motorShaftDistanceMm / 2,
+                x2: -state.motorsShaftDistanceMm / 2,
                 y2: 0
             });
 
             $(".scene .chain.b").attr({
                 x1: sledX,
                 y1: sledY,
-                x2: state.motorShaftDistanceMm / 2,
+                x2: state.motorsShaftDistanceMm / 2,
                 y2: 0
             });
 

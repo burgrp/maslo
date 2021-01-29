@@ -7,7 +7,7 @@ module.exports = async ({ }) => {
     }
 
     return {
-        async createMotor(name, config, listener) {
+        async createMotor(name, listener) {
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;
@@ -16,7 +16,6 @@ module.exports = async ({ }) => {
 
             return {
                 name,
-                ...config,
 
                 getPulses() {
                     return pulseCounter
@@ -69,7 +68,7 @@ module.exports = async ({ }) => {
 
                     } finally {
                         update();
-                        log(`move finished`, Math.ceil(pulseCounter));
+                        log(`move finished`, pulseCounter);
                         moving = false;
                     }
                 },

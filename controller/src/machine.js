@@ -3,14 +3,14 @@ const deepEqual = require("fast-deep-equal");
 module.exports = async ({
     drivers,
     driver,
-    motors,
+    motors: motorConfigs,
     relays,
     rapidMoveSpeedMmpmin,
     cuttingMoveSpeedMmpmin,
-    motorShaftDistanceMm,
+    motorsShaftDistanceMm,
     workspaceWidthMm,
     workspaceHeightMm,
-    motorToWorkspaceVerticalMm
+    motorsToWorkspaceVerticalMm
 }) => {
 
     let state = {
@@ -18,7 +18,7 @@ module.exports = async ({
         },
         userOrigin: {
             xmm: 0,
-            ymm: motorToWorkspaceVerticalMm + workspaceHeightMm
+            ymm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
         positionReference: {
             xmm: -1000,
@@ -27,10 +27,10 @@ module.exports = async ({
             bp: 0
         },
         spindle: {},
-        motorShaftDistanceMm,
+        motorsShaftDistanceMm,
         workspaceWidthMm,
         workspaceHeightMm,
-        motorToWorkspaceVerticalMm
+        motorsToWorkspaceVerticalMm
     };
 
     let stateChangedListeners = [];
@@ -48,8 +48,8 @@ module.exports = async ({
         if (state.positionReference) {
 
             // calculate pulse counter as sled would be at motor A
-            let originAp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
-            let originBp = mm2pulse(sqrt(p2(state.motorShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
+            let originAp = mm2pulse(sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
+            let originBp = mm2pulse(sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
 
             // chain lengths
             let a = pulses2mm(state.motorPulses.a + originAp);
@@ -62,11 +62,11 @@ module.exports = async ({
             let aa = calcC(
                 a,
                 b,
-                state.motorShaftDistanceMm
+                state.motorsShaftDistanceMm
             );
 
             state.sledPosition = {
-                xmm: aa - state.motorShaftDistanceMm / 2,
+                xmm: aa - state.motorsShaftDistanceMm / 2,
                 ymm: sqrt(p2(a) - p2(aa))
             };
 
@@ -89,12 +89,14 @@ module.exports = async ({
 
     driver = drivers[driver];
 
-    for (let name in motors) {
+
+    motorDrivers = {};
+    for (let name in motorConfigs) {
         function update() {
-            state.motorPulses[name] = motors[name].getPulses();
+            state.motorPulses[name] = motorDrivers[name].getPulses();
             checkState();
         }
-        motors[name] = await driver.createMotor(name, motors[name], update);
+        motorDrivers[name] = await driver.createMotor(name, update);
         update();
     }
 
@@ -108,9 +110,11 @@ module.exports = async ({
     }
 
 
-    function calcMotorSpeed(motor) {
+    function calcMoveParams(motorConfig, mm) {
         let speedMmpmin = rapidMoveSpeedMmpmin; // or cuttingMoveSpeedMmpmin if z not at home
-        return speedMmpmin * motor.encoderPpr * motor.gearRatio / 60;
+        let pulses = mm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount);
+        let timeMs = 60000 * mm / speedMmpmin;
+        return {pulses, timeMs}
     }
 
     return {
@@ -123,15 +127,15 @@ module.exports = async ({
         },
 
         async manualMoveStart(kind, direction) {
-            if (motors[kind]) {
-                //let speedPps = calcMotorSpeed(motors[kind]);
-                await motors[kind].move(direction * 10000, 10000);
+            if (motorDrivers[kind]) {
+                let moveParams = calcMoveParams(motorConfigs[kind], 100);
+                await motorDrivers[kind].move(moveParams.pulses, moveParams.timeMs);
             }
         },
 
         async manualMoveStop(kind) {
-            if (motors[kind]) {
-                await motors[kind].stop();
+            if (motorDrivers[kind]) {
+                await motorDrivers[kind].stop();
             }
         },
 
