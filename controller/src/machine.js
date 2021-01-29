@@ -1,5 +1,13 @@
 const deepEqual = require("fast-deep-equal");
 
+function distanceToPulses(motorConfig, distanceMm) {
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount));
+}
+
+function pulsesToDistance(motorConfig, pulses) {
+    return pulses * motorConfig.pitchMm * motorConfig.teethCount / (motorConfig.encoderPpr * motorConfig.gearRatio);
+}
+
 module.exports = async ({
     drivers,
     driver,
@@ -38,8 +46,6 @@ module.exports = async ({
 
     let p2 = a => a * a;
     let sqrt = Math.sqrt;
-    let pulses2mm = pulses => pulses / 100;
-    let mm2pulse = mm => mm * 100;
 
     let calcC = (a, b, base) => (p2(a) - p2(b) + p2(base)) / (2 * base);
 
@@ -48,12 +54,12 @@ module.exports = async ({
         if (state.positionReference) {
 
             // calculate pulse counter as sled would be at motor A
-            let originAp = mm2pulse(sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
-            let originBp = mm2pulse(sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
+            let originAp = distanceToPulses(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
+            let originBp = distanceToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
 
             // chain lengths
-            let a = pulses2mm(state.motorPulses.a + originAp);
-            let b = pulses2mm(state.motorPulses.b + originBp);
+            let a = pulsesToDistance(motorConfigs.a, state.motorPulses.a + originAp);
+            let b = pulsesToDistance(motorConfigs.b, state.motorPulses.b + originBp);
 
             // let's have triangle MotorA-MotorB-Sled, then:
             // a is MotorA-Sled, i.e. chain length a
@@ -109,14 +115,6 @@ module.exports = async ({
         update();
     }
 
-
-    function calcMoveParams(motorConfig, mm) {
-        let speedMmpmin = rapidMoveSpeedMmpmin; // or cuttingMoveSpeedMmpmin if z not at home
-        let pulses = mm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount);
-        let timeMs = 60000 * mm / speedMmpmin;
-        return {pulses, timeMs}
-    }
-
     return {
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
@@ -126,16 +124,50 @@ module.exports = async ({
             return state;
         },
 
-        async manualMoveStart(kind, direction) {
-            if (motorDrivers[kind]) {
-                let moveParams = calcMoveParams(motorConfigs[kind], 100);
-                await motorDrivers[kind].move(moveParams.pulses, moveParams.timeMs);
+        async manualMoveStart(kind, ...direction) {
+
+            let distanceMm = 100;
+            let timeMs = 60000 * distanceMm / rapidMoveSpeedMmpmin;
+
+            if (kind == "a" || kind == "b") {
+                
+                await motorDrivers[kind].move(
+                    direction[0] * distanceToPulses(motorConfigs[kind], distanceMm),
+                    timeMs
+                );
+
+            } else if (kind === "xy") {
+                
+                let base = (a, b) => Math.sqrt(a * a + b * b);
+                //let arm = (c, a) => Math.sqrt(c * c - a * a);
+                
+                let length = pos => ({
+                    a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
+                    b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
+                });
+                
+                let pos1 = {
+                    x: state.sledPosition.xmm, 
+                    y: state.sledPosition.ymm
+                };
+                let len1 = length(pos1);
+                let len2 = length({x: pos1.x + direction[0] * distanceMm, y: pos1.y + direction[1] * distanceMm});
+                
+                await Promise.allSettled([
+                    motorDrivers.a.move(distanceToPulses(motorConfigs.a, len2.a - len1.a), timeMs),
+                    motorDrivers.b.move(distanceToPulses(motorConfigs.b, len2.b - len1.b), timeMs)
+                ]);
             }
         },
 
         async manualMoveStop(kind) {
             if (motorDrivers[kind]) {
                 await motorDrivers[kind].stop();
+            } else if (kind === "xy") {
+                await Promise.allSettled([
+                    motorDrivers.a.stop(),
+                    motorDrivers.b.stop()
+                ]);
             }
         },
 
