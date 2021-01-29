@@ -10,8 +10,7 @@ module.exports = async ({ }) => {
         async createMotor(name, config, listener) {
             let log = Debug(`app:motor:${name}`);
 
-            let endTimeout;
-            let resolveMove;
+            let stopCurrentMove;
             let pulseCounter = 0;
             let moving = false;
 
@@ -27,21 +26,27 @@ module.exports = async ({ }) => {
                     return moving;
                 },
 
-                async move(direction, speedPps, pulses) {
+                async move(pulses, timeMs) {
+
+                    let ranToTheEnd = false;
 
                     if (moving) {
                         throw new Error("Already moving");
                     }
+                    moving = true;
 
-                    let runTimeMs = pulses / speedPps * 1000;
-                    log(`move ${direction?"forward": "backward"} ${speedPps} pps, ${pulses} pulses (${runTimeMs} ms)`);
+                    log(`move ${pulses} pulses in ${timeMs} ms`);
 
                     let startedAtMs = now();
                     let startedPulses = pulseCounter;
 
                     function update() {
-                        let actualRunTimeMs = now() - startedAtMs;
-                        pulseCounter = startedPulses + direction * Math.ceil(actualRunTimeMs * speedPps / 1000);
+                        if (ranToTheEnd) {
+                            pulseCounter = startedPulses + pulses;
+                        } else {
+                            let actualTimeMs = now() - startedAtMs;
+                            pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);        
+                        }
                         log(`pulses: ${pulseCounter}`);
                         listener();
                     }
@@ -51,31 +56,29 @@ module.exports = async ({ }) => {
                     try {
 
                         await new Promise((resolve, reject) => {
-                            resolveMove = resolve;
-                            if (runTimeMs !== Infinity) {
-                                endTimeout = setTimeout(resolve, runTimeMs);
-                            }
+                            endTimeout = setTimeout(() => {
+                                clearInterval(updateInterval);
+                                ranToTheEnd = true;
+                                resolve();        
+                            }, timeMs);
+                            stopCurrentMove = () => {
+                                clearInterval(updateInterval);
+                                resolve();        
+                            };
                         });
 
                     } finally {
-                        clearInterval(updateInterval);
-
                         update();
-
                         log(`move finished`, Math.ceil(pulseCounter));
                         moving = false;
                     }
                 },
 
                 async stop() {
-                    if (endTimeout) {
-                        clearTimeout(endTimeout);
-                        endTimeout = undefined;
-                    }
-                    if (resolveMove) {
-                        resolveMove();
-                    }
                     log(`stop`);
+                    if (stopCurrentMove) {
+                        stopCurrentMove();
+                    }
                 }
             }
         },

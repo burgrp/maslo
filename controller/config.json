@@ -8,7 +8,7 @@
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
         "rapidMoveSpeedMmpmin": 700,
-        "cuttingMoveSpeedMmpmin": 500,
+        "cuttingMoveSpeedMmpmin": 200,
         "motorShaftDistanceMm": 3500,
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
@@ -17,12 +17,16 @@
             "a": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
-                "gearRatio": 280
+                "gearRatio": 280,
+                "teethCount": 30,
+                "pitchMm": 2
             },
             "b": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
-                "gearRatio": 280
+                "gearRatio": 280,
+                "teethCount": 30,
+                "pitchMm": 2
             },
             "z": {
                 "maxRpm": 9900,

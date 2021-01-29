@@ -123,8 +123,8 @@ module.exports = async ({
 
         async moveStart(kind, direction, pulses = Infinity) {
             if (motors[kind]) {
-                let speedPps = calcMotorSpeed(motors[kind]);
-                await motors[kind].move(direction, speedPps, pulses);
+                //let speedPps = calcMotorSpeed(motors[kind]);
+                await motors[kind].move(direction * 10000, 10000);
             }
         },
 
