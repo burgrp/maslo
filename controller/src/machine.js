@@ -96,13 +96,13 @@ module.exports = async ({
 
     driver = drivers[driver];
 
-
     motorDrivers = {};
     for (let name in motorConfigs) {
         function update() {
             state.motorPulses[name] = motorDrivers[name].getPulses();
             if (name === "z") {
-                state.spindle.home = motorDrivers[name].getEndStop(0);
+                state.spindle.home = motorDrivers[name].getLoStop();
+                state.spindle.position = pulsesToDistance(motorConfigs[name], motorDrivers[name].getPulses());
             }
             checkState();
         }
@@ -119,6 +119,12 @@ module.exports = async ({
         update();
     }
 
+    function checkPositionReference() {
+        if (!state.positionReference) {
+            throw new Error("No position reference");
+        }
+    }
+
     async function moveRelativeAB(motor, speedMmpmin, distanceMm) {
 
         let timeMs = 60000 * Math.abs(distanceMm) / speedMmpmin;
@@ -130,6 +136,8 @@ module.exports = async ({
     }
 
     async function moveAbsoluteXY(speedMmpmin, xMm, yMm) {
+
+        checkPositionReference();
 
         let base = (a, b) => Math.sqrt(a * a + b * b);
 
@@ -154,6 +162,9 @@ module.exports = async ({
     }
 
     async function moveRelativeXY(speedMmpmin, xMm, yMm) {
+
+        checkPositionReference();
+
         await moveAbsoluteXY(speedMmpmin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
 
@@ -183,7 +194,7 @@ module.exports = async ({
 
                 await moveRelativeAB(
                     kind,
-                    rapidMoveSpeedMmpmin, direction[0] * manualMoveMm
+                    50, direction[0] * manualMoveMm
                 );
 
             } else if (kind === "xy") {

@@ -3,7 +3,12 @@
         "module": "./machine.js",
         "drivers": {
             "virtual": {
-                "module": "./driver-virtual.js"
+                "module": "./driver-virtual.js",
+                "z": {
+                    "endStops": {
+                        "lo": -1000
+                    }
+                }
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",

@@ -1,6 +1,6 @@
 const Debug = require("debug");
 
-module.exports = async ({ }) => {
+module.exports = async ({ z: zConfig }) => {
 
     function now() {
         return new Date().getTime();
@@ -25,8 +25,8 @@ module.exports = async ({ }) => {
                     return moving;
                 },
 
-                getEndStop(n) {
-                    return n == 0 ? pulseCounter <= 0 : false;
+                getLoStop() {
+                    return zConfig && zConfig.endStops && pulseCounter <= zConfig.endStops.lo;
                 },
 
                 async move(pulses, timeMs) {
