@@ -23,10 +23,10 @@ module.exports = async ({ machine }) => {
                 async resetUserOrigin() {
                     let state = machine.getState();
                     if (state.sledPosition) {
-                        if (state.userOrigin.xmm === state.sledPosition.xmm && state.userOrigin.ymm === state.sledPosition.ymm) {
+                        if (state.userOrigin.xMm === state.sledPosition.xMm && state.userOrigin.yMm === state.sledPosition.yMm) {
                             await machine.setUserOrigin(0, state.motorsToWorkspaceVerticalMm + state.workspaceHeightMm);
                         } else {
-                            await machine.setUserOrigin(state.sledPosition.xmm, state.sledPosition.ymm);
+                            await machine.setUserOrigin(state.sledPosition.xMm, state.sledPosition.yMm);
                         }
                     }
                 }

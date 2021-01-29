@@ -25,6 +25,10 @@ module.exports = async ({ }) => {
                     return moving;
                 },
 
+                getEndStop(n) {
+                    return n == 0 ? pulseCounter <= 0 : false;
+                },
+
                 async move(pulses, timeMs) {
 
                     let ranToTheEnd = false;
@@ -41,10 +45,10 @@ module.exports = async ({ }) => {
 
                     function update() {
                         if (ranToTheEnd) {
-                            pulseCounter = startedPulses + pulses;
+                            pulseCounter = Math.round(startedPulses + pulses);
                         } else {
                             let actualTimeMs = now() - startedAtMs;
-                            pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);        
+                            pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);
                         }
                         log(`pulses: ${pulseCounter}`);
                         listener();
@@ -58,11 +62,11 @@ module.exports = async ({ }) => {
                             endTimeout = setTimeout(() => {
                                 clearInterval(updateInterval);
                                 ranToTheEnd = true;
-                                resolve();        
+                                resolve();
                             }, timeMs);
                             stopCurrentMove = () => {
                                 clearInterval(updateInterval);
-                                resolve();        
+                                resolve();
                             };
                         });
 

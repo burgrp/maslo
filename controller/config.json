@@ -19,20 +19,19 @@
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
-                "teethCount": 30,
-                "pitchMm": 2
+                "mmPerRev": 60
             },
             "b": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
-                "teethCount": 30,
-                "pitchMm": 2
+                "mmPerRev": 60
             },
             "z": {
                 "maxRpm": 9900,
                 "encoderPpr": 11,
-                "gearRatio": 90
+                "gearRatio": 90,
+                "mmPerRev": 1
             }
         },
         "relays": {

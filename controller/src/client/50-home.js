@@ -43,13 +43,13 @@ wg.pages.home = {
 
         function updateMachineState(state) {
 
-            let sledX = state.sledPosition && state.sledPosition.xmm;
-            let sledY = state.sledPosition && state.sledPosition.ymm;
+            let sledX = state.sledPosition && state.sledPosition.xMm;
+            let sledY = state.sledPosition && state.sledPosition.yMm;
 
             console.info("Machine state changed:", state);
 
-            $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xmm) * 10) / 10);
-            $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.ymm) * 10) / 10);
+            $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xMm) * 10) / 10);
+            $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.yMm) * 10) / 10);
             $(".zaxis .position").text(state.zPosMm);
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
@@ -76,23 +76,22 @@ wg.pages.home = {
             });
 
             $(".scene .userorigin.x").attr({
-                x1: state.userOrigin.xmm - 30,
-                y1: state.userOrigin.ymm,
-                x2: state.userOrigin.xmm + 100,
-                y2: state.userOrigin.ymm
+                x1: state.userOrigin.xMm - 30,
+                y1: state.userOrigin.yMm,
+                x2: state.userOrigin.xMm + 100,
+                y2: state.userOrigin.yMm
             });
 
             $(".scene .userorigin.y").attr({
-                x1: state.userOrigin.xmm,
-                y1: state.userOrigin.ymm - 100,
-                x2: state.userOrigin.xmm,
-                y2: state.userOrigin.ymm + 30
+                x1: state.userOrigin.xMm,
+                y1: state.userOrigin.yMm - 100,
+                x2: state.userOrigin.xMm,
+                y2: state.userOrigin.yMm + 30
             });
 
             $(".scene .chain, .scene .sled").attr({
                 visibility: state.sledPosition ? "visible" : "hidden"
             });
-
 
             $(".scene .chain.a").attr({
                 x1: sledX,
@@ -111,7 +110,6 @@ wg.pages.home = {
             $(".scene").css({ visibility: "visible" });
 
             $(".state").text(JSON.stringify(state, null, 2));
-
 
         }
 

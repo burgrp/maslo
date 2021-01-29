@@ -1,11 +1,11 @@
 const deepEqual = require("fast-deep-equal");
 
 function distanceToPulses(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.pitchMm * motorConfig.teethCount);
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
 }
 
 function pulsesToDistance(motorConfig, pulses) {
-    return pulses * motorConfig.pitchMm * motorConfig.teethCount / (motorConfig.encoderPpr * motorConfig.gearRatio);
+    return pulses * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
 }
 
 module.exports = async ({
@@ -26,12 +26,12 @@ module.exports = async ({
         motorPulses: {
         },
         userOrigin: {
-            xmm: 0,
-            ymm: motorsToWorkspaceVerticalMm + workspaceHeightMm
+            xMm: 0,
+            yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
         positionReference: {
-            xmm: -1000,
-            ymm: 700,
+            xMm: -1000,
+            yMm: 700,
             ap: 0,
             bp: 0
         },
@@ -55,8 +55,8 @@ module.exports = async ({
         if (state.positionReference) {
 
             // calculate pulse counter as sled would be at motor A
-            let originAp = distanceToPulses(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.ap;
-            let originBp = distanceToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xmm) + p2(state.positionReference.ymm))) - state.positionReference.bp;
+            let originAp = distanceToPulses(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.ap;
+            let originBp = distanceToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bp;
 
             // chain lengths
             let a = pulsesToDistance(motorConfigs.a, state.motorPulses.a + originAp);
@@ -73,8 +73,8 @@ module.exports = async ({
             );
 
             state.sledPosition = {
-                xmm: aa - state.motorsShaftDistanceMm / 2,
-                ymm: sqrt(p2(a) - p2(aa))
+                xMm: aa - state.motorsShaftDistanceMm / 2,
+                yMm: sqrt(p2(a) - p2(aa))
             };
 
         } else {
@@ -101,6 +101,9 @@ module.exports = async ({
     for (let name in motorConfigs) {
         function update() {
             state.motorPulses[name] = motorDrivers[name].getPulses();
+            if (name === "z") {
+                state.spindle.home = motorDrivers[name].getEndStop(0);
+            }
             checkState();
         }
         motorDrivers[name] = await driver.createMotor(name, update);
@@ -126,7 +129,7 @@ module.exports = async ({
         );
     }
 
-    async function moveAbsoluteXY(speedMmpmin, xmm, ymm) {
+    async function moveAbsoluteXY(speedMmpmin, xMm, yMm) {
 
         let base = (a, b) => Math.sqrt(a * a + b * b);
 
@@ -135,8 +138,8 @@ module.exports = async ({
             b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
         });
 
-        let pos1 = { x: state.sledPosition.xmm, y: state.sledPosition.ymm };
-        let pos2 = { x: xmm, y: ymm };
+        let pos1 = { x: state.sledPosition.xMm, y: state.sledPosition.yMm };
+        let pos2 = { x: xMm, y: yMm };
 
         let len1 = length(pos1);
         let len2 = length(pos2);
@@ -150,8 +153,8 @@ module.exports = async ({
 
     }
 
-    async function moveRelativeXY(speedMmpmin, xmm, ymm) {
-        await moveAbsoluteXY(speedMmpmin, state.sledPosition.xmm + xmm, state.sledPosition.ymm + ymm);
+    async function moveRelativeXY(speedMmpmin, xMm, yMm) {
+        await moveAbsoluteXY(speedMmpmin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
 
     return {
@@ -170,6 +173,13 @@ module.exports = async ({
         async manualMoveStart(kind, ...direction) {
 
             if (kind == "a" || kind == "b") {
+
+                await moveRelativeAB(
+                    kind,
+                    rapidMoveSpeedMmpmin, direction[0] * manualMoveMm
+                );
+
+            } if (kind == "z") {
 
                 await moveRelativeAB(
                     kind,
@@ -202,8 +212,8 @@ module.exports = async ({
             await relays[relay].switch(state);
         },
 
-        async setUserOrigin(xmm, ymm) {
-            state.userOrigin = { xmm, ymm };
+        async setUserOrigin(xMm, yMm) {
+            state.userOrigin = { xMm, yMm };
             checkState();
         }
     }
