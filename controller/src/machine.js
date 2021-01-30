@@ -23,8 +23,9 @@ module.exports = async ({
 }) => {
 
     let state = {
-        motorPulses: {
-        },
+        motors: {},
+        relays: {},
+        spindle: {},
         userOrigin: {
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
@@ -35,7 +36,6 @@ module.exports = async ({
             ap: 0,
             bp: 0
         },
-        spindle: {},
         motorsShaftDistanceMm,
         workspaceWidthMm,
         workspaceHeightMm,
@@ -59,8 +59,8 @@ module.exports = async ({
             let originBp = distanceToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bp;
 
             // chain lengths
-            let a = pulsesToDistance(motorConfigs.a, state.motorPulses.a + originAp);
-            let b = pulsesToDistance(motorConfigs.b, state.motorPulses.b + originBp);
+            let a = pulsesToDistance(motorConfigs.a, state.motors.a && state.motors.a.pulses + originAp);
+            let b = pulsesToDistance(motorConfigs.b, state.motors.b && state.motors.b.pulses + originBp);
 
             // let's have triangle MotorA-MotorB-Sled, then:
             // a is MotorA-Sled, i.e. chain length a
@@ -81,6 +81,8 @@ module.exports = async ({
             delete state.sledPosition;
         }
 
+        state.spindle.on = state.relays.spindle;
+
         let stateJson = JSON.stringify(state);
         if (stateJson !== oldStateJson) {
             oldStateJson = stateJson;
@@ -99,20 +101,17 @@ module.exports = async ({
     motorDrivers = {};
     for (let name in motorConfigs) {
         function update() {
-            state.motorPulses[name] = motorDrivers[name].getPulses();
-            if (name === "z") {
-                state.spindle.home = motorDrivers[name].getLoStop();
-                state.spindle.position = pulsesToDistance(motorConfigs[name], motorDrivers[name].getPulses());
-            }
+            state.motors[name] = motorDrivers[name].getState();
             checkState();
         }
         motorDrivers[name] = await driver.createMotor(name, update);
+        state.motors[name] = {};
         update();
     }
 
     for (let name in relays) {
         function update() {
-            state[name].on = relays[name].isOn();
+            state.relays[name] = relays[name].getState();
             checkState();
         }
         relays[name] = await driver.createRelay(name, relays[name], update);

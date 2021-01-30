@@ -17,16 +17,17 @@ module.exports = async ({ z: zConfig }) => {
             return {
                 name,
 
-                getPulses() {
-                    return pulseCounter
-                },
-
-                isMoving() {
-                    return moving;
-                },
-
                 getLoStop() {
                     return zConfig && zConfig.endStops && pulseCounter <= zConfig.endStops.lo;
+                },
+
+                getState() {
+                    return {
+                        pulses: pulseCounter,
+                        lo: false,
+                        hi: false,
+                        moving
+                    }
                 },
 
                 async move(pulses, timeMs) {
@@ -94,7 +95,7 @@ module.exports = async ({ z: zConfig }) => {
             return {
                 name,
                 ...config,
-                isOn() {
+                getState() {
                     return on;
                 },
                 async switch(newOn) {
