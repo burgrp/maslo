@@ -1,10 +1,10 @@
 const deepEqual = require("fast-deep-equal");
 
-function distanceToPulses(motorConfig, distanceMm) {
+function distanceMmToPulses(motorConfig, distanceMm) {
     return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
 }
 
-function pulsesToDistance(motorConfig, pulses) {
+function pulsesToDistanceMm(motorConfig, pulses) {
     return pulses * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
 }
 
@@ -19,6 +19,7 @@ module.exports = async ({
     workspaceWidthMm,
     workspaceHeightMm,
     motorsToWorkspaceVerticalMm,
+    zHiStopToStockMm,
     manualMoveMm
 }) => {
 
@@ -55,12 +56,12 @@ module.exports = async ({
         if (state.positionReference) {
 
             // calculate pulse counter as sled would be at motor A
-            let originAp = distanceToPulses(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.ap;
-            let originBp = distanceToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bp;
+            let originAp = distanceMmToPulses(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.ap;
+            let originBp = distanceMmToPulses(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bp;
 
             // chain lengths
-            let a = pulsesToDistance(motorConfigs.a, state.motors.a && state.motors.a.pulses + originAp);
-            let b = pulsesToDistance(motorConfigs.b, state.motors.b && state.motors.b.pulses + originBp);
+            let a = pulsesToDistanceMm(motorConfigs.a, state.motors.a && state.motors.a.pulses + originAp);
+            let b = pulsesToDistanceMm(motorConfigs.b, state.motors.b && state.motors.b.pulses + originBp);
 
             // let's have triangle MotorA-MotorB-Sled, then:
             // a is MotorA-Sled, i.e. chain length a
@@ -82,6 +83,12 @@ module.exports = async ({
         }
 
         state.spindle.on = state.relays.spindle;
+
+        if (state.motors.z && isFinite(state.motors.z.hi.pulses)) {
+            state.spindle.zMm = pulsesToDistanceMm(motorConfigs.z, state.motors.z.pulses - state.motors.z.hi.pulses) + zHiStopToStockMm;
+        } else {
+            delete state.spindle.zMm;
+        }
 
         let stateJson = JSON.stringify(state);
         if (stateJson !== oldStateJson) {
@@ -130,7 +137,7 @@ module.exports = async ({
         let timeMs = 60000 * Math.abs(distanceMm) / speedMmpmin;
 
         await motorDrivers[motor].move(
-            distanceToPulses(motorConfigs[motor], distanceMm),
+            distanceMmToPulses(motorConfigs[motor], distanceMm),
             timeMs
         );
     }
@@ -155,8 +162,8 @@ module.exports = async ({
         let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmpmin;
 
         await Promise.allSettled([
-            motorDrivers.a.move(distanceToPulses(motorConfigs.a, len2.a - len1.a), timeMs),
-            motorDrivers.b.move(distanceToPulses(motorConfigs.b, len2.b - len1.b), timeMs)
+            motorDrivers.a.move(distanceMmToPulses(motorConfigs.a, len2.a - len1.a), timeMs),
+            motorDrivers.b.move(distanceMmToPulses(motorConfigs.b, len2.b - len1.b), timeMs)
         ]);
 
     }
