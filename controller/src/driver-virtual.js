@@ -1,6 +1,6 @@
 const Debug = require("debug");
 
-module.exports = async ({ z: zConfig }) => {
+module.exports = async ({ motors }) => {
 
     function now() {
         return new Date().getTime();
@@ -12,14 +12,33 @@ module.exports = async ({ z: zConfig }) => {
 
             let stopCurrentMove;
             let pulseCounter = 0;
-            let moving = false;
+            let running = false;
 
             let lo = {};
             let hi = {};
 
+            function stop() {
+                log(`stop`);
+                if (stopCurrentMove) {
+                    stopCurrentMove();
+                }
+            }
+
             function checkStops() {
-                lo.stop = pulseCounter <= -1000;
-                hi.stop = pulseCounter >= 2000;
+
+                let loStop = motors && motors[name] && motors[name].lo && pulseCounter <= motors[name].lo;
+                if (loStop && !lo.stop) {
+                    lo.pulses = pulseCounter;
+                    stop();
+                }
+                lo.stop = loStop;
+
+                let hiStop = motors && motors[name] && motors[name].lo && pulseCounter >= motors[name].hi;
+                if (hiStop && !hi.stop) {
+                    hi.pulses = pulseCounter;
+                    stop();
+                }
+                hi.stop = hiStop;
             }
 
             checkStops();
@@ -32,7 +51,7 @@ module.exports = async ({ z: zConfig }) => {
                         pulses: pulseCounter,
                         lo,
                         hi,
-                        moving
+                        running
                     }
                 },
 
@@ -40,59 +59,54 @@ module.exports = async ({ z: zConfig }) => {
 
                     let ranToTheEnd = false;
 
-                    if (moving) {
-                        throw new Error("Already moving");
-                    }
-                    moving = true;
+                    if (!running && !(lo.stop && pulses < 0) && !(hi.stop && pulses > 0)) {
 
-                    log(`move ${pulses} pulses in ${timeMs} ms`);
+                        running = true;
 
-                    let startedAtMs = now();
-                    let startedPulses = pulseCounter;
+                        log(`move ${pulses} pulses in ${timeMs} ms`);
 
-                    function update() {
-                        if (ranToTheEnd) {
-                            pulseCounter = Math.round(startedPulses + pulses);
-                        } else {
-                            let actualTimeMs = now() - startedAtMs;
-                            pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);
+                        let startedAtMs = now();
+                        let startedPulses = pulseCounter;
+
+                        function update() {
+                            if (ranToTheEnd) {
+                                pulseCounter = Math.round(startedPulses + pulses);
+                            } else {
+                                let actualTimeMs = now() - startedAtMs;
+                                pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);
+                            }
+
+                            checkStops();
+
+                            log(`pulses: ${pulseCounter}`);
+                            listener();
                         }
 
-                        checkStops();
+                        let updateInterval = setInterval(update, 100);
 
-                        log(`pulses: ${pulseCounter}`);
-                        listener();
-                    }
+                        try {
 
-                    let updateInterval = setInterval(update, 100);
+                            await new Promise((resolve, reject) => {
+                                endTimeout = setTimeout(() => {
+                                    clearInterval(updateInterval);
+                                    ranToTheEnd = true;
+                                    resolve();
+                                }, timeMs);
+                                stopCurrentMove = () => {
+                                    clearInterval(updateInterval);
+                                    resolve();
+                                };
+                            });
 
-                    try {
-
-                        await new Promise((resolve, reject) => {
-                            endTimeout = setTimeout(() => {
-                                clearInterval(updateInterval);
-                                ranToTheEnd = true;
-                                resolve();
-                            }, timeMs);
-                            stopCurrentMove = () => {
-                                clearInterval(updateInterval);
-                                resolve();
-                            };
-                        });
-
-                    } finally {
-                        moving = false;
-                        update();
-                        log(`move finished`, pulseCounter);
+                        } finally {
+                            running = false;
+                            update();
+                            log(`move finished`, pulseCounter);
+                        }
                     }
                 },
 
-                async stop() {
-                    log(`stop`);
-                    if (stopCurrentMove) {
-                        stopCurrentMove();
-                    }
-                }
+                stop
             }
         },
 

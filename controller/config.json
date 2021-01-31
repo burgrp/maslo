@@ -4,9 +4,10 @@
         "drivers": {
             "virtual": {
                 "module": "./driver-virtual.js",
-                "z": {
-                    "endStops": {
-                        "lo": -1000
+                "motors": {
+                    "z": {
+                        "lo": -1000,
+                        "hi": 500
                     }
                 }
             }
@@ -18,7 +19,11 @@
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
-        "manualMoveMm": 100,
+        "manualMoveMm": {
+            "xy": 100,
+            "ab": 100,
+            "z": 1
+        },
         "motors": {
             "a": {
                 "maxRpm": 7800,
@@ -40,9 +45,7 @@
             }
         },
         "relays": {
-            "spindle": {
-
-            }
+            "spindle": {}
         }
     },
     "webserver": {

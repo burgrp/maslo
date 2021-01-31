@@ -125,7 +125,7 @@ module.exports = async ({
         }
     }
 
-    async function moveRelativeAB(motor, speedMmpmin, distanceMm) {
+    async function moveRelativeABZ(motor, speedMmpmin, distanceMm) {
 
         let timeMs = 60000 * Math.abs(distanceMm) / speedMmpmin;
 
@@ -177,32 +177,43 @@ module.exports = async ({
             return state;
         },
 
-        moveRelativeAB,
+        moveRelativeABZ,
         moveAbsoluteXY,
         moveRelativeXY,
 
         async manualMoveStart(kind, ...direction) {
 
+            function getMoveSpeed() {
+                if (state.motors.z.lo.stop) {
+                    return rapidMoveSpeedMmpmin;
+                } else {
+                    if (!state.spindle.on) {
+                        throw new Error("Can not move while spindle is not running and Z is not at home");
+                    }
+                    return cuttingMoveSpeedMmpmin;
+                }
+            }
+
             if (kind == "a" || kind == "b") {
 
-                await moveRelativeAB(
+                await moveRelativeABZ(
                     kind,
-                    rapidMoveSpeedMmpmin, direction[0] * manualMoveMm
+                    getMoveSpeed(), direction[0] * manualMoveMm.ab
                 );
 
             } if (kind == "z") {
 
-                await moveRelativeAB(
+                await moveRelativeABZ(
                     kind,
-                    50, direction[0] * manualMoveMm
+                    50, direction[0] * manualMoveMm.z
                 );
 
             } else if (kind === "xy") {
 
                 await moveRelativeXY(
-                    rapidMoveSpeedMmpmin,
-                    direction[0] * manualMoveMm,
-                    direction[1] * manualMoveMm
+                    getMoveSpeed(),
+                    direction[0] * manualMoveMm.xy,
+                    direction[1] * manualMoveMm.xy
                 );
 
             }
