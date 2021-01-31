@@ -14,18 +14,24 @@ module.exports = async ({ z: zConfig }) => {
             let pulseCounter = 0;
             let moving = false;
 
+            let lo = {};
+            let hi = {};
+
+            function checkStops() {
+                lo.stop = pulseCounter <= -1000;
+                hi.stop = pulseCounter >= 2000;
+            }
+
+            checkStops();
+
             return {
                 name,
-
-                getLoStop() {
-                    return zConfig && zConfig.endStops && pulseCounter <= zConfig.endStops.lo;
-                },
 
                 getState() {
                     return {
                         pulses: pulseCounter,
-                        lo: false,
-                        hi: false,
+                        lo,
+                        hi,
                         moving
                     }
                 },
@@ -51,6 +57,9 @@ module.exports = async ({ z: zConfig }) => {
                             let actualTimeMs = now() - startedAtMs;
                             pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);
                         }
+
+                        checkStops();
+
                         log(`pulses: ${pulseCounter}`);
                         listener();
                     }
@@ -72,9 +81,9 @@ module.exports = async ({ z: zConfig }) => {
                         });
 
                     } finally {
+                        moving = false;
                         update();
                         log(`move finished`, pulseCounter);
-                        moving = false;
                     }
                 },
 
@@ -87,14 +96,13 @@ module.exports = async ({ z: zConfig }) => {
             }
         },
 
-        async createRelay(name, config, listener) {
+        async createRelay(name, listener) {
             let log = Debug(`app:relay:${name}`);
 
             let on = false;
 
             return {
                 name,
-                ...config,
                 getState() {
                     return on;
                 },

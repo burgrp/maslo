@@ -12,7 +12,7 @@ module.exports = async ({
     drivers,
     driver,
     motors: motorConfigs,
-    relays,
+    relays: relayConfigs,
     rapidMoveSpeedMmpmin,
     cuttingMoveSpeedMmpmin,
     motorsShaftDistanceMm,
@@ -98,7 +98,7 @@ module.exports = async ({
 
     driver = drivers[driver];
 
-    motorDrivers = {};
+    let motorDrivers = {};
     for (let name in motorConfigs) {
         function update() {
             state.motors[name] = motorDrivers[name].getState();
@@ -109,12 +109,13 @@ module.exports = async ({
         update();
     }
 
-    for (let name in relays) {
+    let relayDrivers = {};
+    for (let name in relayConfigs) {
         function update() {
-            state.relays[name] = relays[name].getState();
+            state.relays[name] = relayDrivers[name].getState();
             checkState();
         }
-        relays[name] = await driver.createRelay(name, relays[name], update);
+        relayDrivers[name] = await driver.createRelay(name, update);
         update();
     }
 
@@ -219,7 +220,7 @@ module.exports = async ({
         },
 
         async manualSwitch(relay, state) {
-            await relays[relay].switch(state);
+            await relayDrivers[relay].switch(state);
         },
 
         async setUserOrigin(xMm, yMm) {

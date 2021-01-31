@@ -129,9 +129,9 @@ button:active {
     font-family: monospace;
     white-space: pre;
     position: absolute;
-    left: 3em;
-    top: 3em;
-    font-size: smaller;
+    left: 4em;
+    top: 0em;
+    font-size: 7.7pt;
     color: #999;
 }
 
