@@ -53,8 +53,8 @@ public:
       // sercom->I2CS.INTFLAG.setDRDY(true);
 
       if (rxLength > 9) {
-        // sercom->I2CS.CTRLA.setENABLE(false);
-        // sercom->I2CS.CTRLA.setENABLE(true);
+        sercom->I2CS.CTRLA.setENABLE(false);
+        sercom->I2CS.CTRLA.setENABLE(true);
       }
     }
 
