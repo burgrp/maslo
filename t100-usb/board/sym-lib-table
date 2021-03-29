@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name PAM8320)(type Legacy)(uri /home/paul/git/retradio/mb-a/PAM8320.lib)(options "")(descr ""))
+  (lib (name t100-usb-rescue)(type Legacy)(uri ${KIPRJMOD}/t100-usb-rescue.lib)(options "")(descr ""))
 )

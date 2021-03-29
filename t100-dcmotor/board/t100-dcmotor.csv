@@ -1,19 +1,19 @@
-Id;Quantity;Designator;Designation;Package
-18;1;C2;10n;C_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-17;2;C3,C1;100n;C_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-16;1;C4;270p;C_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-15;1;D1;LED;LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-14;2;D3,D2;BAT54S;SOT-23
-13;1;FB1;600R/500mA;L_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-12;1;J1;T100-IN;PinHeader_1x12_P2.54mm_Horizontal
-11;1;J2;T100-OUT;PinSocket_1x12_P2.54mm_Horizontal
-4;1;J3;Conn_01x08_Female;DG235-3.81-08P
-9;3;R11,R10,R1;270R;R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-3;1;R12;A-270R B-N/A Z-10k;R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-2;1;R13;A-N/A B-270R Z-10k;R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-1;5;R15,R14,R8,R7,R6;10k;R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-5;4;R2,R5,R4,R3;1k;R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-10;1;R9;(sense?);R_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-8;1;U1;ATSAMD11D14A-SS;SOIC-20W_7.5x12.8mm_P1.27mm
-7;1;U2;VNH7070BAS;SOIC-16_3.9x9.9mm_P1.27mm
-6;1;X1;SWD;SWD
+Quantity;Designator;Designation
+5;R15,R14,R8,R7,R6;10k
+1;R13;A-N/A B-270R Z-10k
+1;R12;A-270R B-N/A Z-10k
+1;J3;Conn_01x08_Female
+4;R2,R5,R4,R3;1k
+1;X1;SWD
+1;U2;VNH7070BAS
+1;U1;ATSAMD11D14A-SS
+3;R11,R10,R1;270R
+1;R9;(sense?)
+1;J2;T100-OUT
+1;J1;T100-IN
+1;FB1;600R/500mA
+2;D3,D2;BAT54S
+1;D1;LED
+1;C4;270p
+2;C3,C1;100n
+1;C2;10n

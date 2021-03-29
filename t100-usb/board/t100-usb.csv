@@ -1,22 +1,21 @@
-Id;Quantity;Designator;Designation;Package
-1;2;L3,L1;6.8uH;CKCS6028
-2;1;J1;Conn_01x02_Female;DG301-5.0-02
-3;5;C8,C18,C11,C3,C2;100n;C_0805_2012Metric
-4;1;U3;MCP2221A;SOIC-14_3.9x8.7mm_P1.27mm
-5;2;U2,U1;FR8205;SOT-23-6
-6;4;R14,R13,R12,R4;270R;R_0805_2012Metric
-7;4;R11,R10,R9,R8;1K5;R_0805_2012Metric
-8;1;R7;4.22k 1%;R_0805_2012Metric
-9;1;R6;30.9k 1%;R_0805_2012Metric
-10;2;R5,R1;100k;R_0805_2012Metric
-11;1;R3;6.65k 1%;R_0805_2012Metric
-12;1;R2;30k 1%;R_0805_2012Metric
-13;1;J3;T100-OUT;PinSocket_1x12_P2.54mm_Horizontal
-14;1;J2;USB_B_Micro;conn_usb_B_micro_smd-2
-15;1;DY1;YELLOW;LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-16;1;DW1;WHITE;LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-17;1;DR1;RED;LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-18;1;DG1;GREEN;LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-19;4;C19,C5,C4,C1;100u/12V;CP_Elec_6.3x5.4
-20;1;C7;220n;C_0805_2012Metric_Pad1.15x1.40mm_HandSolder
-21;1;C6;47M;C_0805_2012Metric_Pad1.15x1.40mm_HandSolder
+;Quantity;Designator;;Designation
+;1;J1;;Conn_01x02_Female
+;1;X1;;SWD
+;1;U3;;ATSAMD11C14A-SS
+;6;C6,C8,C18,C11,C3,C2;;100n
+;2;L3,L1;;6.8uH
+;2;U2,U1;;FR8205
+;4;R14,R13,R12,R4;;270R
+;4;R11,R10,R9,R8;;1K5
+;1;R7;;4.22k 1%
+;1;R6;;30.9k 1%
+;2;R5,R1;;100k
+;1;R3;;6.65k 1%
+;1;R2;;30k 1%
+;1;J3;;T100-OUT
+;1;J2;;USB_B_Micro
+;1;DY1;;YELLOW
+;1;DW1;;WHITE
+;1;DR1;;RED
+;1;DG1;;GREEN
+;4;C19,C5,C4,C1;;100u/12V
