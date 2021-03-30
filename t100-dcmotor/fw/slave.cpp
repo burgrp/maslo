@@ -1,36 +1,30 @@
 // https://microchipdeveloper.com/32arm:samd21-sercom-i2c-slave-configuration
 
 namespace atsamd::i2c {
+
+enum AddressMode {
+  MASK,
+  TWO,
+  RANGE
+};
+
 class Slave {
   volatile target::sercom::Peripheral *sercom;
 
 public:
 public:
   int rxLength;
-  int rxLimit;
-
   int txLength;
 
-  unsigned char *rxBufferPtr;
-  unsigned int rxBufferSize;
-  unsigned char *txBufferPtr;
-  unsigned int txBufferSize;
-
-  void init(int address, volatile target::sercom::Peripheral *sercom, unsigned char *rxBufferPtr,
-            unsigned int rxBufferSize, unsigned char *txBufferPtr, unsigned int txBufferSize) {
+  void init(int address1, int address2, AddressMode addressMode, volatile target::sercom::Peripheral *sercom) {
 
     this->sercom = sercom;
 
-    this->rxBufferPtr = rxBufferPtr;
-    this->rxBufferSize = rxBufferSize;
-    this->txBufferPtr = txBufferPtr;
-    this->txBufferSize = txBufferSize;
-
     sercom->I2CS.INTENSET = sercom->I2CS.INTENSET.bare().setDRDY(true).setAMATCH(true).setPREC(true);
 
-    sercom->I2CS.CTRLB = sercom->I2CS.CTRLB.bare().setAACKEN(false).setSMEN(false);
+    sercom->I2CS.CTRLB = sercom->I2CS.CTRLB.bare().setAACKEN(false).setSMEN(false).setAMODE((int)addressMode);
 
-    sercom->I2CS.ADDR = sercom->I2CS.ADDR.bare().setADDR(0x50).setADDRMASK(0);
+    sercom->I2CS.ADDR = sercom->I2CS.ADDR.bare().setADDR(address1).setADDRMASK(address2);
 
     sercom->I2CS.CTRLA =
         sercom->I2CS.CTRLA.bare().setMODE(target::sercom::I2CS::CTRLA::MODE::I2C_SLAVE).setSCLSM(false).setENABLE(true);
@@ -58,11 +52,9 @@ public:
       if (status.getDIR()) {
         // master read
         txLength = 0;
-        txStart();
       } else {
         // master write
         rxLength = 0;
-        rxStart();
       }
     }
 
@@ -71,8 +63,9 @@ public:
       if (status.getDIR()) {
 
         // master read
-        if (txLength < txBufferSize) {
-          sercom->I2CS.DATA = txBufferPtr[txLength++] | 0x80;
+        int byte = getTxByte(txLength++);
+        if (byte != -1) {
+          sercom->I2CS.DATA = byte | 0x80;
         } else {
           sercom->I2CS.DATA = 0xFF;
         }
@@ -80,8 +73,9 @@ public:
       } else {
 
         // master write
-        if (rxLength < rxBufferSize) {
-          rxBufferPtr[rxLength++] = sercom->I2CS.DATA;
+        int byte = sercom->I2CS.DATA;
+        bool ack = setRxByte(rxLength++, byte);
+        if (ack) {
           sercom->I2CS.CTRLB.setACKACT(0).setCMD(CMD_CONTINUE);
         } else {
           sercom->I2CS.CTRLB.setACKACT(1).setCMD(CMD_END);
@@ -90,7 +84,12 @@ public:
     }
   }
 
-  virtual void rxStart(){};
-  virtual void txStart(){};
+  virtual int getTxByte(int index) {
+    return -1;
+  }
+
+  virtual bool setRxByte(int index, int value) {
+    return false;
+  }
 };
 } // namespace atsamd::i2c
