@@ -17,10 +17,14 @@ public:
 
 class I2CSlave : public atsamd::i2c::Slave {
 public:
-  unsigned char rxBuffer[128];
-  unsigned char txBuffer[128];
+  unsigned char rxBuffer[3];
+  unsigned char txBuffer[2];
 
-  void init() { Slave::init(0x50, &target::SERCOM0, rxBuffer, sizeof(rxBuffer), txBuffer, sizeof(txBuffer)); }
+  void init() {
+    Slave::init(0x50, &target::SERCOM0, rxBuffer, sizeof(rxBuffer), txBuffer, sizeof(txBuffer));
+    txBuffer[0] = 0x33;
+    txBuffer[1] = 0x44;
+  }
 };
 
 I2CSlave i2cSlave;
@@ -34,8 +38,6 @@ void initApplication() {
 
   // enable safeboot
   atsamd::safeboot::init(SAFEBOOT_PIN, false, LED_PIN);
-
-//    target::SYSCTRL.OSC8M.setPRESC(target::sysctrl::OSC8M::PRESC::_1);
 
   // I2C pins
 
@@ -57,5 +59,4 @@ void initApplication() {
   i2cSlave.init();
 
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
-
 }

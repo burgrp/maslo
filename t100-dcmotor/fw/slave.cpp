@@ -1,3 +1,5 @@
+// https://microchipdeveloper.com/32arm:samd21-sercom-i2c-slave-configuration
+
 namespace atsamd::i2c {
 class Slave {
   volatile target::sercom::Peripheral *sercom;
@@ -8,7 +10,6 @@ public:
   int rxLimit;
 
   int txLength;
-  int txLimit;
 
   unsigned char *rxBufferPtr;
   unsigned int rxBufferSize;
@@ -25,7 +26,7 @@ public:
     this->txBufferPtr = txBufferPtr;
     this->txBufferSize = txBufferSize;
 
-    sercom->I2CS.INTENSET = sercom->I2CS.INTENSET.bare().setAMATCH(true).setDRDY(true); //.setPREC(true);
+    sercom->I2CS.INTENSET = sercom->I2CS.INTENSET.bare().setDRDY(true).setAMATCH(true).setPREC(true);
 
     sercom->I2CS.CTRLB = sercom->I2CS.CTRLB.bare().setAACKEN(false).setSMEN(false);
 
@@ -38,89 +39,58 @@ public:
       ;
   }
 
+  const int CMD_END = 2;
+  const int CMD_CONTINUE = 3;
+
   void interruptHandlerSERCOM() {
 
-    if (sercom->I2CS.INTFLAG.getAMATCH()) {
-      // sercom->I2CS.INTFLAG.setAMATCH(true);
-      rxLength = 0;
-      sercom->I2CS.DATA = rxLength++;
-      sercom->I2CS.CTRLB.setCMD(3);
-    }
+    target::sercom::I2CS::INTFLAG::Register flags = sercom->I2CS.INTFLAG.copy();
+    target::sercom::I2CS::STATUS::Register status = sercom->I2CS.STATUS.copy();
 
-    if (sercom->I2CS.INTFLAG.getDRDY()) {
-      sercom->I2CS.DATA = rxLength++;
-      sercom->I2CS.CTRLB.setCMD(3);
-      // sercom->I2CS.INTFLAG.setDRDY(true);
-
-      if (rxLength > 9) {
-        sercom->I2CS.CTRLA.setENABLE(false);
-        sercom->I2CS.CTRLA.setENABLE(true);
-      }
-    }
-
-    if (sercom->I2CS.INTFLAG.getPREC()) {
-      // sercom->I2CS.CTRLB.setCMD(2);
+    if (flags.getPREC()) {
       sercom->I2CS.INTFLAG.setPREC(true);
     }
 
+    if (flags.getAMATCH()) {
+      sercom->I2CS.CTRLB.setACKACT(0);
+      sercom->I2CS.INTFLAG.setAMATCH(true);
 
-    // if (sercom->I2CS.INTFLAG.getMB()) {
-    //   sercom->I2CS.INTFLAG.setMB(true);
+      if (status.getDIR()) {
+        // master read
+        txLength = 0;
+        txStart();
+      } else {
+        // master write
+        rxLength = 0;
+        rxStart();
+      }
+    }
 
-    //   if (sercom->I2CS.STATUS.getBUSERR() || sercom->I2CS.STATUS.getRXNACK()) {
+    if (flags.getDRDY()) {
 
-    //     if (sercom->I2CS.ADDR & 1) {
-    //       rxComplete(rxLength);
-    //     } else {
-    //       txComplete(txLength);
-    //     }
+      if (status.getDIR()) {
 
-    //     sercom->I2CS.CTRLB.setCMD(3);
+        // master read
+        if (txLength < txBufferSize) {
+          sercom->I2CS.DATA = txBufferPtr[txLength++] | 0x80;
+        } else {
+          sercom->I2CS.DATA = 0xFF;
+        }
 
-    //   } else {
+      } else {
 
-    //     if (txLength < txLimit) {
-    //       sercom->I2CS.DATA = txBufferPtr[txLength++];
-    //     } else {
-    //       txComplete(txLength);
-    //       sercom->I2CS.CTRLB.setCMD(3);
-    //     }
-
-    //   }
-    // }
-
-    // if (sercom->I2CS.INTFLAG.getSB()) {
-    //   sercom->I2CS.INTFLAG.setSB(true);
-
-    //   if (rxLength < rxLimit && !sercom->I2CS.STATUS.getRXNACK()) {
-    //     rxBufferPtr[rxLength] = sercom->I2CS.DATA;
-    //     rxLength++;
-    //     if (rxLength < rxLimit) {
-    //       sercom->I2CS.CTRLB.setCMD(2);
-    //     } else {
-    //       rxComplete(rxLength);
-    //       sercom->I2CS.CTRLB.setCMD(3);
-    //     }
-    //   } else {
-    //     rxComplete(rxLength);
-    //     sercom->I2CS.CTRLB.setCMD(3);
-    //   }
-    // }
+        // master write
+        if (rxLength < rxBufferSize) {
+          rxBufferPtr[rxLength++] = sercom->I2CS.DATA;
+          sercom->I2CS.CTRLB.setACKACT(0).setCMD(CMD_CONTINUE);
+        } else {
+          sercom->I2CS.CTRLB.setACKACT(1).setCMD(CMD_END);
+        }
+      }
+    }
   }
 
-  virtual void rxComplete(int length){};
-  virtual void txComplete(int length){};
-
-  virtual void startRx(int address, int length) {
-    rxLength = 0;
-    rxLimit = length > rxBufferSize ? rxBufferSize : length;
-    sercom->I2CS.ADDR.setADDR(address << 1 | 1);
-  }
-
-  virtual void startTx(int address, int length) {
-    txLength = 0;
-    txLimit = length > txBufferSize ? txBufferSize : length;
-    sercom->I2CS.ADDR.setADDR(address << 1);
-  }
+  virtual void rxStart(){};
+  virtual void txStart(){};
 };
 } // namespace atsamd::i2c
