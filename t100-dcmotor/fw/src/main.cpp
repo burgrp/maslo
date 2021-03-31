@@ -3,6 +3,8 @@ int IRQ_PIN = 5;
 int ADDR_PIN = 3;
 int SAFEBOOT_PIN = 8;
 
+int PWM_PIN = 16;
+
 /*
 class LedPulseTimer : public genericTimer::Timer {
 
@@ -20,31 +22,69 @@ public:
 // target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
 // target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
 
-enum State { IDLE = 0, RUNNING = 1, FINISHED = 2, ERROR = 3 };
+enum State { IDLE = 0, RUNNING = 1, ERROR = 2 };
 
-enum Command { NONE = 0, SETUP = 1, START = 2, STOP = 3 };
+enum Command { NONE = 0, START = 1, STOP = 2 };
 
-class Device : public atsamd::i2c::Slave, public genericTimer::Timer {
+class PWM {
+  volatile target::tc::Peripheral *tc;
+
+public:
+  void init(volatile target::tc::Peripheral *tc, int pin) {
+    this->tc = tc;
+
+    tc->COUNT16.CTRLA = tc->COUNT16.CTRLA.bare()
+                            .setMODE(target::tc::COUNT16::CTRLA::MODE::COUNT16)
+                            .setPRESCALER(target::tc::COUNT16::CTRLA::PRESCALER::DIV2)
+                            .setWAVEGEN(target::tc::COUNT16::CTRLA::WAVEGEN::NPWM)
+                            .setENABLE(true);
+
+    while (tc->COUNT16.STATUS.getSYNCBUSY())
+      ;
+
+
+    tc->COUNT16.CC->setCC(0x4000);
+
+    if (pin & 1) {
+      target::PORT.PMUX[pin >> 1].setPMUXO(target::port::PMUX::PMUXO::E);
+    } else {
+      target::PORT.PMUX[pin >> 1].setPMUXE(target::port::PMUX::PMUXE::E);
+    }
+
+    target::PORT.PINCFG[pin].setPMUXEN(true);
+  }
+};
+
+class Device : public atsamd::i2c::Slave {
 public:
   struct __attribute__((packed)) {
     unsigned char command = Command::NONE;
     union {
       struct __attribute__((packed)) {
         int endSteps;
-        unsigned int endTime;
-        unsigned char startImmediatelly;
-      } setup;
+      } start;
     };
   } rxBuffer;
   unsigned char txBuffer[2];
 
   State state = State::IDLE;
-  Stopwatch stopwatch;
+  PWM pwm;
   int endSteps;
   unsigned int endTime;
 
   void init(int axis) {
-    stopwatch.init();
+
+    target::PM.APBCMASK.setTC(1, true);
+
+    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
+                               .setID(target::gclk::CLKCTRL::ID::TC1_TC2)
+                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
+                               .setCLKEN(true);
+
+    while (target::GCLK.STATUS.getSYNCBUSY())
+      ;
+
+    pwm.init(&target::TC1, PWM_PIN);
 
     // I2C
 
@@ -61,38 +101,31 @@ public:
                                .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
                                .setCLKEN(true);
 
+    while (target::GCLK.STATUS.getSYNCBUSY())
+      ;
+
+    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, &target::SERCOM0);
+
     // IRQ
 
     target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN);
     target::PORT.DIRSET.setDIRSET(1 << IRQ_PIN);
-
-
-    Slave::init(0x50, 0x51 + axis, atsamd::i2c::AddressMode::TWO, &target::SERCOM0);
   }
+
+  void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
+
+  void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
   void startNow() {
     state = State::RUNNING;
-    stopwatch.start();
-    start(1); // start the check timer
+    target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
   }
 
-  void stopNow() {
+  void stopNow(bool setIrq) {
     state = State::IDLE;
-    endSteps = 0;
-    endTime = 0;
-
     target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
-  }
-
-  void checkState() {
-
-    if (state == State::RUNNING) {
-      target::PORT.OUTTGL.setOUTTGL(1 << LED_PIN);    
-
-      // we should be stopped by step counter, this is a timeout check
-      if (stopwatch.getTime() > endTime) {
-        stopNow();
-      }
+    if (setIrq) {
+      irqSet();
     }
   }
 
@@ -100,35 +133,28 @@ public:
     return rxBuffer.command == command && index == paramsSize;
   }
 
-  virtual int getTxByte(int index) { return state; }
+  virtual int getTxByte(int index) {
+    irqClear();
+    return state;
+  }
 
   virtual bool setRxByte(int index, int value) {
 
     if (index < sizeof(rxBuffer)) {
       ((unsigned char *)&rxBuffer)[index] = value;
 
-      if (checkCommand(Command::SETUP, index, value, sizeof(rxBuffer.setup))) {
-        this->endSteps += rxBuffer.setup.endSteps;
-        this->endTime += rxBuffer.setup.endTime;
-        if (rxBuffer.setup.startImmediatelly) {
-          startNow();
-        }
+      if (checkCommand(Command::START, index, value, sizeof(rxBuffer.start))) {
+        this->endSteps += rxBuffer.start.endSteps;
+        startNow();
       }
 
-      if (checkCommand(Command::START, index, value, 0)) {
-        startNow();
+      if (checkCommand(Command::STOP, index, value, 0)) {
+        stopNow(false);
       }
 
       return true;
     } else {
       return true;
-    }
-  }
-
-  void onTimer() {
-    checkState();
-    if (state == State::RUNNING) {
-      start(2); // restart the check timer
     }
   }
 };

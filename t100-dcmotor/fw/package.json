@@ -12,7 +12,6 @@
   "silicon": {
     "sources": [
       "src/config-pin.cpp",
-      "src/stopwatch.cpp",
       "src/slave.cpp",
       "src/main.cpp"
     ],
