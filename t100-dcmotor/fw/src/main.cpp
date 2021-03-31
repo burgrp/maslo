@@ -26,35 +26,6 @@ enum State { IDLE = 0, RUNNING = 1, ERROR = 2 };
 
 enum Command { NONE = 0, START = 1, STOP = 2 };
 
-class PWM {
-  volatile target::tc::Peripheral *tc;
-
-public:
-  void init(volatile target::tc::Peripheral *tc, int pin) {
-    this->tc = tc;
-
-    tc->COUNT16.CTRLA = tc->COUNT16.CTRLA.bare()
-                            .setMODE(target::tc::COUNT16::CTRLA::MODE::COUNT16)
-                            .setPRESCALER(target::tc::COUNT16::CTRLA::PRESCALER::DIV2)
-                            .setWAVEGEN(target::tc::COUNT16::CTRLA::WAVEGEN::NPWM)
-                            .setENABLE(true);
-
-    while (tc->COUNT16.STATUS.getSYNCBUSY())
-      ;
-
-
-    tc->COUNT16.CC->setCC(0x4000);
-
-    if (pin & 1) {
-      target::PORT.PMUX[pin >> 1].setPMUXO(target::port::PMUX::PMUXO::E);
-    } else {
-      target::PORT.PMUX[pin >> 1].setPMUXE(target::port::PMUX::PMUXE::E);
-    }
-
-    target::PORT.PINCFG[pin].setPMUXEN(true);
-  }
-};
-
 class Device : public atsamd::i2c::Slave {
 public:
   struct __attribute__((packed)) {

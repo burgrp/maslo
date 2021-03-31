@@ -89,6 +89,7 @@ namespace target {
 #include "/home/paul/git/maslo/t100-dcmotor/fw/node_modules/@si14/si-generic-timer/generic-timer.cpp"
 #include "/home/paul/git/maslo/t100-dcmotor/fw/node_modules/@si14/si-systick-timer/systick-timer.cpp"
 #include "/home/paul/git/maslo/t100-dcmotor/fw/src/config-pin.cpp"
+#include "/home/paul/git/maslo/t100-dcmotor/fw/src/pwm.cpp"
 #include "/home/paul/git/maslo/t100-dcmotor/fw/src/slave.cpp"
 #include "/home/paul/git/maslo/t100-dcmotor/fw/src/main.cpp"
 

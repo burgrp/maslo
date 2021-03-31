@@ -12,6 +12,7 @@
   "silicon": {
     "sources": [
       "src/config-pin.cpp",
+      "src/pwm.cpp",
       "src/slave.cpp",
       "src/main.cpp"
     ],
