@@ -1,5 +1,3 @@
-// https://microchipdeveloper.com/32arm:samd21-sercom-i2c-slave-configuration
-
 namespace atsamd::i2c {
 
 enum AddressMode {

@@ -11,8 +11,10 @@
   },
   "silicon": {
     "sources": [
-      "slave.cpp",
-      "main.cpp"
+      "src/config-pin.cpp",
+      "src/stopwatch.cpp",
+      "src/slave.cpp",
+      "src/main.cpp"
     ],
     "symbols": {
       "ROM_START": "0x00000000",
