@@ -123,7 +123,9 @@ public:
   VNH7070 vnh7070;
   Encoder encoder;
 
-  //const int stopPrecision = 50;
+  const int stopPrecision = 20;
+
+  // const int stopPrecision = 50;
 
   void init(int axis) {
 
@@ -171,19 +173,11 @@ public:
   void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
   void checkState() {
-    
+
     int diff = state.endSteps - state.actSteps;
-    
-    // derive stop precision from current speed
-    // this is to allow stops in high speed, 
-    // which should not normally happen thanks to controlled kinematics
-    int stopPrecision = (state.speed - 40) * 3;
-    if (stopPrecision < 0) {
-      stopPrecision = 0;
-    }
 
     bool running = abs(diff) > stopPrecision;
-    
+
     if (state.running && !running) {
       irqSet();
     }

@@ -76,7 +76,7 @@ async function start() {
         console.info(state);
 
         await motor.setEndSteps(state.endSteps + 1000);
-        await motor.setSpeed(.3);
+        await motor.setSpeed(.15);
 
         while (true) {
             console.info(await motor.get());
