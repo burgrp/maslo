@@ -128,7 +128,7 @@ public:
   virtual int getTxByte(int index) {
     irqClear();
 
-    // send data in 7bits, due to I2C STOP problem
+    // send data in 7bits, due to the I2C STOP problem
 
     int lsb = index * 7;
 
