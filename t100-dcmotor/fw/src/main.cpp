@@ -41,8 +41,8 @@ public:
 };
 
 class EncoderCallback {
-  public:
-    virtual void addSteps(int steps) = 0;
+public:
+  virtual void addSteps(int steps) = 0;
 };
 
 class Encoder {
@@ -50,9 +50,10 @@ class Encoder {
   int pinB;
   int extInA;
 
-  EncoderCallback* callback;
+  EncoderCallback *callback;
+
 public:
-  void init(int pinA, int pinB, int extInA, EncoderCallback* callback) {
+  void init(int pinA, int pinB, int extInA, EncoderCallback *callback) {
 
     this->pinA = pinA;
     this->pinB = pinB;
@@ -88,8 +89,8 @@ public:
   void interruptHandlerEIC() {
     if (target::EIC.INTFLAG.getEXTINT(extInA)) {
       target::EIC.INTFLAG.setEXTINT(extInA, true);
-      //callback->addSteps((target::PORT.IN.getIN() >> pinA) & 1 != (target::PORT.IN.getIN() >> pinB) & 1? 1: -1);
-      callback->addSteps((target::PORT.IN.getIN() >> pinB) & 1 ? -1: 1);
+      // callback->addSteps((target::PORT.IN.getIN() >> pinA) & 1 != (target::PORT.IN.getIN() >> pinB) & 1? 1: -1);
+      callback->addSteps((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
     }
   }
 };
@@ -112,14 +113,17 @@ public:
 
   struct __attribute__((packed)) {
     unsigned char speed;
+    bool running : 1;
     bool endStops : 2;
-    unsigned char error : 6;
+    unsigned char error : 5;
     int actSteps;
     int endSteps;
   } state;
 
   VNH7070 vnh7070;
   Encoder encoder;
+
+  //const int stopPrecision = 50;
 
   void init(int axis) {
 
@@ -166,31 +170,48 @@ public:
 
   void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
-  void checkSteps() {
-    if (state.endSteps == state.actSteps) {
+  void checkState() {
+    
+    int diff = state.endSteps - state.actSteps;
+    
+    // derive stop precision from current speed
+    // this is to allow stops in high speed, 
+    // which should not normally happen thanks to controlled kinematics
+    int stopPrecision = (state.speed - 40) * 3;
+    if (stopPrecision < 0) {
+      stopPrecision = 0;
+    }
+
+    bool running = abs(diff) > stopPrecision;
+    
+    if (state.running && !running) {
+      irqSet();
+    }
+
+    state.running = running;
+
+    if (running) {
+      vnh7070.set(state.speed, diff > 0);
+      target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
+    } else {
       vnh7070.set(0, false);
       target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
-    } else {
-      bool direction = state.endSteps > state.actSteps;      
-      int speed = state.speed;
-      vnh7070.set(speed, direction);
-      target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
     }
   }
 
   void addSteps(int steps) {
     state.actSteps += steps;
-    checkSteps();
+    checkState();
   }
 
   void setSpeed(unsigned int speed) {
     state.speed = speed;
-    checkSteps();
+    checkState();
   }
 
   void setEndSteps(int endSteps) {
-    this->state.endSteps = endSteps;
-    checkSteps();
+    state.endSteps = endSteps;
+    checkState();
   }
 
   bool checkCommand(Command command, int index, int value, int paramsSize) {

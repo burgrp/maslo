@@ -15,7 +15,7 @@ function createMotor(i2c, address) {
             buffer.writeUInt8(Math.round(0xFF * speed), 1);
             await i2c.i2cWrite(address, buffer);
         },
-        
+
         async setEndSteps(endSteps) {
             let buffer = Buffer.alloc(5);
             buffer.writeUInt8(COMMAND_SET_END_STEPS, 0);
@@ -44,8 +44,9 @@ function createMotor(i2c, address) {
 
             return {
                 speed: buffer8.readUInt8(0),
-                endStops: [!!(buffer8.readUInt8(1) & 1), !!(buffer8.readUInt8(1) >> 1 & 1)],
-                error: buffer8.readUInt8(1) >> 2,
+                running: !!(buffer8.readUInt8(1) & 1),
+                endStops: [!!(buffer8.readUInt8(1) >> 1 & 1), !!(buffer8.readUInt8(1) >> 2 & 1)],
+                error: buffer8.readUInt8(1) >> 3,
                 actSteps: buffer8.readInt32LE(2),
                 endSteps: buffer8.readInt32LE(6)
             }
@@ -69,16 +70,17 @@ async function start() {
 
         const motor = createMotor(i2c, 0x50);
 
-        const maxSpeed = 20;
+        const maxSpeed = 100;
 
-        console.info(await motor.get());
+        let state = await motor.get();
+        console.info(state);
 
-        await motor.setEndSteps(1);
-        await motor.setSpeed(.1);
+        await motor.setEndSteps(state.endSteps + 1000);
+        await motor.setSpeed(.3);
 
-        while(true) {
+        while (true) {
             console.info(await motor.get());
-            await wait(100); 
+            await wait(100);
         }
 
         // for (let speed = 0; speed <= maxSpeed; speed++) {
@@ -97,7 +99,6 @@ async function start() {
         //     console.info(await motor.get());
         // }
 
-        
     } finally {
         await i2c.close();
     }
