@@ -1,7 +1,7 @@
 int LED_PIN = 22;
 int IRQ_PIN = 5;
 int ADDR_PIN = 3;
-int SAFEBOOT_PIN = 8;
+int SAFEBOOT_PIN = 23;
 
 int PWM_PIN = 16;
 int INA_PIN = 24;
@@ -9,6 +9,9 @@ int INB_PIN = 25;
 int HALL_A_PIN = 6;
 int HALL_B_PIN = 7;
 int HALL_A_EXTINT = 6;
+
+int STOP1_PIN = 8;
+int STOP2_PIN = 9;
 
 class VNH7070 {
   int pinInA;
@@ -97,7 +100,7 @@ public:
 
 enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
 
-class Device : public atsamd::i2c::Slave, EncoderCallback {
+class Device : public atsamd::i2c::Slave, EncoderCallback, genericTimer::Timer {
 public:
   struct __attribute__((packed)) {
     unsigned char command = Command::NONE;
@@ -114,7 +117,8 @@ public:
   struct __attribute__((packed)) {
     unsigned char speed;
     bool running : 1;
-    bool endStops : 2;
+    bool endStop1 : 1;
+    bool endStop2 : 1;
     unsigned char error : 5;
     int actSteps;
     int endSteps;
@@ -123,7 +127,8 @@ public:
   VNH7070 vnh7070;
   Encoder encoder;
 
-  const int stopPrecision = 20;
+  const int stopSteps = 20;
+  const int loPriocheckMs = 100;
 
   // const int stopPrecision = 50;
 
@@ -166,6 +171,14 @@ public:
 
     target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN);
     target::PORT.DIRSET.setDIRSET(1 << IRQ_PIN);
+
+    // STOPs
+
+    target::PORT.PINCFG[STOP1_PIN].setINEN(true).setPULLEN(true);
+    target::PORT.PINCFG[STOP2_PIN].setINEN(true).setPULLEN(true);
+
+    // start check timer
+    start(loPriocheckMs / 10);
   }
 
   void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
@@ -176,13 +189,12 @@ public:
 
     int diff = state.endSteps - state.actSteps;
 
-    bool running = abs(diff) > stopPrecision;
+    bool running = abs(diff) > stopSteps && !state.endStop1 && !state.endStop2 && state.error == 0;
 
-    if (state.running && !running) {
+    if (state.running != running) {
+      state.running = running;
       irqSet();
     }
-
-    state.running = running;
 
     if (running) {
       vnh7070.set(state.speed, diff > 0);
@@ -250,6 +262,15 @@ public:
     } else {
       return true;
     }
+  }
+
+  void onTimer() {
+    state.endStop1 = target::PORT.IN.getIN() >> STOP1_PIN & 1;
+    state.endStop2 = target::PORT.IN.getIN() >> STOP2_PIN & 1;
+
+    checkState();
+
+    start(loPriocheckMs / 10);
   }
 };
 
