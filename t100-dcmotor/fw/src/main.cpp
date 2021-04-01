@@ -6,6 +6,9 @@ int SAFEBOOT_PIN = 8;
 int PWM_PIN = 16;
 int INA_PIN = 24;
 int INB_PIN = 25;
+int HALL_A_PIN = 6;
+int HALL_B_PIN = 7;
+int HALL_A_EXTINT = 6;
 
 class VNH7070 {
   int pinInA;
@@ -29,7 +32,7 @@ public:
     pwm.set(speed);
     if (speed) {
       if (direction) {
-        target::PORT.OUTSET.setOUTSET(1 << pinInB);        
+        target::PORT.OUTSET.setOUTSET(1 << pinInB);
       } else {
         target::PORT.OUTSET.setOUTSET(1 << pinInA);
       }
@@ -37,17 +40,70 @@ public:
   }
 };
 
-enum Command { NONE = 0, SET_MOTOR = 1, SET_END_STEPS = 2 };
+class EncoderCallback {
+  public:
+    virtual void addSteps(int steps) = 0;
+};
 
-class Device : public atsamd::i2c::Slave {
+class Encoder {
+  int pinA;
+  int pinB;
+  int extInA;
+
+  EncoderCallback* callback;
+public:
+  void init(int pinA, int pinB, int extInA, EncoderCallback* callback) {
+
+    this->pinA = pinA;
+    this->pinB = pinB;
+    this->extInA = extInA;
+    this->callback = callback;
+
+    target::PORT.OUTSET.setOUTSET(1 << pinA | 1 << pinB);
+    target::PORT.PINCFG[pinA].setINEN(true).setPULLEN(true).setPMUXEN(true);
+    target::PORT.PINCFG[pinB].setINEN(true).setPULLEN(true).setPMUXEN(true);
+
+    if (pinA & 1) {
+      target::PORT.PMUX[pinA >> 1].setPMUXO(target::port::PMUX::PMUXO::A);
+    } else {
+      target::PORT.PMUX[pinA >> 1].setPMUXE(target::port::PMUX::PMUXE::A);
+    }
+
+    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
+                               .setID(target::gclk::CLKCTRL::ID::EIC)
+                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
+                               .setCLKEN(true);
+
+    while (target::GCLK.STATUS.getSYNCBUSY())
+      ;
+
+    target::EIC.CTRL = target::EIC.CTRL.bare().setENABLE(true);
+    while (target::EIC.STATUS)
+      ;
+
+    target::EIC.CONFIG.setSENSE(extInA, target::eic::CONFIG::SENSE::RISE);
+    target::EIC.INTENSET.setEXTINT(extInA, true);
+  }
+
+  void interruptHandlerEIC() {
+    if (target::EIC.INTFLAG.getEXTINT(extInA)) {
+      target::EIC.INTFLAG.setEXTINT(extInA, true);
+      //callback->addSteps((target::PORT.IN.getIN() >> pinA) & 1 != (target::PORT.IN.getIN() >> pinB) & 1? 1: -1);
+      callback->addSteps((target::PORT.IN.getIN() >> pinB) & 1 ? -1: 1);
+    }
+  }
+};
+
+enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
+
+class Device : public atsamd::i2c::Slave, EncoderCallback {
 public:
   struct __attribute__((packed)) {
     unsigned char command = Command::NONE;
     union {
       struct __attribute__((packed)) {
         unsigned char speed;
-        bool direction;
-      } setMotor;
+      } setSpeed;
       struct __attribute__((packed)) {
         int steps;
       } setEndSteps;
@@ -56,13 +112,14 @@ public:
 
   struct __attribute__((packed)) {
     unsigned char speed;
-    bool direction: 1;
-    unsigned char error: 7;
-    unsigned int actSteps;
-    unsigned int endSteps;
+    bool endStops : 2;
+    unsigned char error : 6;
+    int actSteps;
+    int endSteps;
   } state;
 
   VNH7070 vnh7070;
+  Encoder encoder;
 
   void init(int axis) {
 
@@ -76,6 +133,7 @@ public:
     while (target::GCLK.STATUS.getSYNCBUSY())
       ;
 
+    encoder.init(HALL_A_PIN, HALL_B_PIN, HALL_A_EXTINT, this);
     vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, &target::TC1);
 
     // I2C
@@ -102,22 +160,37 @@ public:
 
     target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN);
     target::PORT.DIRSET.setDIRSET(1 << IRQ_PIN);
-
   }
 
   void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
 
   void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
-  void setMotor(unsigned int speed, bool direction) {
-    state.speed = speed;
-    state.direction = direction;
-    vnh7070.set(speed, direction);
-    if (speed > 0) {
-      target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
-    } else {
+  void checkSteps() {
+    if (state.endSteps == state.actSteps) {
+      vnh7070.set(0, false);
       target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
+    } else {
+      bool direction = state.endSteps > state.actSteps;      
+      int speed = state.speed;
+      vnh7070.set(speed, direction);
+      target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
     }
+  }
+
+  void addSteps(int steps) {
+    state.actSteps += steps;
+    checkSteps();
+  }
+
+  void setSpeed(unsigned int speed) {
+    state.speed = speed;
+    checkSteps();
+  }
+
+  void setEndSteps(int endSteps) {
+    this->state.endSteps = endSteps;
+    checkSteps();
   }
 
   bool checkCommand(Command command, int index, int value, int paramsSize) {
@@ -150,12 +223,12 @@ public:
     if (index < sizeof(rxBuffer)) {
       ((unsigned char *)&rxBuffer)[index] = value;
 
-      if (checkCommand(Command::SET_MOTOR, index, value, sizeof(rxBuffer.setMotor))) {
-        setMotor(rxBuffer.setMotor.speed, rxBuffer.setMotor.direction);
+      if (checkCommand(Command::SET_SPEED, index, value, sizeof(rxBuffer.setSpeed))) {
+        setSpeed(rxBuffer.setSpeed.speed);
       }
 
-      if (checkCommand(Command::SET_END_STEPS, index, value, sizeof(rxBuffer.setMotor))) {
-        this->state.endSteps = rxBuffer.setEndSteps.steps;
+      if (checkCommand(Command::SET_END_STEPS, index, value, sizeof(rxBuffer.setEndSteps))) {
+        setEndSteps(rxBuffer.setEndSteps.steps);
       }
 
       return true;
@@ -168,6 +241,7 @@ public:
 Device device;
 
 void interruptHandlerSERCOM0() { device.interruptHandlerSERCOM(); }
+void interruptHandlerEIC() { device.encoder.interruptHandlerEIC(); }
 
 void initApplication() {
 
@@ -181,4 +255,5 @@ void initApplication() {
 
   // enable interrupts
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
+  target::NVIC.ISER.setSETENA(1 << target::interrupts::External::EIC);
 }

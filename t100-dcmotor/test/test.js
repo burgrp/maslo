@@ -2,18 +2,24 @@ const I2C = require("@burgrp/i2c");
 
 function createMotor(i2c, address) {
 
-    const COMMAND_SET_MOTOR = 1;
-    const COMMAND_END_STEPS = 2;
+    const COMMAND_SET_SPEED = 1;
+    const COMMAND_SET_END_STEPS = 2;
 
     const STATE = ["IDLE", "RUNNING", "ERROR"];
 
     return {
 
-        async setMotor(speed, direction) {
-            let buffer = Buffer.alloc(3);
-            buffer.writeUInt8(COMMAND_SET_MOTOR, 0);
+        async setSpeed(speed) {
+            let buffer = Buffer.alloc(2);
+            buffer.writeUInt8(COMMAND_SET_SPEED, 0);
             buffer.writeUInt8(Math.round(0xFF * speed), 1);
-            buffer.writeUInt8(direction ? 1 : 0, 2);
+            await i2c.i2cWrite(address, buffer);
+        },
+        
+        async setEndSteps(endSteps) {
+            let buffer = Buffer.alloc(5);
+            buffer.writeUInt8(COMMAND_SET_END_STEPS, 0);
+            buffer.writeInt32LE(endSteps, 1);
             await i2c.i2cWrite(address, buffer);
         },
 
@@ -38,10 +44,10 @@ function createMotor(i2c, address) {
 
             return {
                 speed: buffer8.readUInt8(0),
-                direction: !!(buffer8.readUInt8(1) & 1),
-                error: buffer8.readUInt8(1) >> 1,
-                actSteps: buffer8.readUInt32LE(2),
-                endSteps: buffer8.readUInt32LE(6)
+                endStops: [!!(buffer8.readUInt8(1) & 1), !!(buffer8.readUInt8(1) >> 1 & 1)],
+                error: buffer8.readUInt8(1) >> 2,
+                actSteps: buffer8.readInt32LE(2),
+                endSteps: buffer8.readInt32LE(6)
             }
         }
 
@@ -65,23 +71,33 @@ async function start() {
 
         const maxSpeed = 20;
 
-        for (let speed = 0; speed <= maxSpeed; speed++) {
-            console.info(speed);
-            await motor.setMotor(speed / 100, true);
-            await wait(100);
+        console.info(await motor.get());
+
+        await motor.setEndSteps(1);
+        await motor.setSpeed(.1);
+
+        while(true) {
             console.info(await motor.get());
+            await wait(100); 
         }
 
-        await wait(3000);
+        // for (let speed = 0; speed <= maxSpeed; speed++) {
+        //     console.info(speed);
+        //     await motor.setSpeed(speed / 100);
+        //     await wait(100);
+        //     console.info(await motor.get());
+        // }
 
-        for (let speed = maxSpeed; speed >= 0; speed--) {
-            console.info(speed);
-            await motor.setMotor(speed / 100, true);
-            await wait(100);
-            console.info(await motor.get());
-        }
+        // await wait(3000);
 
-        //await new Promise(r => setTimeout(r, 10000));
+        // for (let speed = maxSpeed; speed >= 0; speed--) {
+        //     console.info(speed);
+        //     await motor.setSpeed(speed / 100);
+        //     await wait(100);
+        //     console.info(await motor.get());
+        // }
+
+        
     } finally {
         await i2c.close();
     }
