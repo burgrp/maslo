@@ -41,7 +41,6 @@ enum Command { NONE = 0, SET_MOTOR = 1, SET_END_STEPS = 2 };
 
 class Device : public atsamd::i2c::Slave {
 public:
-  
   struct __attribute__((packed)) {
     unsigned char command = Command::NONE;
     union {
@@ -56,8 +55,12 @@ public:
   } rxBuffer;
 
   struct __attribute__((packed)) {
-    unsigned char speed;
-    bool direction;
+    // unsigned char speed;
+    // bool direction: 1;
+    // unsigned char error: 7;
+    unsigned char a = 1;
+    unsigned char b = 1;
+    unsigned char c = 0xFF;
   } txBuffer;
 
   VNH7070 vnh7070;
@@ -124,7 +127,24 @@ public:
 
   virtual int getTxByte(int index) {
     irqClear();
-    return 0;
+
+    // send data in 7bits, due to I2C STOP problem
+
+    int lsb = index * 7;
+
+    unsigned char *raw = ((unsigned char *)&txBuffer);
+
+    unsigned char byte = 0;
+
+    for (int b = 0; b < 7; b++) {
+      int rawIndex = b + lsb;
+      int byteIndex = rawIndex >> 3;
+      int bitIndex = rawIndex & 0x07;
+      int rawByte = byteIndex < sizeof(txBuffer) ? raw[byteIndex] : 0;
+      byte |= ((rawByte >> bitIndex) & 1) << b;
+    }
+
+    return byte;
   }
 
   virtual bool setRxByte(int index, int value) {

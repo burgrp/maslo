@@ -18,7 +18,7 @@ function createMotor(i2c, address) {
         },
 
         async get() {
-            let buffer = await i2c.i2cRead(address, 1);
+            let buffer = await i2c.i2cRead(address, 15);
             return {
                 state: buffer
             }
@@ -42,7 +42,7 @@ async function start() {
 
         const motor = createMotor(i2c, 0x50);
 
-        const maxSpeed = 100;
+        const maxSpeed = 30;
 
         for (let speed = 0; speed <= maxSpeed; speed++) {
             console.info(speed);
