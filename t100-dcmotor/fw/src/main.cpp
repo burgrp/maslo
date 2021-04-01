@@ -29,9 +29,9 @@ public:
     pwm.set(speed);
     if (speed) {
       if (direction) {
-        target::PORT.OUTSET.setOUTSET(1 << pinInA);
+        target::PORT.OUTSET.setOUTSET(1 << pinInB);        
       } else {
-        target::PORT.OUTSET.setOUTSET(1 << pinInB);
+        target::PORT.OUTSET.setOUTSET(1 << pinInA);
       }
     }
   }
@@ -55,12 +55,9 @@ public:
   } rxBuffer;
 
   struct __attribute__((packed)) {
-    // unsigned char speed;
-    // bool direction: 1;
-    // unsigned char error: 7;
-    unsigned char a = 1;
-    unsigned char b = 1;
-    unsigned char c = 0xFF;
+    unsigned char speed;
+    bool direction: 1;
+    unsigned char error: 7;
   } txBuffer;
 
   VNH7070 vnh7070;
@@ -112,7 +109,9 @@ public:
 
   void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
-  void set(unsigned int speed, bool direction) {
+  void setMotor(unsigned int speed, bool direction) {
+    txBuffer.speed = speed;
+    txBuffer.direction = direction;
     vnh7070.set(speed, direction);
     if (speed > 0) {
       target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
@@ -130,21 +129,20 @@ public:
 
     // send data in 7bits, due to the I2C STOP problem
 
-    int lsb = index * 7;
-
     unsigned char *raw = ((unsigned char *)&txBuffer);
 
-    unsigned char byte = 0;
+    unsigned char byte7 = 0;
 
-    for (int b = 0; b < 7; b++) {
-      int rawIndex = b + lsb;
-      int byteIndex = rawIndex >> 3;
-      int bitIndex = rawIndex & 0x07;
-      int rawByte = byteIndex < sizeof(txBuffer) ? raw[byteIndex] : 0;
-      byte |= ((rawByte >> bitIndex) & 1) << b;
+    int absBitIndexBase = index * 7;
+    for (int bitIndex7 = 0; bitIndex7 < 7; bitIndex7++) {
+      int absBitIndex = bitIndex7 + absBitIndexBase;
+      int byteIndex8 = absBitIndex >> 3;
+      int bitIndex8 = absBitIndex & 0x07;
+      int byte8 = byteIndex8 < sizeof(txBuffer) ? raw[byteIndex8] : 0;
+      byte7 |= ((byte8 >> bitIndex8) & 1) << bitIndex7;
     }
 
-    return byte;
+    return byte7;
   }
 
   virtual bool setRxByte(int index, int value) {
@@ -153,12 +151,7 @@ public:
       ((unsigned char *)&rxBuffer)[index] = value;
 
       if (checkCommand(Command::SET_MOTOR, index, value, sizeof(rxBuffer.setMotor))) {
-        vnh7070.set(rxBuffer.setMotor.speed, rxBuffer.setMotor.direction);
-        if (rxBuffer.setMotor.speed > 0) {
-          target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
-        } else {
-          target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
-        }
+        setMotor(rxBuffer.setMotor.speed, rxBuffer.setMotor.direction);
       }
 
       if (checkCommand(Command::SET_END_STEPS, index, value, sizeof(rxBuffer.setMotor))) {
