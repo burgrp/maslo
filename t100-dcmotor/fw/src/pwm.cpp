@@ -14,8 +14,9 @@ public:
     while (tc->COUNT8.STATUS.getSYNCBUSY())
       ;
 
-
-    tc->COUNT8.CC->setCC(0x80);
+    // needs to be 0xFE to achieve full-on on CC=0xFF
+    tc->COUNT8.PER.setPER(0xFE);
+    tc->COUNT8.CC[0].setCC(0);
 
     if (pin & 1) {
       target::PORT.PMUX[pin >> 1].setPMUXO(target::port::PMUX::PMUXO::E);
@@ -24,5 +25,9 @@ public:
     }
 
     target::PORT.PINCFG[pin].setPMUXEN(true);
+  }
+
+  void set(unsigned int dc) {
+    tc->COUNT8.CC[0].setCC(dc);
   }
 };
