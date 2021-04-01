@@ -58,12 +58,11 @@ public:
     unsigned char speed;
     bool direction: 1;
     unsigned char error: 7;
-  } txBuffer;
+    unsigned int actSteps;
+    unsigned int endSteps;
+  } state;
 
   VNH7070 vnh7070;
-
-  int endSteps;
-  int actSteps;
 
   void init(int axis) {
 
@@ -103,6 +102,7 @@ public:
 
     target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN);
     target::PORT.DIRSET.setDIRSET(1 << IRQ_PIN);
+
   }
 
   void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
@@ -110,8 +110,8 @@ public:
   void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
 
   void setMotor(unsigned int speed, bool direction) {
-    txBuffer.speed = speed;
-    txBuffer.direction = direction;
+    state.speed = speed;
+    state.direction = direction;
     vnh7070.set(speed, direction);
     if (speed > 0) {
       target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
@@ -129,7 +129,7 @@ public:
 
     // send data in 7bits, due to the I2C STOP problem
 
-    unsigned char *raw = ((unsigned char *)&txBuffer);
+    unsigned char *raw = ((unsigned char *)&state);
 
     unsigned char byte7 = 0;
 
@@ -138,7 +138,7 @@ public:
       int absBitIndex = bitIndex7 + absBitIndexBase;
       int byteIndex8 = absBitIndex >> 3;
       int bitIndex8 = absBitIndex & 0x07;
-      int byte8 = byteIndex8 < sizeof(txBuffer) ? raw[byteIndex8] : 0;
+      int byte8 = byteIndex8 < sizeof(state) ? raw[byteIndex8] : 0;
       byte7 |= ((byte8 >> bitIndex8) & 1) << bitIndex7;
     }
 
@@ -155,7 +155,7 @@ public:
       }
 
       if (checkCommand(Command::SET_END_STEPS, index, value, sizeof(rxBuffer.setMotor))) {
-        this->endSteps = rxBuffer.setEndSteps.steps;
+        this->state.endSteps = rxBuffer.setEndSteps.steps;
       }
 
       return true;

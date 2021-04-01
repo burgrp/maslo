@@ -18,7 +18,7 @@ function createMotor(i2c, address) {
         },
 
         async get() {
-            let data8 = new Array(3).fill(0);
+            let data8 = new Array(1 + 1 + 4 + 4).fill(0);
             let data7 = [...(await i2c.i2cRead(address, Math.ceil(data8.length / 7 * 8)))];
 
             for (let byteIndex7 = 0; byteIndex7 < data7.length; byteIndex7++) {
@@ -39,6 +39,9 @@ function createMotor(i2c, address) {
             return {
                 speed: buffer8.readUInt8(0),
                 direction: !!(buffer8.readUInt8(1) & 1),
+                error: buffer8.readUInt8(1) >> 1,
+                actSteps: buffer8.readUInt32LE(2),
+                endSteps: buffer8.readUInt32LE(6)
             }
         }
 
