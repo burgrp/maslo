@@ -20,45 +20,6 @@ const int LO_PRIO_CHECK_MS = 100;
 
 enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
 
-class ADC {
-public:
-  void init(int pin) {
-
-    target::PM.APBCMASK.setADC(true);
-
-    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
-                               .setID(target::gclk::CLKCTRL::ID::ADC)
-                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
-                               .setCLKEN(true);
-
-    if (pin & 1) {
-      target::PORT.PMUX[pin >> 1].setPMUXO(target::port::PMUX::PMUXO::B);
-    } else {
-      target::PORT.PMUX[pin >> 1].setPMUXE(target::port::PMUX::PMUXE::B);
-    }
-
-    target::ADC.CTRLB = target::ADC.CTRLB.bare().setRESSEL(target::adc::CTRLB::RESSEL::_8BIT);
-    target::ADC.AVGCTRL.setSAMPLENUM(target::adc::AVGCTRL::SAMPLENUM::_1024_SAMPLES).setADJRES(4);
-    target::ADC.INPUTCTRL.setMUXNEG(target::adc::INPUTCTRL::MUXNEG::GND)
-        .setMUXPOS(target::adc::INPUTCTRL::MUXPOS::PIN0);
-    target::ADC.REFCTRL.setREFSEL(target::adc::REFCTRL::REFSEL::INTVCC1);
-    target::ADC.CTRLA = target::ADC.CTRLA.bare().setENABLE(true);
-
-    while (target::ADC.STATUS)
-      ;
-  }
-
-  const int x = 1540 * 3300 / (2 * 1500);
-
-  int getValue() {
-    target::ADC.SWTRIG.setSTART(true);
-    while (!target::ADC.INTFLAG.getRESRDY())
-      ;
-
-    return (target::ADC.RESULT.getRESULT() * x) >> 8;
-  }
-};
-
 class Device : public atsamd::i2c::Slave, EncoderCallback, genericTimer::Timer {
 public:
   struct __attribute__((packed)) {
@@ -85,8 +46,7 @@ public:
   } state;
 
   VNH7070 vnh7070;
-  Encoder encoder;
-  ADC adc;
+  Encoder encoder;  
 
   void init(int axis) {
 
@@ -102,11 +62,22 @@ public:
     while (target::GCLK.STATUS.getSYNCBUSY())
       ;
 
-    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, SEL0_PIN, &target::TC1);
+    // ADC for WNH7070 current sense
+
+    target::PM.APBCMASK.setADC(true);
+
+    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
+                               .setID(target::gclk::CLKCTRL::ID::ADC)
+                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
+                               .setCLKEN(true);
+
+    // init VNH7070
+
+    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, SEL0_PIN, CS_PIN, &target::TC1);
+
+    // init encoder
 
     encoder.init(HALL_A_PIN, HALL_B_PIN, HALL_A_EXTINT, this);
-
-    adc.init(CS_PIN);
 
     // I2C
 
@@ -229,7 +200,7 @@ public:
     state.endStop1 = target::PORT.IN.getIN() >> STOP1_PIN & 1;
     state.endStop2 = target::PORT.IN.getIN() >> STOP2_PIN & 1;
 
-    state.current = adc.getValue();
+    state.current = vnh7070.getCurrentmA();
 
     checkState();
 
