@@ -71,7 +71,7 @@ async function start() {
 
         const motor = createMotor(i2c, 0x50);
 
-        const maxSpeed = 0;
+        const maxSpeed = 50;
 
         let state = await motor.get();
         console.info(state);

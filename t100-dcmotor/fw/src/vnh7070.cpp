@@ -7,7 +7,7 @@ class VNH7070 {
   PWM pwm;
 
 public:
-  void init(int pinInA, int pinInB, int pinPwm, int pinSel0, volatile target::tc::Peripheral *tcPwm) {
+  void init(int pinInA, int pinInB, int pinPwm, int pinSel0, int pinCs, volatile target::tc::Peripheral *tcPwm) {
 
     if (pinCs & 1) {
       target::PORT.PMUX[pinCs >> 1].setPMUXO(target::port::PMUX::PMUXO::B);
@@ -16,6 +16,9 @@ public:
     }
 
     target::ADC.CTRLB = target::ADC.CTRLB.bare().setRESSEL(target::adc::CTRLB::RESSEL::_8BIT);
+    target::ADC.CALIB.setBIAS_CAL(target::NVMCALIB.SOFT1.getADC_BIASCAL());
+    target::ADC.CALIB.setLINEARITY_CAL((target::NVMCALIB.SOFT1.getADC_LINEARITY_MSB() << 5) | target::NVMCALIB.SOFT0.getADC_LINEARITY_LSB());
+    
     target::ADC.AVGCTRL.setSAMPLENUM(target::adc::AVGCTRL::SAMPLENUM::_1024_SAMPLES).setADJRES(4);
     target::ADC.INPUTCTRL.setMUXNEG(target::adc::INPUTCTRL::MUXNEG::GND)
         .setMUXPOS(target::adc::INPUTCTRL::MUXPOS::PIN0);
