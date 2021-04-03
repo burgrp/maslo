@@ -71,13 +71,13 @@ async function start() {
 
         const motor = createMotor(i2c, 0x50);
 
-        const maxSpeed = 50;
+        const maxSpeed = 100;
 
         let state = await motor.get();
         console.info(state);
 
         await motor.setSpeed(0);
-        await motor.setEndSteps(state.endSteps - 100000);
+        await motor.setEndSteps(state.endSteps + 1000);
 
 
         for (let speed = 0; speed <= maxSpeed; speed++) {

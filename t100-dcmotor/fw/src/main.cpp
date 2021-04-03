@@ -15,7 +15,8 @@ const int HALL_A_EXTINT = 6;
 const int STOP1_PIN = 8;
 const int STOP2_PIN = 9;
 
-const int STOP_STEPS = 20;
+const int STOP_TOLERANCE = 2;
+const int MIN_SPEED = 50;
 const int LO_PRIO_CHECK_MS = 100;
 
 enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
@@ -46,7 +47,7 @@ public:
   } state;
 
   VNH7070 vnh7070;
-  Encoder encoder;  
+  Encoder encoder;
 
   void init(int axis) {
 
@@ -121,7 +122,7 @@ public:
 
     int diff = state.endSteps - state.actSteps;
 
-    bool running = abs(diff) > STOP_STEPS && !state.endStop1 && !state.endStop2 && state.error == 0;
+    bool running = state.speed && abs(diff) > STOP_TOLERANCE && !state.endStop1 && !state.endStop2 && state.error == 0;
 
     if (state.running != running) {
       state.running = running;
@@ -129,7 +130,15 @@ public:
     }
 
     if (running) {
-      vnh7070.set(state.speed, diff > 0);
+      int speedLimit = abs(diff >> 2) + MIN_SPEED;
+      int speed = state.speed;
+      if (speed > speedLimit) {
+        speed = speedLimit;
+      }
+      if (speed < MIN_SPEED) {
+        speed = MIN_SPEED;
+      }
+      vnh7070.set(speed, diff > 0);
       target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
     } else {
       vnh7070.set(0, false);
