@@ -13,6 +13,8 @@
     "sources": [
       "src/config-pin.cpp",
       "src/pwm.cpp",
+      "src/encoder.cpp",
+      "src/vnh7070.cpp",
       "src/slave.cpp",
       "src/main.cpp"
     ],

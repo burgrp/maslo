@@ -24,7 +24,7 @@ function createMotor(i2c, address) {
         },
 
         async get() {
-            let data8 = new Array(1 + 1 + 4 + 4).fill(0);
+            let data8 = new Array(1 + 1 + 4 + 4 + 2).fill(0);
             let data7 = [...(await i2c.i2cRead(address, Math.ceil(data8.length / 7 * 8)))];
 
             for (let byteIndex7 = 0; byteIndex7 < data7.length; byteIndex7++) {
@@ -48,7 +48,8 @@ function createMotor(i2c, address) {
                 endStops: [!!(buffer8.readUInt8(1) >> 1 & 1), !!(buffer8.readUInt8(1) >> 2 & 1)],
                 error: buffer8.readUInt8(1) >> 3,
                 actSteps: buffer8.readInt32LE(2),
-                endSteps: buffer8.readInt32LE(6)
+                endSteps: buffer8.readInt32LE(6),
+                currentmA: buffer8.readInt16LE(10)
             }
         }
 
@@ -70,13 +71,21 @@ async function start() {
 
         const motor = createMotor(i2c, 0x50);
 
-        const maxSpeed = 100;
+        const maxSpeed = 0;
 
         let state = await motor.get();
         console.info(state);
 
-        await motor.setEndSteps(state.endSteps + 1000);
-        await motor.setSpeed(.15);
+        await motor.setSpeed(0);
+        await motor.setEndSteps(state.endSteps - 100000);
+
+
+        for (let speed = 0; speed <= maxSpeed; speed++) {
+            console.info(speed);
+            await motor.setSpeed(speed / 100);
+            await wait(1);
+            console.info(await motor.get());
+        }
 
         while (true) {
             console.info(await motor.get());

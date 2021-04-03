@@ -1,104 +1,63 @@
-int LED_PIN = 22;
-int IRQ_PIN = 5;
-int ADDR_PIN = 3;
-int SAFEBOOT_PIN = 23;
+const int LED_PIN = 22;
+const int IRQ_PIN = 5;
+const int ADDR_PIN = 3;
+const int SAFEBOOT_PIN = 23;
 
-int PWM_PIN = 16;
-int INA_PIN = 24;
-int INB_PIN = 25;
-int HALL_A_PIN = 6;
-int HALL_B_PIN = 7;
-int HALL_A_EXTINT = 6;
+const int INA_PIN = 24;
+const int INB_PIN = 25;
+const int PWM_PIN = 16;
+const int SEL0_PIN = 23;
+const int CS_PIN = 2;
+const int HALL_A_PIN = 6;
+const int HALL_B_PIN = 7;
+const int HALL_A_EXTINT = 6;
 
-int STOP1_PIN = 8;
-int STOP2_PIN = 9;
+const int STOP1_PIN = 8;
+const int STOP2_PIN = 9;
 
-class VNH7070 {
-  int pinInA;
-  int pinInB;
+const int STOP_STEPS = 20;
+const int LO_PRIO_CHECK_MS = 100;
 
-  PWM pwm;
+enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
 
+class ADC {
 public:
-  void init(int pinInA, int pinInB, int pinPwm, volatile target::tc::Peripheral *tcPwm) {
+  void init(int pin) {
 
-    pwm.init(tcPwm, pinPwm);
-
-    this->pinInA = pinInA;
-    this->pinInB = pinInB;
-
-    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB);
-    target::PORT.DIRSET.setDIRSET(1 << pinInA | 1 << pinInB);
-  }
-  void set(unsigned int speed, bool direction) {
-    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB);
-    pwm.set(speed);
-    if (speed) {
-      if (direction) {
-        target::PORT.OUTSET.setOUTSET(1 << pinInB);
-      } else {
-        target::PORT.OUTSET.setOUTSET(1 << pinInA);
-      }
-    }
-  }
-};
-
-class EncoderCallback {
-public:
-  virtual void addSteps(int steps) = 0;
-};
-
-class Encoder {
-  int pinA;
-  int pinB;
-  int extInA;
-
-  EncoderCallback *callback;
-
-public:
-  void init(int pinA, int pinB, int extInA, EncoderCallback *callback) {
-
-    this->pinA = pinA;
-    this->pinB = pinB;
-    this->extInA = extInA;
-    this->callback = callback;
-
-    target::PORT.OUTSET.setOUTSET(1 << pinA | 1 << pinB);
-    target::PORT.PINCFG[pinA].setINEN(true).setPULLEN(true).setPMUXEN(true);
-    target::PORT.PINCFG[pinB].setINEN(true).setPULLEN(true).setPMUXEN(true);
-
-    if (pinA & 1) {
-      target::PORT.PMUX[pinA >> 1].setPMUXO(target::port::PMUX::PMUXO::A);
-    } else {
-      target::PORT.PMUX[pinA >> 1].setPMUXE(target::port::PMUX::PMUXE::A);
-    }
+    target::PM.APBCMASK.setADC(true);
 
     target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
-                               .setID(target::gclk::CLKCTRL::ID::EIC)
+                               .setID(target::gclk::CLKCTRL::ID::ADC)
                                .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
                                .setCLKEN(true);
 
-    while (target::GCLK.STATUS.getSYNCBUSY())
-      ;
+    if (pin & 1) {
+      target::PORT.PMUX[pin >> 1].setPMUXO(target::port::PMUX::PMUXO::B);
+    } else {
+      target::PORT.PMUX[pin >> 1].setPMUXE(target::port::PMUX::PMUXE::B);
+    }
 
-    target::EIC.CTRL = target::EIC.CTRL.bare().setENABLE(true);
-    while (target::EIC.STATUS)
-      ;
+    target::ADC.CTRLB = target::ADC.CTRLB.bare().setRESSEL(target::adc::CTRLB::RESSEL::_8BIT);
+    target::ADC.AVGCTRL.setSAMPLENUM(target::adc::AVGCTRL::SAMPLENUM::_1024_SAMPLES).setADJRES(4);
+    target::ADC.INPUTCTRL.setMUXNEG(target::adc::INPUTCTRL::MUXNEG::GND)
+        .setMUXPOS(target::adc::INPUTCTRL::MUXPOS::PIN0);
+    target::ADC.REFCTRL.setREFSEL(target::adc::REFCTRL::REFSEL::INTVCC1);
+    target::ADC.CTRLA = target::ADC.CTRLA.bare().setENABLE(true);
 
-    target::EIC.CONFIG.setSENSE(extInA, target::eic::CONFIG::SENSE::RISE);
-    target::EIC.INTENSET.setEXTINT(extInA, true);
+    while (target::ADC.STATUS)
+      ;
   }
 
-  void interruptHandlerEIC() {
-    if (target::EIC.INTFLAG.getEXTINT(extInA)) {
-      target::EIC.INTFLAG.setEXTINT(extInA, true);
-      // callback->addSteps((target::PORT.IN.getIN() >> pinA) & 1 != (target::PORT.IN.getIN() >> pinB) & 1? 1: -1);
-      callback->addSteps((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
-    }
+  const int x = 1540 * 3300 / (2 * 1500);
+
+  int getValue() {
+    target::ADC.SWTRIG.setSTART(true);
+    while (!target::ADC.INTFLAG.getRESRDY())
+      ;
+
+    return (target::ADC.RESULT.getRESULT() * x) >> 8;
   }
 };
-
-enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
 
 class Device : public atsamd::i2c::Slave, EncoderCallback, genericTimer::Timer {
 public:
@@ -122,17 +81,16 @@ public:
     unsigned char error : 5;
     int actSteps;
     int endSteps;
+    short current;
   } state;
 
   VNH7070 vnh7070;
   Encoder encoder;
-
-  const int stopSteps = 20;
-  const int loPriocheckMs = 100;
-
-  // const int stopPrecision = 50;
+  ADC adc;
 
   void init(int axis) {
+
+    // TC1 for VNH7070 PWM
 
     target::PM.APBCMASK.setTC(1, true);
 
@@ -144,8 +102,11 @@ public:
     while (target::GCLK.STATUS.getSYNCBUSY())
       ;
 
+    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, SEL0_PIN, &target::TC1);
+
     encoder.init(HALL_A_PIN, HALL_B_PIN, HALL_A_EXTINT, this);
-    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, &target::TC1);
+
+    adc.init(CS_PIN);
 
     // I2C
 
@@ -178,7 +139,7 @@ public:
     target::PORT.PINCFG[STOP2_PIN].setINEN(true).setPULLEN(true);
 
     // start check timer
-    start(loPriocheckMs / 10);
+    start(LO_PRIO_CHECK_MS / 10);
   }
 
   void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
@@ -189,7 +150,7 @@ public:
 
     int diff = state.endSteps - state.actSteps;
 
-    bool running = abs(diff) > stopSteps && !state.endStop1 && !state.endStop2 && state.error == 0;
+    bool running = abs(diff) > STOP_STEPS && !state.endStop1 && !state.endStop2 && state.error == 0;
 
     if (state.running != running) {
       state.running = running;
@@ -268,9 +229,11 @@ public:
     state.endStop1 = target::PORT.IN.getIN() >> STOP1_PIN & 1;
     state.endStop2 = target::PORT.IN.getIN() >> STOP2_PIN & 1;
 
+    state.current = adc.getValue();
+
     checkState();
 
-    start(loPriocheckMs / 10);
+    start(LO_PRIO_CHECK_MS / 10);
   }
 };
 
