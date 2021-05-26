@@ -69,7 +69,7 @@ async function start() {
             console.info("IRQ");
         });
 
-        const motor = createMotor(i2c, 0x50);
+        const motor = createMotor(i2c, 0x52);
 
         const maxSpeed = 100;
 
@@ -77,7 +77,7 @@ async function start() {
         console.info(state);
 
         await motor.setSpeed(0);
-        await motor.setEndSteps(state.endSteps + 1000);
+        await motor.setEndSteps(state.actSteps + 10000);
 
 
         for (let speed = 0; speed <= maxSpeed; speed++) {
@@ -89,7 +89,7 @@ async function start() {
 
         while (true) {
             console.info(await motor.get());
-            await wait(100);
+            await wait(1000);
         }
 
         // for (let speed = 0; speed <= maxSpeed; speed++) {

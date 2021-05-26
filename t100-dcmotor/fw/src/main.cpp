@@ -1,19 +1,18 @@
 const int LED_PIN = 22;
-const int IRQ_PIN = 5;
+const int IRQ_PIN = 23;
 const int ADDR_PIN = 3;
-const int SAFEBOOT_PIN = 23;
+const int SAFEBOOT_PIN = 8;
 
 const int INA_PIN = 24;
 const int INB_PIN = 25;
 const int PWM_PIN = 16;
-const int SEL0_PIN = 23;
 const int CS_PIN = 2;
 const int HALL_A_PIN = 6;
 const int HALL_B_PIN = 7;
 const int HALL_A_EXTINT = 6;
 
-const int STOP1_PIN = 8;
-const int STOP2_PIN = 9;
+const int STOP1_PIN = 4;
+const int STOP2_PIN = 5;
 
 const int STOP_TOLERANCE = 2;
 const int MIN_SPEED = 50;
@@ -74,7 +73,7 @@ public:
 
     // init VNH7070
 
-    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, SEL0_PIN, CS_PIN, &target::TC1);
+    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, CS_PIN, &target::TC1);
 
     // init encoder
 

@@ -202,7 +202,7 @@
     (add_net "Net-(U1-Pad4)")
   )
 
-  (module device.farm:Raspberry-PI-3-B-vertical (layer F.Cu) (tedit 6008BDCE) (tstamp 6008613C)
+  (module Drake:Raspberry-PI-3-B-vertical (layer F.Cu) (tedit 6008BDCE) (tstamp 6008613C)
     (at 104 69 90)
     (path /6000DA12)
     (fp_text reference J3 (at 5.08 -7.62 90) (layer F.SilkS)
@@ -821,7 +821,7 @@
     )
   )
 
-  (module device.farm:CKCS6028 (layer F.Cu) (tedit 6005FB71) (tstamp 6008190C)
+  (module Drake:CKCS6028 (layer F.Cu) (tedit 6005FB71) (tstamp 6008190C)
     (at 104 56 270)
     (descr "Inductor, Taiyo Yuden, NR series, Taiyo-Yuden_NR-60xx, 6.0mmx6.0mm")
     (tags "inductor taiyo-yuden nr smd")
@@ -865,7 +865,7 @@
     )
   )
 
-  (module device.farm:CKCS6028 (layer F.Cu) (tedit 6005FB71) (tstamp 60084186)
+  (module Drake:CKCS6028 (layer F.Cu) (tedit 6005FB71) (tstamp 60084186)
     (at 115 115)
     (descr "Inductor, Taiyo Yuden, NR series, Taiyo-Yuden_NR-60xx, 6.0mmx6.0mm")
     (tags "inductor taiyo-yuden nr smd")
@@ -1061,7 +1061,7 @@
     )
   )
 
-  (module device.farm:DG301-5.0-02 (layer F.Cu) (tedit 5777CD9F) (tstamp 6008BA47)
+  (module Drake:DG301-5.0-02 (layer F.Cu) (tedit 5777CD9F) (tstamp 6008BA47)
     (at 92.5 53.5 180)
     (path /6000F96B)
     (fp_text reference J4 (at 8.5 -3) (layer F.SilkS)
@@ -1129,7 +1129,7 @@
     )
   )
 
-  (module device.farm:conn_usb_B_micro_smd-2 (layer F.Cu) (tedit 5CBF3AB5) (tstamp 600817FB)
+  (module Drake:conn_usb_B_micro_smd-2 (layer F.Cu) (tedit 5CBF3AB5) (tstamp 600817FB)
     (at 110 148)
     (descr "USB B micro SMD connector with retention pins")
     (path /6003CBE2)

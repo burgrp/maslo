@@ -2,12 +2,11 @@ class VNH7070 {
 
   int pinInA;
   int pinInB;
-  int pinSel0;
 
   PWM pwm;
 
 public:
-  void init(int pinInA, int pinInB, int pinPwm, int pinSel0, int pinCs, volatile target::tc::Peripheral *tcPwm) {
+  void init(int pinInA, int pinInB, int pinPwm, int pinCs, volatile target::tc::Peripheral *tcPwm) {
 
     if (pinCs & 1) {
       target::PORT.PMUX[pinCs >> 1].setPMUXO(target::port::PMUX::PMUXO::B);
@@ -32,19 +31,19 @@ public:
 
     this->pinInA = pinInA;
     this->pinInB = pinInB;
-    this->pinSel0 = pinSel0;
 
-    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB | 1 << pinSel0);
-    target::PORT.DIRSET.setDIRSET(1 << pinInA | 1 << pinInB | 1 << pinSel0);
+    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB);
+    target::PORT.DIRSET.setDIRSET(1 << pinInA | 1 << pinInB);
   }
+
   void set(unsigned int speed, bool direction) {
-    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB | 1 << pinSel0);
+    target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB);
     pwm.set(speed);
     //if (speed) {
       if (direction) {
         target::PORT.OUTSET.setOUTSET(1 << pinInB);
       } else {
-        target::PORT.OUTSET.setOUTSET(1 << pinInA | 1 << pinSel0);
+        target::PORT.OUTSET.setOUTSET(1 << pinInA);
       }
     //}
   }
