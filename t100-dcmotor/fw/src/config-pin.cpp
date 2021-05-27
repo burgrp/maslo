@@ -11,5 +11,5 @@ int readConfigPin(int pin) {
 
   target::PORT.PINCFG[pin].setINEN(false).setPULLEN(false);
 
-  return (puValue && pdValue)? 0: (!puValue && !pdValue)? 1: 2;
+  return (puValue && pdValue)? 1: (!puValue && !pdValue)? 0: 2;
 }

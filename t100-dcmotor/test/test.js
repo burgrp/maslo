@@ -5,8 +5,6 @@ function createMotor(i2c, address) {
     const COMMAND_SET_SPEED = 1;
     const COMMAND_SET_END_STEPS = 2;
 
-    const STATE = ["IDLE", "RUNNING", "ERROR"];
-
     return {
 
         async setSpeed(speed) {
@@ -68,29 +66,48 @@ async function start() {
         i2c.onIRQ(() => {
             console.info("IRQ");
         });
+        i2c.nop();
 
-        const motor = createMotor(i2c, 0x52);
+        let motors = ["L", "R", "Z"].map((name, i) => {
+            let motor = createMotor(i2c, 0x50 + i);
+            motor.name = name;
+            return motor;
+        });
 
-        const maxSpeed = 100;
-
-        let state = await motor.get();
-        console.info(state);
-
-        await motor.setSpeed(0);
-        await motor.setEndSteps(state.actSteps + 10000);
-
-
-        for (let speed = 0; speed <= maxSpeed; speed++) {
-            console.info(speed);
-            await motor.setSpeed(speed / 100);
-            await wait(1);
-            console.info(await motor.get());
+        for (let motor of motors) {
+            await motor.setSpeed(0);
+            let state = await motor.get();
+            console.info(motor.name, state);
+            await motor.setEndSteps(state.actSteps + 10000);
         }
 
-        while (true) {
-            console.info(await motor.get());
-            await wait(1000);
+        for (let motor of motors) {
+            await motor.setSpeed(1);
         }
+
+
+        // const motor = createMotor(i2c, 0x52);
+
+        // const maxSpeed = 100;
+
+        // let state = await motor.get();
+        // console.info(state);
+
+        // await motor.setSpeed(0);
+        // await motor.setEndSteps(state.actSteps + 10000);
+
+
+        // for (let speed = 0; speed <= maxSpeed; speed++) {
+        //     console.info(speed);
+        //     await motor.setSpeed(speed / 100);
+        //     await wait(1);
+        //     console.info(await motor.get());
+        // }
+
+        // while (true) {
+        //     console.info(await motor.get());
+        //     await wait(1000);
+        // }
 
         // for (let speed = 0; speed <= maxSpeed; speed++) {
         //     console.info(speed);
