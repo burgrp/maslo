@@ -42,7 +42,8 @@ public:
     bool running : 1;
     bool endStop1 : 1;
     bool endStop2 : 1;
-    unsigned char error : 5 = 1;
+    bool reserved : 2;
+    unsigned char error : 3;
     int actSteps;
     int endSteps;
     short current;
@@ -52,7 +53,7 @@ public:
   Encoder encoder;
 
   void init(int axis) {
-
+    
     // TC1 for VNH7070 PWM
 
     target::PM.APBCMASK.setTC(1, true);
@@ -126,10 +127,17 @@ public:
         speed = MIN_SPEED;
       }
       vnh7070.set(speed, diff > 0);
-      target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
+      // target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
     } else {
       vnh7070.set(0, false);
-      target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
+      // target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
+    }
+
+    if (state.error) {
+      target::PORT.OUTTGL.setOUTTGL(1 << LED_PIN);
+    } else {
+      target::PORT.OUTCLR.setOUTCLR(!running << LED_PIN);
+      target::PORT.OUTSET.setOUTSET(running << LED_PIN);
     }
   }
 
