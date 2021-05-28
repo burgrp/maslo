@@ -42,7 +42,7 @@ public:
     bool running : 1;
     bool endStop1 : 1;
     bool endStop2 : 1;
-    unsigned char error : 5;
+    unsigned char error : 5 = 1;
     int actSteps;
     int endSteps;
     short current;
