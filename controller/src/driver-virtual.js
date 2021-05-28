@@ -11,7 +11,7 @@ module.exports = async ({ motors }) => {
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;
-            let pulseCounter = 0;
+            let stepCounter = 0;
             let running = false;
 
             let lo = {};
@@ -26,16 +26,16 @@ module.exports = async ({ motors }) => {
 
             function checkStops() {
 
-                let loStop = motors && motors[name] && motors[name].lo && pulseCounter <= motors[name].lo;
+                let loStop = motors && motors[name] && motors[name].lo && stepCounter <= motors[name].lo;
                 if (loStop && !lo.stop) {
-                    lo.pulses = pulseCounter;
+                    lo.steps = stepCounter;
                     stop();
                 }
                 lo.stop = loStop;
 
-                let hiStop = motors && motors[name] && motors[name].lo && pulseCounter >= motors[name].hi;
+                let hiStop = motors && motors[name] && motors[name].lo && stepCounter >= motors[name].hi;
                 if (hiStop && !hi.stop) {
-                    hi.pulses = pulseCounter;
+                    hi.steps = stepCounter;
                     stop();
                 }
                 hi.stop = hiStop;
@@ -48,37 +48,37 @@ module.exports = async ({ motors }) => {
 
                 getState() {
                     return {
-                        pulses: pulseCounter,
+                        steps: stepCounter,
                         lo,
                         hi,
                         running
                     }
                 },
 
-                async move(pulses, timeMs) {
+                async move(steps, timeMs) {
 
                     let ranToTheEnd = false;
 
-                    if (!running && !(lo.stop && pulses < 0) && !(hi.stop && pulses > 0)) {
+                    if (!running && !(lo.stop && steps < 0) && !(hi.stop && steps > 0)) {
 
                         running = true;
 
-                        log(`move ${pulses} pulses in ${timeMs} ms`);
+                        log(`move ${steps} steps in ${timeMs} ms`);
 
                         let startedAtMs = now();
-                        let startedPulses = pulseCounter;
+                        let startedSteps = stepCounter;
 
                         function update() {
                             if (ranToTheEnd) {
-                                pulseCounter = Math.round(startedPulses + pulses);
+                                stepCounter = Math.round(startedSteps + steps);
                             } else {
                                 let actualTimeMs = now() - startedAtMs;
-                                pulseCounter = startedPulses + Math.ceil(pulses * actualTimeMs / timeMs);
+                                stepCounter = startedSteps + Math.ceil(steps * actualTimeMs / timeMs);
                             }
 
                             checkStops();
 
-                            log(`pulses: ${pulseCounter}`);
+                            log(`steps: ${stepCounter}`);
                             listener();
                         }
 
@@ -101,7 +101,7 @@ module.exports = async ({ motors }) => {
                         } finally {
                             running = false;
                             update();
-                            log(`move finished`, pulseCounter);
+                            log(`move finished`, stepCounter);
                         }
                     }
                 },
