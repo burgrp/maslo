@@ -48,7 +48,7 @@ public:
     //}
   }
 
-  int getCurrentmA() {
+  int getCurrentMA() {
     target::ADC.SWTRIG.setSTART(true);
     while (!target::ADC.INTFLAG.getRESRDY())
       ;

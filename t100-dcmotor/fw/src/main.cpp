@@ -46,7 +46,7 @@ public:
     unsigned char error : 3;
     int actSteps;
     int endSteps;
-    short current;
+    short currentMA;
   } state;
 
   VNH7070 vnh7070;
@@ -189,7 +189,7 @@ public:
     state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
     state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
 
-    state.current = vnh7070.getCurrentmA();
+    state.currentMA = vnh7070.getCurrentMA();
 
     checkState();
 
