@@ -13,7 +13,12 @@
             },
             "i2c": {
                 "module": "./driver-i2c.js",
-                "bus": "-> $.I2C"
+                "bus": "-> $.I2C",
+                "motorAddresses": {
+                    "a": 80,
+                    "b": 81,
+                    "z": 82
+                }
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
