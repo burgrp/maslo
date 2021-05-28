@@ -84,23 +84,8 @@ public:
 
     // I2C
 
-    target::PORT.PMUX[7].setPMUXE(target::port::PMUX::PMUXE::C);
-    target::PORT.PMUX[7].setPMUXO(target::port::PMUX::PMUXO::C);
-
-    target::PORT.PINCFG[14].setPMUXEN(true);
-    target::PORT.PINCFG[15].setPMUXEN(true);
-
-    target::PM.APBCMASK.setSERCOM(0, true);
-
-    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
-                               .setID(target::gclk::CLKCTRL::ID::SERCOM0_CORE)
-                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
-                               .setCLKEN(true);
-
-    while (target::GCLK.STATUS.getSYNCBUSY())
-      ;
-
-    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, &target::SERCOM0);
+    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, SDA_PIN, SCL_PIN,
+                target::port::PMUX::PMUXE::C);
 
     // IRQ
 
@@ -169,23 +154,7 @@ public:
 
   virtual int getTxByte(int index) {
     irqClear();
-
-    // send data in 7bits, due to the I2C STOP problem
-
-    unsigned char *raw = ((unsigned char *)&state);
-
-    unsigned char byte7 = 0;
-
-    int absBitIndexBase = index * 7;
-    for (int bitIndex7 = 0; bitIndex7 < 7; bitIndex7++) {
-      int absBitIndex = bitIndex7 + absBitIndexBase;
-      int byteIndex8 = absBitIndex >> 3;
-      int bitIndex8 = absBitIndex & 0x07;
-      int byte8 = byteIndex8 < sizeof(state) ? raw[byteIndex8] : 0;
-      byte7 |= ((byte8 >> bitIndex8) & 1) << bitIndex7;
-    }
-
-    return byte7;
+    return ((unsigned char *)&state)[index];
   }
 
   virtual bool setRxByte(int index, int value) {
@@ -202,8 +171,9 @@ public:
       }
 
       return true;
+
     } else {
-      return true;
+      return false;
     }
   }
 
@@ -231,6 +201,7 @@ void initApplication() {
 
   // MCU clocked at 8MHz
   target::SYSCTRL.OSC8M.setPRESC(target::sysctrl::OSC8M::PRESC::_1);
+  genericTimer::clkHz = 8E6;
 
   device.init(readConfigPin(ADDR_PIN));
 

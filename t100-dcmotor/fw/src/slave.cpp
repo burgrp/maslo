@@ -2,18 +2,59 @@ namespace atsamd::i2c {
 
 enum AddressMode { MASK, TWO, RANGE };
 
+const int SERCOM_COUNT = 2;
+
+// TODO: make lookup tables constant to save RAM
+
+volatile target::sercom::Peripheral *SERCOM_PERIPHERAL[SERCOM_COUNT] = {
+  &target::SERCOM0,
+  &target::SERCOM1
+};
+
+target::gclk::CLKCTRL::ID SERCOM_CLKCTRL[SERCOM_COUNT] = {
+  target::gclk::CLKCTRL::ID::SERCOM0_CORE,
+  target::gclk::CLKCTRL::ID::SERCOM1_CORE
+};
+
 class Slave {
   volatile target::sercom::Peripheral *sercom;
 
-public:
+  void setPerpheralMux(int pin, target::port::PMUX::PMUXE mux) {
+    if (pin & 1) {
+      target::PORT.PMUX[pin >> 1].setPMUXO((target::port::PMUX::PMUXO)mux);
+    } else {
+      target::PORT.PMUX[pin >> 1].setPMUXE(mux);
+    }
+  }
+
+
+  int pinSDA;
+
 public:
   int rxLength;
   int txLength;
 
-  void init(int address1, int address2, AddressMode addressMode, volatile target::sercom::Peripheral *sercom,
-            int sercomIndex, target::gclk::CLKCTRL::GEN clockGen, int pinSDA, int pinSCL) {
+  void init(int address1, int address2, AddressMode addressMode, 
+            int sercomIndex, target::gclk::CLKCTRL::GEN clockGen, int pinSDA, int pinSCL, target::port::PMUX::PMUXE peripheralMux) {
 
-    this->sercom = sercom;
+    setPerpheralMux(pinSDA, peripheralMux);
+    setPerpheralMux(pinSCL, peripheralMux);
+
+    target::PORT.PINCFG[pinSDA].setPMUXEN(true);
+    target::PORT.PINCFG[pinSCL].setPMUXEN(true);
+
+    target::PM.APBCMASK.setSERCOM(sercomIndex, true);
+
+    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
+                               .setID(SERCOM_CLKCTRL[sercomIndex])
+                               .setGEN(clockGen)
+                               .setCLKEN(true);
+
+    while (target::GCLK.STATUS.getSYNCBUSY())
+      ;
+
+    this->sercom = SERCOM_PERIPHERAL[sercomIndex];
+    this->pinSDA = pinSDA;
 
     sercom->I2CS.INTENSET = sercom->I2CS.INTENSET.bare().setDRDY(true).setAMATCH(true).setPREC(true);
 
@@ -60,13 +101,14 @@ public:
         // master read
         int byte = getTxByte(txLength++);
         if (byte != -1) {
-          sercom->I2CS.DATA = txLength; // byte;
+          
+          sercom->I2CS.DATA = byte;
 
           // release SDA after byte is sent to allow detect STOP condition
-          while (sercom->I2CS.INTFLAG.getDRDY())
-            ;
-          target::PORT.PINCFG[14].setPMUXEN(false);
-          target::PORT.PINCFG[14].setPMUXEN(true);
+          int wait = genericTimer::clkHz >> 17;
+          for (volatile int c = 0; c < wait; c++);
+          target::PORT.PINCFG[pinSDA].setPMUXEN(false);
+          target::PORT.PINCFG[pinSDA].setPMUXEN(true);
 
         } else {
           sercom->I2CS.DATA = 0xFF;

@@ -22,32 +22,17 @@ function createMotor(i2c, address) {
         },
 
         async get() {
-            let data8 = new Array(1 + 1 + 4 + 4 + 2).fill(0);
-            let data7 = [...(await i2c.i2cRead(address, Math.ceil(data8.length / 7 * 8)))];
 
-            for (let byteIndex7 = 0; byteIndex7 < data7.length; byteIndex7++) {
-
-                for (let bitIndex7 = 0; bitIndex7 < 7; bitIndex7++) {
-                    let absBitIndex = byteIndex7 * 7 + bitIndex7;
-                    let byteIndex8 = absBitIndex >> 3;
-                    let bitIndex8 = absBitIndex & 7;
-                    if (byteIndex8 < data8.length) {
-                        data8[byteIndex8] |= ((data7[byteIndex7] >> bitIndex7) & 1) << bitIndex8;
-                    }
-                }
-
-            }
-
-            let buffer8 = Buffer.from(data8);
+            let buffer = await i2c.i2cRead(address, 1 + 1 + 4 + 4 + 2);
 
             return {
-                speed: buffer8.readUInt8(0),
-                running: !!(buffer8.readUInt8(1) & 1),
-                endStops: [!!(buffer8.readUInt8(1) >> 1 & 1), !!(buffer8.readUInt8(1) >> 2 & 1)],
-                error: buffer8.readUInt8(1) >> 3,
-                actSteps: buffer8.readInt32LE(2),
-                endSteps: buffer8.readInt32LE(6),
-                currentmA: buffer8.readInt16LE(10)
+                speed: buffer.readUInt8(0),
+                running: !!(buffer.readUInt8(1) & 1),
+                endStops: [!!(buffer.readUInt8(1) >> 1 & 1), !!(buffer.readUInt8(1) >> 2 & 1)],
+                error: buffer.readUInt8(1) >> 3,
+                actSteps: buffer.readInt32LE(2),
+                endSteps: buffer.readInt32LE(6),
+                currentmA: buffer.readInt16LE(10)
             }
         }
 
@@ -68,7 +53,7 @@ async function start() {
         });
         i2c.nop();
 
-        let motors = ["L", "R", "Z"].map((name, i) => {
+        let motors = ["L"].map((name, i) => {
             let motor = createMotor(i2c, 0x50 + i);
             motor.name = name;
             return motor;
@@ -82,8 +67,15 @@ async function start() {
         }
 
         for (let motor of motors) {
-            await motor.setSpeed(1);
+            await motor.setSpeed(0.4);
         }
+
+        while (true) {
+            for (let motor of motors) {
+                console.info(motor.name, await motor.get());
+            }
+            await wait(100);
+        }        
 
 
         // const motor = createMotor(i2c, 0x52);
