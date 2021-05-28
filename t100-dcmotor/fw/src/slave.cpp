@@ -1,10 +1,6 @@
 namespace atsamd::i2c {
 
-enum AddressMode {
-  MASK,
-  TWO,
-  RANGE
-};
+enum AddressMode { MASK, TWO, RANGE };
 
 class Slave {
   volatile target::sercom::Peripheral *sercom;
@@ -63,7 +59,14 @@ public:
         // master read
         int byte = getTxByte(txLength++);
         if (byte != -1) {
-          sercom->I2CS.DATA = byte | 0x80;
+          sercom->I2CS.DATA = txLength;// byte;
+
+          // release SDA after byte is sent to allow detect STOP condition
+          while (sercom->I2CS.INTFLAG.getDRDY())
+            ;
+          target::PORT.PINCFG[14].setPMUXEN(false);
+          target::PORT.PINCFG[14].setPMUXEN(true);
+
         } else {
           sercom->I2CS.DATA = 0xFF;
         }
@@ -82,12 +85,8 @@ public:
     }
   }
 
-  virtual int getTxByte(int index) {
-    return -1;
-  }
+  virtual int getTxByte(int index) { return -1; }
 
-  virtual bool setRxByte(int index, int value) {
-    return false;
-  }
+  virtual bool setRxByte(int index, int value) { return false; }
 };
 } // namespace atsamd::i2c
