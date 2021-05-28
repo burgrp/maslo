@@ -32,7 +32,7 @@ function createMotor(i2c, address) {
                 error: buffer.readUInt8(1) >> 5,
                 actSteps: buffer.readInt32LE(2),
                 endSteps: buffer.readInt32LE(6),
-                currentmA: buffer.readInt16LE(10)
+                currentMA: buffer.readInt16LE(10)
             }
         }
 
@@ -53,7 +53,7 @@ async function start() {
         });
         i2c.nop();
 
-        let motors = ["L"].map((name, i) => {
+        let motors = ["L", "R", "Z"].map((name, i) => {
             let motor = createMotor(i2c, 0x50 + i);
             motor.name = name;
             return motor;
@@ -63,7 +63,7 @@ async function start() {
             await motor.setSpeed(0);
             let state = await motor.get();
             console.info(motor.name, state);
-            await motor.setEndSteps(state.actSteps + 1000);
+            await motor.setEndSteps(state.actSteps + 2000);
         }
 
         for (let motor of motors) {
