@@ -103,7 +103,12 @@ module.exports = async ({
         }
     }
 
+    if (!drivers[driver]) {
+        throw new Error(`Unknown machine driver "${driver}"`);
+    }
+
     driver = drivers[driver];
+    await driver.open();
 
     let motorDrivers = {};
     for (let name in motorConfigs) {

@@ -1,12 +1,16 @@
 const Debug = require("debug");
 
-module.exports = async ({ motors }) => {
+module.exports = async ({ stopPositions }) => {
 
     function now() {
         return new Date().getTime();
     }
 
     return {
+
+        async open() {
+        },
+
         async createMotor(name, listener) {
             let log = Debug(`app:motor:${name}`);
 
@@ -28,7 +32,7 @@ module.exports = async ({ motors }) => {
 
             function checkStops() {
                 for (let side of [{ name: "lo", multiplier: -1 }, { name: "hi", multiplier: 1 }]) {
-                    let stop = !!motors && !!motors[name] && isFinite(motors[name][side.name]) && stepCounter * side.multiplier >= motors[name][side.name] * side.multiplier;
+                    let stop = !!stopPositions && !!stopPositions[name] && isFinite(stopPositions[name][side.name]) && stepCounter * side.multiplier >= stopPositions[name][side.name] * side.multiplier;
                     if (stop && !stops[side.name].stop) {
                         stops[side.name].steps = stepCounter;
                         doStop();
