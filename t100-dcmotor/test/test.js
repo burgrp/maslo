@@ -67,7 +67,7 @@ async function start() {
         }
 
         for (let motor of motors) {
-            await motor.setSpeed(0.4);
+            await motor.setSpeed(.3);
         }
 
         while (true) {
