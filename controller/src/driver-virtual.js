@@ -14,10 +14,12 @@ module.exports = async ({ motors }) => {
             let stepCounter = 0;
             let running = false;
 
-            let lo = {};
-            let hi = {};
+            let stops = {
+                lo: {},
+                hi: {}
+            };
 
-            function stop() {
+            function doStop() {
                 log(`stop`);
                 if (stopCurrentMove) {
                     stopCurrentMove();
@@ -25,20 +27,14 @@ module.exports = async ({ motors }) => {
             }
 
             function checkStops() {
-
-                let loStop = motors && motors[name] && motors[name].lo && stepCounter <= motors[name].lo;
-                if (loStop && !lo.stop) {
-                    lo.steps = stepCounter;
-                    stop();
+                for (let side of [{ name: "lo", multiplier: -1 }, { name: "hi", multiplier: 1 }]) {
+                    let stop = !!motors && !!motors[name] && isFinite(motors[name][side.name]) && stepCounter * side.multiplier >= motors[name][side.name] * side.multiplier;
+                    if (stop && !stops[side.name].stop) {
+                        stops[side.name].steps = stepCounter;
+                        doStop();
+                    }
+                    stops[side.name].stop = stop;
                 }
-                lo.stop = loStop;
-
-                let hiStop = motors && motors[name] && motors[name].lo && stepCounter >= motors[name].hi;
-                if (hiStop && !hi.stop) {
-                    hi.steps = stepCounter;
-                    stop();
-                }
-                hi.stop = hiStop;
             }
 
             checkStops();
@@ -49,9 +45,10 @@ module.exports = async ({ motors }) => {
                 getState() {
                     return {
                         steps: stepCounter,
-                        lo,
-                        hi,
-                        running
+                        lo: stops.lo,
+                        hi: stops.hi,
+                        running,
+                        currentMA: running? 500: 0
                     }
                 },
 
@@ -59,7 +56,7 @@ module.exports = async ({ motors }) => {
 
                     let ranToTheEnd = false;
 
-                    if (!running && !(lo.stop && steps < 0) && !(hi.stop && steps > 0)) {
+                    if (!running && !(stops.lo.stop && steps < 0) && !(stops.hi.stop && steps > 0)) {
 
                         running = true;
 
@@ -106,7 +103,7 @@ module.exports = async ({ motors }) => {
                     }
                 },
 
-                stop
+                stop: doStop
             }
         },
 
