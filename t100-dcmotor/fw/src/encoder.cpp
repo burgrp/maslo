@@ -1,6 +1,6 @@
 class EncoderCallback {
 public:
-  virtual void addSteps(int steps) = 0;
+  virtual void ecoderChanged(int steps) = 0;
 };
 
 class Encoder {
@@ -47,8 +47,7 @@ public:
   void interruptHandlerEIC() {
     if (target::EIC.INTFLAG.getEXTINT(extInA)) {
       target::EIC.INTFLAG.setEXTINT(extInA, true);
-      // callback->addSteps((target::PORT.IN.getIN() >> pinA) & 1 != (target::PORT.IN.getIN() >> pinB) & 1? 1: -1);
-      callback->addSteps((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
+      callback->ecoderChanged((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
     }
   }
 };

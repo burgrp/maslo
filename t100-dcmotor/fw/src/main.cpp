@@ -1,21 +1,21 @@
-const int LED_PIN = 22;
-const int IRQ_PIN = 23;
-const int ADDR_PIN = 3;
-const int SAFEBOOT_PIN = 8;
+const int PIN_LED = 22;
+const int PIN_IRQ = 23;
+const int PIN_ADDR = 3;
+const int PIN_SAFEBOOT = 8;
 
-const int INA_PIN = 24;
-const int INB_PIN = 25;
-const int PWM_PIN = 16;
-const int CS_PIN = 2;
-const int HALL_A_PIN = 6;
-const int HALL_B_PIN = 7;
-const int HALL_A_EXTINT = 6;
+const int PIN_INA = 24;
+const int PIN_INB = 25;
+const int PIN_PWM = 16;
+const int PIN_CS = 2;
+const int PIN_HALL_A = 6;
+const int PIN_HALL_B = 7;
+const int EXT_INT_HALL_A = 6;
 
-const int SDA_PIN = 14;
-const int SCL_PIN = 15;
+const int PIN_SDA = 14;
+const int PIN_SCL = 15;
 
-const int STOP1_PIN = 4;
-const int STOP2_PIN = 5;
+const int PIN_STOP1 = 4;
+const int PIN_STOP2 = 5;
 
 const int STOP_TOLERANCE = 2;
 const int MIN_SPEED = 50;
@@ -77,34 +77,34 @@ public:
 
     // init VNH7070
 
-    vnh7070.init(INA_PIN, INB_PIN, PWM_PIN, CS_PIN, &target::TC1);
+    vnh7070.init(PIN_INA, PIN_INB, PIN_PWM, PIN_CS, &target::TC1);
 
     // init encoder
 
-    encoder.init(HALL_A_PIN, HALL_B_PIN, HALL_A_EXTINT, this);
+    encoder.init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A, this);
 
     // I2C
 
-    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, SDA_PIN, SCL_PIN,
+    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, PIN_SDA, PIN_SCL,
                 target::port::PMUX::PMUXE::C);
 
     // IRQ
 
-    target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN);
-    target::PORT.DIRSET.setDIRSET(1 << IRQ_PIN);
+    target::PORT.OUTSET.setOUTSET(1 << PIN_IRQ);
+    target::PORT.DIRSET.setDIRSET(1 << PIN_IRQ);
 
     // STOPs
 
-    target::PORT.PINCFG[STOP1_PIN].setINEN(true).setPULLEN(true);
-    target::PORT.PINCFG[STOP2_PIN].setINEN(true).setPULLEN(true);
+    target::PORT.PINCFG[PIN_STOP1].setINEN(true).setPULLEN(true);
+    target::PORT.PINCFG[PIN_STOP2].setINEN(true).setPULLEN(true);
 
     // start check timer
     start(LO_PRIO_CHECK_MS / 10);
   }
 
-  void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << IRQ_PIN); }
+  void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << PIN_IRQ); }
 
-  void irqClear() { target::PORT.OUTSET.setOUTSET(1 << IRQ_PIN); }
+  void irqClear() { target::PORT.OUTSET.setOUTSET(1 << PIN_IRQ); }
 
   void checkState() {
 
@@ -134,14 +134,14 @@ public:
     }
 
     if (state.error) {
-      target::PORT.OUTTGL.setOUTTGL(1 << LED_PIN);
+      target::PORT.OUTTGL.setOUTTGL(1 << PIN_LED);
     } else {
-      target::PORT.OUTCLR.setOUTCLR(!running << LED_PIN);
-      target::PORT.OUTSET.setOUTSET(running << LED_PIN);
+      target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
+      target::PORT.OUTSET.setOUTSET(running << PIN_LED);
     }
   }
 
-  void addSteps(int steps) {
+  void ecoderChanged(int steps) {
     state.actSteps += steps;
     checkState();
   }
@@ -186,8 +186,8 @@ public:
   }
 
   void onTimer() {
-    state.endStop1 = target::PORT.IN.getIN() >> STOP1_PIN & 1;
-    state.endStop2 = target::PORT.IN.getIN() >> STOP2_PIN & 1;
+    state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
+    state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
 
     state.current = vnh7070.getCurrentmA();
 
@@ -205,13 +205,13 @@ void interruptHandlerEIC() { device.encoder.interruptHandlerEIC(); }
 void initApplication() {
 
   // enable safeboot
-  atsamd::safeboot::init(SAFEBOOT_PIN, false, LED_PIN);
+  atsamd::safeboot::init(PIN_SAFEBOOT, false, PIN_LED);
 
   // MCU clocked at 8MHz
   target::SYSCTRL.OSC8M.setPRESC(target::sysctrl::OSC8M::PRESC::_1);
   genericTimer::clkHz = 8E6;
 
-  device.init(readConfigPin(ADDR_PIN));
+  device.init(readConfigPin(PIN_ADDR));
 
   // enable interrupts
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
