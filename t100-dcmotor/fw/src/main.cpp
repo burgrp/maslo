@@ -11,6 +11,9 @@ const int HALL_A_PIN = 6;
 const int HALL_B_PIN = 7;
 const int HALL_A_EXTINT = 6;
 
+const int SDA_PIN = 14;
+const int SCL_PIN = 15;
+
 const int STOP1_PIN = 4;
 const int STOP2_PIN = 5;
 

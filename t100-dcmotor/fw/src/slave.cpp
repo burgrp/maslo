@@ -10,7 +10,8 @@ public:
   int rxLength;
   int txLength;
 
-  void init(int address1, int address2, AddressMode addressMode, volatile target::sercom::Peripheral *sercom) {
+  void init(int address1, int address2, AddressMode addressMode, volatile target::sercom::Peripheral *sercom,
+            int sercomIndex, target::gclk::CLKCTRL::GEN clockGen, int pinSDA, int pinSCL) {
 
     this->sercom = sercom;
 
@@ -59,7 +60,7 @@ public:
         // master read
         int byte = getTxByte(txLength++);
         if (byte != -1) {
-          sercom->I2CS.DATA = txLength;// byte;
+          sercom->I2CS.DATA = txLength; // byte;
 
           // release SDA after byte is sent to allow detect STOP condition
           while (sercom->I2CS.INTFLAG.getDRDY())
