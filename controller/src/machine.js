@@ -13,8 +13,8 @@ module.exports = async ({
     driver,
     motors: motorConfigs,
     relays: relayConfigs,
-    rapidMoveSpeedMmpmin,
-    cuttingMoveSpeedMmpmin,
+    rapidMoveSpeedMmPerMin,
+    cuttingMoveSpeedMmPerMin,
     motorsShaftDistanceMm,
     workspaceWidthMm,
     workspaceHeightMm,
@@ -128,9 +128,9 @@ module.exports = async ({
         }
     }
 
-    async function moveRelativeABZ(motor, speedMmpmin, distanceMm) {
+    async function moveRelativeABZ(motor, speedMmPerMin, distanceMm) {
 
-        let timeMs = 60000 * Math.abs(distanceMm) / speedMmpmin;
+        let timeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
 
         await motorDrivers[motor].move(
             distanceMmToSteps(motorConfigs[motor], distanceMm),
@@ -138,7 +138,7 @@ module.exports = async ({
         );
     }
 
-    async function moveAbsoluteXY(speedMmpmin, xMm, yMm) {
+    async function moveAbsoluteXY(speedMmPerMin, xMm, yMm) {
 
         checkPositionReference();
 
@@ -155,7 +155,7 @@ module.exports = async ({
         let len1 = length(pos1);
         let len2 = length(pos2);
 
-        let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmpmin;
+        let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
 
         await Promise.allSettled([
             motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), timeMs),
@@ -164,11 +164,11 @@ module.exports = async ({
 
     }
 
-    async function moveRelativeXY(speedMmpmin, xMm, yMm) {
+    async function moveRelativeXY(speedMmPerMin, xMm, yMm) {
 
         checkPositionReference();
 
-        await moveAbsoluteXY(speedMmpmin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
+        await moveAbsoluteXY(speedMmPerMin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
 
     function scheduleNextCheck() {
@@ -199,12 +199,12 @@ module.exports = async ({
 
             function getMoveSpeed() {
                 if (state.motors.z.lo.stop) {
-                    return rapidMoveSpeedMmpmin;
+                    return rapidMoveSpeedMmPerMin;
                 } else {
                     if (!state.spindle.on) {
                         throw new Error("Can not move while spindle is not running and Z is not at home");
                     }
-                    return cuttingMoveSpeedMmpmin;
+                    return cuttingMoveSpeedMmPerMin;
                 }
             }
 
