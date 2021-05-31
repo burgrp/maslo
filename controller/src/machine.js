@@ -1,3 +1,5 @@
+const logError = require("debug")("app:error");
+
 function distanceMmToSteps(motorConfig, distanceMm) {
     return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
 }
@@ -95,7 +97,7 @@ module.exports = async ({
                 try {
                     listener(state);
                 } catch (error) {
-                    console.error("Error in machine state change listener:", error);
+                    logError("Error in machine state change listener:", error);
                 }
             }
         }
@@ -173,7 +175,7 @@ module.exports = async ({
         try {
             checkState();
         } catch(e) {
-            console.error("Error in periodic check:", e);
+            logError("Error in periodic check:", e);
         }
         setTimeout(scheduleNextCheck, 100);
     }
@@ -248,7 +250,6 @@ module.exports = async ({
 
         async setUserOrigin(xMm, yMm) {
             state.userOrigin = { xMm, yMm };
-            checkState();
         }
     }
 }
