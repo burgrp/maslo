@@ -80,7 +80,7 @@ module.exports = async ({ bus, motorAddresses }) => {
 
             let movePromise;
 
-            async function updateState(callListener = true) {
+            async function updateState() {
                 driverState = await driver.get();
                 machineState = {
                     steps: driverState.actSteps,
@@ -89,9 +89,9 @@ module.exports = async ({ bus, motorAddresses }) => {
                     running: { stop: driverState.running },
                     currentMA: { stop: driverState.currentMA }
                 };
-                if (callListener) {
-                    listener();
-                }
+
+                listener();
+
                 if (!driverState.running && movePromise) {
                     movePromise.resolve();
                 }
@@ -116,7 +116,7 @@ module.exports = async ({ bus, motorAddresses }) => {
                     await driver.setEndSteps(driverState.actSteps + steps);
 
                     await new Promise((resolve, reject) => {
-                        movePromise = { resolve, reject };                        
+                        movePromise = { resolve, reject };
                     });
                     movePromise = undefined;
                 },

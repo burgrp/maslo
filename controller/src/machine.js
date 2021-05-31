@@ -113,8 +113,10 @@ module.exports = async ({
     let motorDrivers = {};
     for (let name in motorConfigs) {
         function update() {
-            state.motors[name] = motorDrivers[name].getState();
-            checkState();
+            if (motorDrivers[name]) {
+                state.motors[name] = motorDrivers[name].getState();
+                checkState();
+            }
         }
         motorDrivers[name] = await driver.createMotor(name, update);
         state.motors[name] = {};
