@@ -18,7 +18,7 @@ const int PIN_STOP1 = 4;
 const int PIN_STOP2 = 5;
 
 const int STOP_TOLERANCE = 2;
-const int MIN_SPEED = 50;
+// const int MIN_SPEED = 50;
 const int LO_PRIO_CHECK_MS = 100;
 
 enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
@@ -118,19 +118,9 @@ public:
     }
 
     if (running) {
-      int speedLimit = abs(diff >> 2) + MIN_SPEED;
-      int speed = state.speed;
-      if (speed > speedLimit) {
-        speed = speedLimit;
-      }
-      if (speed < MIN_SPEED) {
-        speed = MIN_SPEED;
-      }
-      vnh7070.set(speed, diff > 0);
-      // target::PORT.OUTSET.setOUTSET(1 << LED_PIN);
+      vnh7070.set(state.speed, diff > 0);
     } else {
       vnh7070.set(0, false);
-      // target::PORT.OUTCLR.setOUTCLR(1 << LED_PIN);
     }
 
     if (state.error) {
@@ -152,6 +142,7 @@ public:
   }
 
   void setEndSteps(int endSteps) {
+    state.speed = 0;
     state.endSteps = endSteps;
     checkState();
   }

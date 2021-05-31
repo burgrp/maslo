@@ -10,7 +10,7 @@ function createMotor(i2c, address) {
         async setSpeed(speed) {
             let buffer = Buffer.alloc(2);
             buffer.writeUInt8(COMMAND_SET_SPEED, 0);
-            buffer.writeUInt8(Math.round(0xFF * speed), 1);
+            buffer.writeUInt8(speed, 1);
             await i2c.i2cWrite(address, buffer);
         },
 
@@ -52,22 +52,21 @@ async function start() {
             console.info("IRQ");
         });
         i2c.nop();
-
-        let motors = ["L", "R", "Z"].map((name, i) => {
-            let motor = createMotor(i2c, 0x50 + i);
+        //"L", "R", 
+        let motors = Object.entries({"Z": 0x52}).map(([name, address]) => {
+            let motor = createMotor(i2c, address);
             motor.name = name;
             return motor;
         });
 
         for (let motor of motors) {
-            await motor.setSpeed(0);
             let state = await motor.get();
             console.info(motor.name, state);
             await motor.setEndSteps(state.actSteps + 2000);
         }
 
         for (let motor of motors) {
-            await motor.setSpeed(.3);
+            await motor.setSpeed(40);
         }
 
         while (true) {

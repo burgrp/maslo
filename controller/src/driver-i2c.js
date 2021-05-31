@@ -13,7 +13,7 @@ module.exports = async ({ bus, motorAddresses }) => {
             async setSpeed(speed) {
                 let buffer = Buffer.alloc(2);
                 buffer.writeUInt8(COMMAND_SET_SPEED, 0);
-                buffer.writeUInt8(Math.round(0xFF * speed), 1);
+                buffer.writeUInt8(speed, 1);
                 await i2c.i2cWrite(address, buffer);
             },
 
@@ -42,16 +42,32 @@ module.exports = async ({ bus, motorAddresses }) => {
         }
     }
 
-    let i2c
+    let i2c;
+    let stateUpdates = [];
 
     return {
 
         async open() {
             i2c = await I2C(bus);
             i2c.nop();
-            i2c.onIRQ(() => {
-                console.info("IRQ");
+            i2c.onIRQ(async () => {
+                for (let stateUpdate of stateUpdates) {
+                    await stateUpdate();
+                }
             });
+
+            async function scheduleNextUpdate() {
+                try {
+                    for (let stateUpdate of stateUpdates) {
+                        await stateUpdate();
+                    }
+                } catch (e) {
+                    console.error("Error in periodic update:", e);
+                }
+                setTimeout(scheduleNextUpdate, 100);
+            }
+
+            scheduleNextUpdate();
         },
 
         async createMotor(name, listener) {
@@ -62,7 +78,9 @@ module.exports = async ({ bus, motorAddresses }) => {
             let driverState;
             let machineState;
 
-            async function updateState() {
+            let movePromise;
+
+            async function updateState(callListener = true) {
                 driverState = await driver.get();
                 machineState = {
                     steps: driverState.actSteps,
@@ -70,10 +88,18 @@ module.exports = async ({ bus, motorAddresses }) => {
                     hi: { stop: driverState.endStops[1] },
                     running: { stop: driverState.running },
                     currentMA: { stop: driverState.currentMA }
-                };                
+                };
+                if (callListener) {
+                    listener();
+                }
+                if (!driverState.running && movePromise) {
+                    movePromise.resolve();
+                }
             }
 
-            await updateState();
+            await updateState(false);
+
+            stateUpdates.push(updateState);
 
             return {
                 name,
@@ -85,13 +111,20 @@ module.exports = async ({ bus, motorAddresses }) => {
                 async move(steps, timeMs) {
                     log(`move ${steps} steps in ${timeMs} ms`);
 
-                    await driver.setSpeed(0.3);
+                    await driver.setSpeed(40);
                     await updateState();
                     await driver.setEndSteps(driverState.actSteps + steps);
+
+                    await new Promise((resolve, reject) => {
+                        movePromise = { resolve, reject };                        
+                    });
+                    movePromise = undefined;
                 },
 
                 async stop() {
-
+                    await driver.setSpeed(0);
+                    await updateState();
+                    await driver.setEndSteps(driverState.actSteps);
                 }
             }
         },

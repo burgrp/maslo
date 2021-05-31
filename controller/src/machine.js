@@ -199,9 +199,9 @@ module.exports = async ({
                 if (state.motors.z.lo.stop) {
                     return rapidMoveSpeedMmpmin;
                 } else {
-                    // if (!state.spindle.on) {
-                    //     throw new Error("Can not move while spindle is not running and Z is not at home");
-                    // }
+                    if (!state.spindle.on) {
+                        throw new Error("Can not move while spindle is not running and Z is not at home");
+                    }
                     return cuttingMoveSpeedMmpmin;
                 }
             }
