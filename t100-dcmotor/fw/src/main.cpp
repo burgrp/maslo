@@ -142,7 +142,6 @@ public:
   }
 
   void setEndSteps(int endSteps) {
-    state.speed = 0;
     state.endSteps = endSteps;
     checkState();
   }

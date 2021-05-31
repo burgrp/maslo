@@ -60,6 +60,7 @@ async function start() {
         });
 
         for (let motor of motors) {
+            await motor.setSpeed(0);
             let state = await motor.get();
             console.info(motor.name, state);
             await motor.setEndSteps(state.actSteps + 2000);
