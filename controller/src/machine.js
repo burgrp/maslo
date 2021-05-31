@@ -80,7 +80,7 @@ module.exports = async ({
             delete state.sledPosition;
         }
 
-        state.spindle.on = state.relays.spindle;
+        state.spindle.on = state.relays.spindle.on;
 
         if (state.motors.z && isFinite(state.motors.z.hi.steps)) {
             state.spindle.zMm = stepsToDistanceMm(motorConfigs.z, state.motors.z.steps - state.motors.z.hi.steps) + zHiStopToStockMm;
@@ -110,12 +110,14 @@ module.exports = async ({
 
     let motorDrivers = {};
     for (let name in motorConfigs) {
-        motorDrivers[name] = await driver.createMotor(name);
+        state.motors[name] = {};
+        motorDrivers[name] = await driver.createMotor(name, state.motors[name]);
     }
 
     let relayDrivers = {};
     for (let name in relayConfigs) {
-        relayDrivers[name] = await driver.createRelay(name);
+        state.relays[name] = {};
+        relayDrivers[name] = await driver.createRelay(name, state.relays[name]);
     }
 
     function checkPositionReference() {
@@ -169,12 +171,6 @@ module.exports = async ({
 
     function scheduleNextCheck() {
         try {
-            for (let name in motorDrivers) {
-                state.motors[name] = motorDrivers[name].getState();
-            }
-            for (let name in relayDrivers) {
-                state.relays[name] = relayDrivers[name].getState();
-            }
             checkState();
         } catch(e) {
             console.error("Error in periodic check:", e);

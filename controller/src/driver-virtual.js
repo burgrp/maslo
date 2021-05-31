@@ -11,17 +11,16 @@ module.exports = async ({ stopPositions }) => {
         async open() {
         },
 
-        async createMotor(name) {
+        async createMotor(name, state) {
+
+            state.steps = 0;
+            state.lo = {};
+            state.hi = {};
+            state.running = false;
+
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;
-            let stepCounter = 0;
-            let running = false;
-
-            let stops = {
-                lo: {},
-                hi: {}
-            };
 
             function doStop() {
                 log(`stop`);
@@ -32,12 +31,12 @@ module.exports = async ({ stopPositions }) => {
 
             function checkStops() {
                 for (let side of [{ name: "lo", multiplier: -1 }, { name: "hi", multiplier: 1 }]) {
-                    let stop = !!stopPositions && !!stopPositions[name] && isFinite(stopPositions[name][side.name]) && stepCounter * side.multiplier >= stopPositions[name][side.name] * side.multiplier;
-                    if (stop && !stops[side.name].stop) {
-                        stops[side.name].steps = stepCounter;
+                    let stop = !!stopPositions && !!stopPositions[name] && isFinite(stopPositions[name][side.name]) && state.steps * side.multiplier >= stopPositions[name][side.name] * side.multiplier;
+                    if (stop && !state[side.name].stop) {
+                        state[side.name].steps = state.steps;
                         doStop();
                     }
-                    stops[side.name].stop = stop;
+                    state[side.name].stop = stop;
                 }
             }
 
@@ -46,40 +45,32 @@ module.exports = async ({ stopPositions }) => {
             return {
                 name,
 
-                getState() {
-                    return {
-                        steps: stepCounter,
-                        lo: stops.lo,
-                        hi: stops.hi,
-                        running,
-                        currentMA: running? 500: 0
-                    }
-                },
-
                 async move(steps, timeMs) {
 
                     let ranToTheEnd = false;
 
-                    if (!running && !(stops.lo.stop && steps < 0) && !(stops.hi.stop && steps > 0)) {
+                    if (!state.running && !(state.lo.stop && steps < 0) && !(state.hi.stop && steps > 0)) {
 
-                        running = true;
+                        state.running = true;
 
                         log(`move ${steps} steps in ${timeMs} ms`);
 
                         let startedAtMs = now();
-                        let startedSteps = stepCounter;
+                        let startedSteps = state.steps;
 
                         function update() {
                             if (ranToTheEnd) {
-                                stepCounter = Math.round(startedSteps + steps);
+                                state.steps = Math.round(startedSteps + steps);
                             } else {
                                 let actualTimeMs = now() - startedAtMs;
-                                stepCounter = startedSteps + Math.ceil(steps * actualTimeMs / timeMs);
+                                state.steps = startedSteps + Math.ceil(steps * actualTimeMs / timeMs);
                             }
 
                             checkStops();
 
-                            log(`steps: ${stepCounter}`);
+                            state.currentMA = state.running? 500: 0;
+
+                            log(`steps: ${state.steps}`);
                         }
 
                         let updateInterval = setInterval(update, 100);
@@ -99,9 +90,9 @@ module.exports = async ({ stopPositions }) => {
                             });
 
                         } finally {
-                            running = false;
+                            state.running = false;
                             update();
-                            log(`move finished`, stepCounter);
+                            log(`move finished`, state.steps);
                         }
                     }
                 },
@@ -110,19 +101,16 @@ module.exports = async ({ stopPositions }) => {
             }
         },
 
-        async createRelay(name) {
+        async createRelay(name, state) {
             let log = Debug(`app:relay:${name}`);
 
-            let on = false;
+            state.on = false;
 
             return {
                 name,
-                getState() {
-                    return on;
-                },
                 async switch(newOn) {
                     log(`switch ${newOn ? "on" : "off"}`);
-                    on = newOn;
+                    state.on = newOn;
                 }
             }
         }
