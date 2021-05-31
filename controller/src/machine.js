@@ -1,5 +1,3 @@
-const deepEqual = require("fast-deep-equal");
-
 function distanceMmToSteps(motorConfig, distanceMm) {
     return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
 }
@@ -112,25 +110,12 @@ module.exports = async ({
 
     let motorDrivers = {};
     for (let name in motorConfigs) {
-        function update() {
-            if (motorDrivers[name]) {
-                state.motors[name] = motorDrivers[name].getState();
-                checkState();
-            }
-        }
-        motorDrivers[name] = await driver.createMotor(name, update);
-        state.motors[name] = {};
-        update();
+        motorDrivers[name] = await driver.createMotor(name);
     }
 
     let relayDrivers = {};
     for (let name in relayConfigs) {
-        function update() {
-            state.relays[name] = relayDrivers[name].getState();
-            checkState();
-        }
-        relayDrivers[name] = await driver.createRelay(name, update);
-        update();
+        relayDrivers[name] = await driver.createRelay(name);
     }
 
     function checkPositionReference() {
@@ -181,6 +166,23 @@ module.exports = async ({
 
         await moveAbsoluteXY(speedMmpmin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
+
+    function scheduleNextCheck() {
+        try {
+            for (let name in motorDrivers) {
+                state.motors[name] = motorDrivers[name].getState();
+            }
+            for (let name in relayDrivers) {
+                state.relays[name] = relayDrivers[name].getState();
+            }
+            checkState();
+        } catch(e) {
+            console.error("Error in periodic check:", e);
+        }
+        setTimeout(scheduleNextCheck, 100);
+    }
+
+    scheduleNextCheck();
 
     return {
         onStateChanged(listener) {

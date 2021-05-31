@@ -11,7 +11,7 @@ module.exports = async ({ stopPositions }) => {
         async open() {
         },
 
-        async createMotor(name, listener) {
+        async createMotor(name) {
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;
@@ -80,7 +80,6 @@ module.exports = async ({ stopPositions }) => {
                             checkStops();
 
                             log(`steps: ${stepCounter}`);
-                            listener();
                         }
 
                         let updateInterval = setInterval(update, 100);
@@ -111,7 +110,7 @@ module.exports = async ({ stopPositions }) => {
             }
         },
 
-        async createRelay(name, listener) {
+        async createRelay(name) {
             let log = Debug(`app:relay:${name}`);
 
             let on = false;
@@ -123,10 +122,7 @@ module.exports = async ({ stopPositions }) => {
                 },
                 async switch(newOn) {
                     log(`switch ${newOn ? "on" : "off"}`);
-                    if (newOn !== on) {
-                        on = newOn;
-                        listener();
-                    }
+                    on = newOn;
                 }
             }
         }
