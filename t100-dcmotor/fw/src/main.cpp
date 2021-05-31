@@ -90,8 +90,8 @@ public:
 
     // IRQ
 
-    target::PORT.OUTSET.setOUTSET(1 << PIN_IRQ);
-    target::PORT.DIRSET.setDIRSET(1 << PIN_IRQ);
+    target::PORT.OUTCLR.setOUTCLR(1 << PIN_IRQ);
+    target::PORT.DIRCLR.setDIRCLR(1 << PIN_IRQ);
 
     // STOPs
 
@@ -102,9 +102,9 @@ public:
     start(LO_PRIO_CHECK_MS / 10);
   }
 
-  void irqSet() { target::PORT.OUTCLR.setOUTCLR(1 << PIN_IRQ); }
+  void irqSet() { target::PORT.DIRSET.setDIRSET(1 << PIN_IRQ); }
 
-  void irqClear() { target::PORT.OUTSET.setOUTSET(1 << PIN_IRQ); }
+  void irqClear() { target::PORT.DIRCLR.setDIRCLR(1 << PIN_IRQ); }
 
   void checkState() {
 
