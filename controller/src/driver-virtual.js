@@ -17,7 +17,8 @@ module.exports = async ({ stopPositions }) => {
             state.lo = {};
             state.hi = {};
             state.running = false;
-
+            state.currentMA = 0;
+            
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;

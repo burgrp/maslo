@@ -133,6 +133,7 @@ module.exports = async ({
     }
 
     async function moveAbsoluteXY(speedMmPerMin, xMm, yMm) {
+        checkState();
 
         if (!state.positionReference) {
             throw new Error("No position reference");
@@ -161,6 +162,7 @@ module.exports = async ({
     }
 
     async function moveRelativeXY(speedMmPerMin, xMm, yMm) {
+        checkState();
         await moveAbsoluteXY(speedMmPerMin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
 
