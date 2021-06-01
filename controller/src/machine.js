@@ -152,13 +152,11 @@ module.exports = async ({
         let len1 = length(pos1);
         let len2 = length(pos2);
 
-        //let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
+        let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
 
         await Promise.allSettled([
-            moveRelativeABZ("a", speedMmPerMin, len2.a - len1.a),
-            moveRelativeABZ("b", speedMmPerMin, len2.b - len1.b)
-            // motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), timeMs),
-            // motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), timeMs)
+            motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), timeMs),
+            motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), timeMs)
         ]);
 
     }
