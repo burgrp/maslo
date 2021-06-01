@@ -13,13 +13,12 @@ module.exports = async ({
     driver,
     motors: motorConfigs,
     relays: relayConfigs,
-    rapidMoveSpeedMmPerMin,
-    cuttingMoveSpeedMmPerMin,
+    moveSpeedRapidMmPerMin,
+    moveSpeedCuttingMmPerMin,
     motorsShaftDistanceMm,
     workspaceWidthMm,
     workspaceHeightMm,
     motorsToWorkspaceVerticalMm,
-    zHiStopToStockMm,
     manualMoveMm
 }) => {
 
@@ -31,12 +30,13 @@ module.exports = async ({
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
-        positionReference: {
+        positionReference: { // TODO: this is calibration
             xMm: -1000,
             yMm: 700,
             ap: 0,
             bp: 0
         },
+        bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspaceWidthMm,
         workspaceHeightMm,
@@ -84,10 +84,10 @@ module.exports = async ({
 
         state.spindle.on = state.relays.spindle.on;
 
-        if (state.motors.z && isFinite(state.motors.z.hi.steps)) {
-            state.spindle.zMm = stepsToDistanceMm(motorConfigs.z, state.motors.z.steps - state.motors.z.hi.steps) + zHiStopToStockMm;
+        if (state.motors.z && isFinite(state.motors.z.lo.steps) && state.bitToMaterialAtLoStopMm) {
+            state.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, state.motors.z.steps - state.motors.z.lo.steps) - state.bitToMaterialAtLoStopMm;
         } else {
-            delete state.spindle.zMm;
+            delete state.spindle.bitToMaterialMm;
         }
 
         let stateJson = JSON.stringify(state);
@@ -122,12 +122,6 @@ module.exports = async ({
         relayDrivers[name] = await driver.createRelay(name, state.relays[name]);
     }
 
-    function checkPositionReference() {
-        if (!state.positionReference) {
-            throw new Error("No position reference");
-        }
-    }
-
     async function moveRelativeABZ(motor, speedMmPerMin, distanceMm) {
 
         let timeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
@@ -140,7 +134,9 @@ module.exports = async ({
 
     async function moveAbsoluteXY(speedMmPerMin, xMm, yMm) {
 
-        checkPositionReference();
+        if (!state.positionReference) {
+            throw new Error("No position reference");
+        }
 
         let base = (a, b) => Math.sqrt(a * a + b * b);
 
@@ -165,16 +161,13 @@ module.exports = async ({
     }
 
     async function moveRelativeXY(speedMmPerMin, xMm, yMm) {
-
-        checkPositionReference();
-
         await moveAbsoluteXY(speedMmPerMin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
     }
 
     function scheduleNextCheck() {
         try {
             checkState();
-        } catch(e) {
+        } catch (e) {
             logError("Error in periodic check:", e);
         }
         setTimeout(scheduleNextCheck, 100);
@@ -198,14 +191,13 @@ module.exports = async ({
         async manualMoveStart(kind, ...direction) {
 
             function getMoveSpeed() {
-                if (state.motors.z.lo.stop) {
-                    return rapidMoveSpeedMmPerMin;
-                } else {
-                    if (!state.spindle.on) {
-                        throw new Error("Can not move while spindle is not running and Z is not at home");
-                    }
-                    return cuttingMoveSpeedMmPerMin;
+                if (!isFinite(state.spindle.bitToMaterialMm)) {
+                    throw new Error("Unknown position of router bit. Please calibrate.");
                 }
+
+                return state.spindle.bitToMaterialMm < 0 ?
+                    moveSpeedRapidMmPerMin :
+                    moveSpeedCuttingMmPerMin;
             }
 
             if (kind == "a" || kind == "b") {
