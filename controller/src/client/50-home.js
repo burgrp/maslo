@@ -41,6 +41,8 @@ wg.common = {
 wg.pages.home = {
     async render(container, pageName) {
 
+        let lastSledX, lastSledY;
+
         function updateMachineState(state) {
 
             let sledX = state.sledPosition && state.sledPosition.xMm;
@@ -106,6 +108,24 @@ wg.pages.home = {
                 x2: state.motorsShaftDistanceMm / 2,
                 y2: 0
             });
+
+            if (lastSledX !== sledX || lastSledY !== sledY) {
+
+                if (isFinite(lastSledX) && isFinite(lastSledY) && isFinite(sledX) && isFinite(sledY)) {
+
+                    $(document.createElementNS('http://www.w3.org/2000/svg', 'line')).attr({
+                        x1: lastSledX,
+                        y1: lastSledY,
+                        x2: sledX,
+                        y2: sledY,
+                        stroke: "#019e72",
+                        "stroke-width": "10"
+                    }).appendTo(".scene svg");
+                }
+
+                lastSledX = sledX;
+                lastSledY = sledY;
+            }
 
             $(".scene").css({ visibility: "visible" });
 

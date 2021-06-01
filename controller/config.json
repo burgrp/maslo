@@ -22,14 +22,14 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "moveSpeedRapidMmPerMin": 700,
+        "moveSpeedRapidMmPerMin": 7000,
         "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
         "manualMoveMm": {
-            "xy": 100,
+            "xy": 1000,
             "ab": 100,
             "z": 1
         },
