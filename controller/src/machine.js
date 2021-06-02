@@ -130,7 +130,21 @@ module.exports = async ({
         let directionMultiplier = totalSteps < 0 ? -1 : 1;
         let overshotSteps = directionMultiplier * distanceMmToSteps(motorConfigs[motor], 50);
 
-        let duty = 0.25;
+        let correctionFactor = 2 * motorConfigs[motor].maxRpm * motorConfigs[motor].encoderPpr;
+
+        let maxSpeedMmPerMin = motorConfigs[motor].maxRpm / motorConfigs[motor].gearRatio * motorConfigs[motor].mmPerRev;
+
+        let duty = isFinite(motorDrivers[motor].speedToDutyRelation) ?
+            motorDrivers[motor].speedToDutyRelation * speedMmPerMin :
+            speedMmPerMin / maxSpeedMmPerMin - .2 // intentional error to test
+            ;
+
+        if (duty > 1) {
+            duty = 1;
+        }
+        if (duty < 0) {
+            duty = 0;
+        }
 
         let sectionCount = Math.ceil(totalTimeMs / 100);
         let startAbsSteps = motorDrivers[motor].state.steps;
@@ -139,28 +153,19 @@ module.exports = async ({
         for (let section = 0; section < sectionCount; section++) {
 
             let sectionAbsSteps = startAbsSteps + totalSteps * (section + 1) / sectionCount;
-            let sectionAbsXSteps = startAbsSteps + totalSteps * (section) / sectionCount;
-            let motorXSteps = motorDrivers[motor].state.steps;
 
-            //console.info(">", section, sectionAbsSteps, motorDrivers[motor].state.steps, duty);
-            let safeDuty = duty;
-            if (safeDuty < 0.2) {
-                safeDuty = 0;
-            }
-            await motorDrivers[motor].set(sectionAbsSteps + overshotSteps, safeDuty);
+            await motorDrivers[motor].set(sectionAbsSteps + overshotSteps, duty);
             await new Promise(resolve => setTimeout(resolve, totalTimeMs / sectionCount));
-            //console.info("<", section, sectionAbsSteps, motorDrivers[motor].state.steps, duty);
 
-            let error = (motorDrivers[motor].state.steps - motorXSteps) - (sectionAbsSteps - sectionAbsXSteps);
+            let error = motorDrivers[motor].state.steps - sectionAbsSteps;
 
-            //let correction = error * Math.abs(error) / 100000;
-            let correction = error / 1000;
+            let correction = directionMultiplier * error / correctionFactor;
             if (correction > 0.1) {
                 correction = 0.1;
             }
             if (correction < -0.1) {
                 correction = -0.1;
-            }          
+            }
 
             duty = duty - correction;
             if (duty > 1) {
@@ -170,9 +175,11 @@ module.exports = async ({
                 duty = 0;
             }
 
-            console.info(`#${section} Error: ${Math.round(error)}, Duty: ${Math.round(duty * 100) / 100}`);
+            console.info(`#${section} Error: ${Math.round(error)}, Duty: ${Math.round(duty * 100) / 100}, Total error: ${Math.round(motorDrivers[motor].state.steps - sectionAbsSteps)}`);
 
         }
+
+        motorDrivers[motor].speedToDutyRelation = duty / speedMmPerMin;
 
     }
 

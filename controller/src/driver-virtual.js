@@ -38,11 +38,11 @@ module.exports = async ({ stopPositions }) => {
 
             checkStops();
 
-            let checkIntervalMs = 10;
+            let checkIntervalMs = 100;
             setInterval(() => {
                 let stepsPerCheck = config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs);
                 let diff = state.steps - endSteps;
-                state.running = Math.abs(diff) > stepsPerCheck && state.duty > 0;
+                state.running = Math.abs(diff) > stepsPerCheck && state.duty > 0.2;
                 if (state.running) {
                     state.steps += stepsPerCheck * (diff < 0 ? 1 : -1);
                 }
