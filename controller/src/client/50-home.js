@@ -42,6 +42,7 @@ wg.pages.home = {
     async render(container, pageName) {
 
         let lastSledX, lastSledY;
+        let trackToggle = false;
 
         function updateMachineState(state) {
 
@@ -109,7 +110,8 @@ wg.pages.home = {
                 y2: 0
             });
 
-            if (lastSledX !== sledX || lastSledY !== sledY) {
+            let dist = Math.sqrt(Math.pow(sledX - lastSledX, 2) + Math.pow(sledY - lastSledY, 2));
+            if (dist > 10 || !isFinite(dist)) {
 
                 if (isFinite(lastSledX) && isFinite(lastSledY) && isFinite(sledX) && isFinite(sledY)) {
 
@@ -118,9 +120,11 @@ wg.pages.home = {
                         y1: lastSledY,
                         x2: sledX,
                         y2: sledY,
-                        stroke: "#019e72",
+                        stroke: trackToggle? "red": "white",
                         "stroke-width": "10"
                     }).appendTo(".scene svg");
+
+                    trackToggle = !trackToggle;
                 }
 
                 lastSledX = sledX;

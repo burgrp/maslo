@@ -113,26 +113,26 @@ module.exports = async ({
     let motorDrivers = {};
     for (let name in motorConfigs) {
         state.motors[name] = {};
-        motorDrivers[name] = await driver.createMotor(name, state.motors[name]);
+        motorDrivers[name] = await driver.createMotor(name, state.motors[name], motorConfigs[name]);
     }
 
     let relayDrivers = {};
     for (let name in relayConfigs) {
         state.relays[name] = {};
-        relayDrivers[name] = await driver.createRelay(name, state.relays[name]);
+        relayDrivers[name] = await driver.createRelay(name, state.relays[name], relayConfigs[name]);
     }
 
-    async function moveRelativeABZ(motor, speedMmPerMin, distanceMm) {
+    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
 
-        let timeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
+        //let timeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
 
         await motorDrivers[motor].move(
             distanceMmToSteps(motorConfigs[motor], distanceMm),
-            timeMs
+            1
         );
     }
 
-    async function moveAbsoluteXY(speedMmPerMin, xMm, yMm) {
+    async function moveAbsoluteXY(xMm, yMm, speedMmPerMin) {
         checkState();
 
         if (!state.positionReference) {
@@ -155,15 +155,15 @@ module.exports = async ({
         let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
 
         await Promise.allSettled([
-            motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), timeMs),
-            motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), timeMs)
+            motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
+            motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
         ]);
 
     }
 
-    async function moveRelativeXY(speedMmPerMin, xMm, yMm) {
+    async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
         checkState();
-        await moveAbsoluteXY(speedMmPerMin, state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm);
+        await moveAbsoluteXY(state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm, speedMmPerMin);
     }
 
     function scheduleNextCheck() {
@@ -206,22 +206,24 @@ module.exports = async ({
 
                 await moveRelativeABZ(
                     kind,
-                    getMoveSpeed(), direction[0] * manualMoveMm.ab
+                     direction[0] * manualMoveMm.ab,
+                     getMoveSpeed()
                 );
 
             } if (kind == "z") {
 
                 await moveRelativeABZ(
                     kind,
-                    50, direction[0] * manualMoveMm.z
+                    direction[0] * manualMoveMm.z,
+                    30
                 );
 
             } else if (kind === "xy") {
 
-                await moveRelativeXY(
-                    getMoveSpeed(),
+                await moveRelativeXY(                    
                     direction[0] * manualMoveMm.xy,
-                    direction[1] * manualMoveMm.xy
+                    direction[1] * manualMoveMm.xy,
+                    getMoveSpeed()
                 );
 
             }

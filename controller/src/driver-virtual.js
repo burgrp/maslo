@@ -11,14 +11,14 @@ module.exports = async ({ stopPositions }) => {
         async open() {
         },
 
-        async createMotor(name, state) {
+        async createMotor(name, state, config) {
 
             state.steps = 0;
             state.lo = {};
             state.hi = {};
             state.running = false;
             state.currentMA = 0;
-            
+
             let log = Debug(`app:motor:${name}`);
 
             let stopCurrentMove;
@@ -46,54 +46,58 @@ module.exports = async ({ stopPositions }) => {
             return {
                 name,
 
-                async move(steps, timeMs) {
+                async move(steps, duty) {
 
-                    let ranToTheEnd = false;
+                    if (duty > 0) {
+                        let timeMs = 60 * 1000 * Math.abs(steps) / (config.maxRpm * config.encoderPpr * duty);
 
-                    if (!state.running && !(state.lo.stop && steps < 0) && !(state.hi.stop && steps > 0)) {
+                        let ranToTheEnd = false;
 
-                        state.running = true;
+                        if (!state.running && !(state.lo.stop && steps < 0) && !(state.hi.stop && steps > 0)) {
 
-                        log(`move ${steps} steps in ${timeMs} ms`);
+                            state.running = true;
 
-                        let startedAtMs = now();
-                        let startedSteps = state.steps;
+                            log(`move ${steps} steps in ${timeMs} ms`);
 
-                        function update() {
-                            if (ranToTheEnd) {
-                                state.steps = Math.round(startedSteps + steps);
-                            } else {
-                                let actualTimeMs = now() - startedAtMs;
-                                state.steps = startedSteps + Math.ceil(steps * actualTimeMs / timeMs);
+                            let startedAtMs = now();
+                            let startedSteps = state.steps;
+
+                            function update() {
+                                if (ranToTheEnd) {
+                                    state.steps = Math.round(startedSteps + steps);
+                                } else {
+                                    let actualTimeMs = now() - startedAtMs;
+                                    state.steps = startedSteps + Math.ceil(steps * actualTimeMs / timeMs);
+                                }
+
+                                checkStops();
+
+                                state.currentMA = state.running ? 500 : 0;
+
+                                log(`steps: ${state.steps}`);
                             }
 
-                            checkStops();
+                            let updateInterval = setInterval(update, 100);
 
-                            state.currentMA = state.running? 500: 0;
+                            try {
 
-                            log(`steps: ${state.steps}`);
-                        }
+                                await new Promise((resolve, reject) => {
+                                    endTimeout = setTimeout(() => {
+                                        clearInterval(updateInterval);
+                                        ranToTheEnd = true;
+                                        resolve();
+                                    }, timeMs);
+                                    stopCurrentMove = () => {
+                                        clearInterval(updateInterval);
+                                        resolve();
+                                    };
+                                });
 
-                        let updateInterval = setInterval(update, 100);
-
-                        try {
-
-                            await new Promise((resolve, reject) => {
-                                endTimeout = setTimeout(() => {
-                                    clearInterval(updateInterval);
-                                    ranToTheEnd = true;
-                                    resolve();
-                                }, timeMs);
-                                stopCurrentMove = () => {
-                                    clearInterval(updateInterval);
-                                    resolve();
-                                };
-                            });
-
-                        } finally {
-                            state.running = false;
-                            update();
-                            log(`move finished`, state.steps);
+                            } finally {
+                                state.running = false;
+                                update();
+                                log(`move finished`, state.steps);
+                            }
                         }
                     }
                 },
