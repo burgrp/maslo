@@ -112,24 +112,68 @@ module.exports = async ({
 
     let motorDrivers = {};
     for (let name in motorConfigs) {
-        state.motors[name] = {};
-        motorDrivers[name] = await driver.createMotor(name, state.motors[name], motorConfigs[name]);
+        motorDrivers[name] = await driver.createMotor(name, motorConfigs[name]);
+        state.motors[name] = motorDrivers[name].state;
     }
 
     let relayDrivers = {};
     for (let name in relayConfigs) {
-        state.relays[name] = {};
-        relayDrivers[name] = await driver.createRelay(name, state.relays[name], relayConfigs[name]);
+        relayDrivers[name] = await driver.createRelay(name, relayConfigs[name]);
+        state.relays[name] = relayDrivers[name].state;
     }
 
-    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
+    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin, stop) {
 
-        //let timeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
+        let totalTimeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
+        let totalSteps = distanceMmToSteps(motorConfigs[motor], distanceMm);
 
-        await motorDrivers[motor].move(
-            distanceMmToSteps(motorConfigs[motor], distanceMm),
-            1
-        );
+        let directionMultiplier = totalSteps < 0 ? -1 : 1;
+        let overshotSteps = directionMultiplier * distanceMmToSteps(motorConfigs[motor], 50);
+
+        let duty = 0.25;
+
+        let sectionCount = Math.ceil(totalTimeMs / 100);
+        let startAbsSteps = motorDrivers[motor].state.steps;
+
+        console.info(totalTimeMs, sectionCount, "---------------------------");
+        for (let section = 0; section < sectionCount; section++) {
+
+            let sectionAbsSteps = startAbsSteps + totalSteps * (section + 1) / sectionCount;
+            let sectionAbsXSteps = startAbsSteps + totalSteps * (section) / sectionCount;
+            let motorXSteps = motorDrivers[motor].state.steps;
+
+            //console.info(">", section, sectionAbsSteps, motorDrivers[motor].state.steps, duty);
+            let safeDuty = duty;
+            if (safeDuty < 0.2) {
+                safeDuty = 0;
+            }
+            await motorDrivers[motor].set(sectionAbsSteps + overshotSteps, safeDuty);
+            await new Promise(resolve => setTimeout(resolve, totalTimeMs / sectionCount));
+            //console.info("<", section, sectionAbsSteps, motorDrivers[motor].state.steps, duty);
+
+            let error = (motorDrivers[motor].state.steps - motorXSteps) - (sectionAbsSteps - sectionAbsXSteps);
+
+            //let correction = error * Math.abs(error) / 100000;
+            let correction = error / 1000;
+            if (correction > 0.1) {
+                correction = 0.1;
+            }
+            if (correction < -0.1) {
+                correction = -0.1;
+            }          
+
+            duty = duty - correction;
+            if (duty > 1) {
+                duty = 1;
+            }
+            if (duty < 0) {
+                duty = 0;
+            }
+
+            console.info(`#${section} Error: ${Math.round(error)}, Duty: ${Math.round(duty * 100) / 100}`);
+
+        }
+
     }
 
     async function moveAbsoluteXY(xMm, yMm, speedMmPerMin) {
@@ -206,8 +250,8 @@ module.exports = async ({
 
                 await moveRelativeABZ(
                     kind,
-                     direction[0] * manualMoveMm.ab,
-                     getMoveSpeed()
+                    direction[0] * manualMoveMm.ab,
+                    getMoveSpeed()
                 );
 
             } if (kind == "z") {
@@ -220,7 +264,7 @@ module.exports = async ({
 
             } else if (kind === "xy") {
 
-                await moveRelativeXY(                    
+                await moveRelativeXY(
                     direction[0] * manualMoveMm.xy,
                     direction[1] * manualMoveMm.xy,
                     getMoveSpeed()
@@ -230,14 +274,14 @@ module.exports = async ({
         },
 
         async manualMoveStop(kind) {
-            if (motorDrivers[kind]) {
-                await motorDrivers[kind].stop();
-            } else if (kind === "xy") {
-                await Promise.allSettled([
-                    motorDrivers.a.stop(),
-                    motorDrivers.b.stop()
-                ]);
-            }
+            // if (motorDrivers[kind]) {
+            //     await motorDrivers[kind].stop();
+            // } else if (kind === "xy") {
+            //     await Promise.allSettled([
+            //         motorDrivers.a.stop(),
+            //         motorDrivers.b.stop()
+            //     ]);
+            // }
         },
 
         async manualSwitch(relay, state) {
