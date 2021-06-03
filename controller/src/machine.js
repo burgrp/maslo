@@ -22,7 +22,7 @@ module.exports = async ({
     manualMoveMm
 }) => {
 
-    let state = {
+    let machine = {
         motors: {},
         relays: {},
         spindle: {},
@@ -60,17 +60,17 @@ module.exports = async ({
 
     let calcC = (a, b, base) => (p2(a) - p2(b) + p2(base)) / (2 * base);
 
-    function checkState() {
+    function checkMachine() {
 
-        if (state.positionReference) {
+        if (machine.positionReference) {
 
             // calculate step counter as sled would be at motor A
-            let originAp = distanceMmToSteps(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.aSteps;
-            let originBp = distanceMmToSteps(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bSteps;
+            let originASteps = distanceMmToSteps(motorConfigs.a, sqrt(p2(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm) + p2(machine.positionReference.yMm))) - machine.positionReference.aSteps;
+            let originBSteps = distanceMmToSteps(motorConfigs.b, sqrt(p2(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm) + p2(machine.positionReference.yMm))) - machine.positionReference.bSteps;
 
             // chain lengths
-            let a = stepsToDistanceMm(motorConfigs.a, state.motors.a && state.motors.a.steps + originAp);
-            let b = stepsToDistanceMm(motorConfigs.b, state.motors.b && state.motors.b.steps + originBp);
+            let a = stepsToDistanceMm(motorConfigs.a, machine.motors.a && machine.motors.a.steps + originASteps);
+            let b = stepsToDistanceMm(motorConfigs.b, machine.motors.b && machine.motors.b.steps + originBSteps);
 
             // let's have triangle MotorA-MotorB-Sled, then:
             // a is MotorA-Sled, i.e. chain length a
@@ -79,32 +79,32 @@ module.exports = async ({
             let aa = calcC(
                 a,
                 b,
-                state.motorsShaftDistanceMm
+                machine.motorsShaftDistanceMm
             );
 
-            state.sledPosition = {
-                xMm: aa - state.motorsShaftDistanceMm / 2,
+            machine.sledPosition = {
+                xMm: aa - machine.motorsShaftDistanceMm / 2,
                 yMm: sqrt(p2(a) - p2(aa))
             };
 
         } else {
-            delete state.sledPosition;
+            delete machine.sledPosition;
         }
 
-        state.spindle.on = state.relays.spindle.on;
+        machine.spindle.on = machine.relays.spindle.on;
 
-        if (state.motors.z && isFinite(state.motors.z.lo.steps) && state.bitToMaterialAtLoStopMm) {
-            state.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, state.motors.z.steps - state.motors.z.lo.steps) - state.bitToMaterialAtLoStopMm;
+        if (machine.motors.z && isFinite(machine.motors.z.lo.steps) && machine.bitToMaterialAtLoStopMm) {
+            machine.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, machine.motors.z.steps - machine.motors.z.lo.steps) - machine.bitToMaterialAtLoStopMm;
         } else {
-            delete state.spindle.bitToMaterialMm;
+            delete machine.spindle.bitToMaterialMm;
         }
 
-        let stateJson = JSON.stringify(state);
+        let stateJson = JSON.stringify(machine);
         if (stateJson !== oldStateJson) {
             oldStateJson = stateJson;
             for (let listener of stateChangedListeners) {
                 try {
-                    listener(state);
+                    listener(machine);
                 } catch (error) {
                     logError("Error in machine state change listener:", error);
                 }
@@ -122,13 +122,13 @@ module.exports = async ({
     let motorDrivers = {};
     for (let name in motorConfigs) {
         motorDrivers[name] = await driver.createMotor(name, motorConfigs[name]);
-        state.motors[name] = motorDrivers[name].state;
+        machine.motors[name] = motorDrivers[name].state;
     }
 
     let relayDrivers = {};
     for (let name in relayConfigs) {
         relayDrivers[name] = await driver.createRelay(name, relayConfigs[name]);
-        state.relays[name] = relayDrivers[name].state;
+        machine.relays[name] = relayDrivers[name].state;
     }
 
     async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
@@ -137,34 +137,84 @@ module.exports = async ({
     }
 
     let followIntervalMs = 100;
-    setInterval(() => {
-        let target = state.targetPosition;
-        let follow = state.followPosition;
+    let followCheckInProgress = false;
+    setInterval(async () => {
 
-        let distanceToTargetMm = sqrt(p2(target.xMm - follow.xMm) + p2(target.yMm - follow.yMm));
-        if (distanceToTargetMm > 0) {
+        if (!followCheckInProgress) {
+            try {
+                try {
+                    followCheckInProgress = true;
 
-            let distanceToNextTickMm = followIntervalMs * target.speedMmPerMin / 60000;
+                    let target = machine.targetPosition;
+                    let follow = machine.followPosition;
 
-            if (distanceToNextTickMm > distanceToTargetMm) {
-                follow.xMm = target.xMm;
-                follow.yMm = target.yMm;
-            } else {
-                let ratio = distanceToNextTickMm / distanceToTargetMm;
-                follow.xMm += (target.xMm - follow.xMm) * ratio;
-                follow.yMm += (target.yMm - follow.yMm) * ratio;
+                    let distanceToTargetMm = sqrt(p2(target.xMm - follow.xMm) + p2(target.yMm - follow.yMm));
+                    if (distanceToTargetMm > 0) {
+
+                        let distanceToNextTickMm = followIntervalMs * target.speedMmPerMin / 60000;
+
+                        if (distanceToNextTickMm > distanceToTargetMm) {
+                            follow.xMm = target.xMm;
+                            follow.yMm = target.yMm;
+                        } else {
+                            let ratio = distanceToNextTickMm / distanceToTargetMm;
+                            follow.xMm += (target.xMm - follow.xMm) * ratio;
+                            follow.yMm += (target.yMm - follow.yMm) * ratio;
+                        }
+
+                    }
+
+
+                    for (let motor of ["a", "b", "z"]) {
+                        let driver = motorDrivers[motor];
+                        let state = await driver.get();
+                        machine.motors[motor] = state;
+                    }
+
+                    if (machine.positionReference) {
+
+                        let length = pos => ({
+                            a: sqrt(p2(motorsShaftDistanceMm / 2 + pos.x) + p2(pos.y)),
+                            b: sqrt(p2(motorsShaftDistanceMm / 2 - pos.x) + p2(pos.y))
+                        });
+
+                        checkMachine();
+
+                        let pos1 = { x: machine.sledPosition.xMm, y: machine.sledPosition.yMm };
+                        let pos2 = { x: follow.xMm, y: follow.yMm };
+
+                        let len1 = length(pos1);
+                        let len2 = length(pos2);
+
+                        //let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
+
+                        await Promise.allSettled([
+                            motorDrivers.a.set(machine.motors.a.steps + distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
+                            motorDrivers.b.set(machine.motors.b.steps + distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
+                        ]);
+
+                    }
+
+                    checkMachine();
+
+                } finally {
+                    followCheckInProgress = false;
+                }
+            } catch (e) {
+                logError("Error in follow check:", e);
             }
-
-            checkState();
+        } else {
+            logError("Follow check too slow.");
         }
+
 
     }, followIntervalMs);
 
     async function moveAbsoluteXY(xMm, yMm, speedMmPerMin) {
-        state.targetPosition.xMm = xMm;
-        state.targetPosition.yMm = yMm;
-        state.targetPosition.speedMmPerMin = speedMmPerMin;
-        checkState();
+        machine.targetPosition.xMm = xMm;
+        machine.targetPosition.yMm = yMm;
+        machine.targetPosition.speedMmPerMin = speedMmPerMin;
+        checkMachine();
 
         // if (!state.positionReference) {
         //     throw new Error("No position reference");
@@ -193,12 +243,12 @@ module.exports = async ({
     }
 
     async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
-        await moveAbsoluteXY(state.targetPosition.xMm + xMm, state.targetPosition.yMm + yMm, speedMmPerMin);
+        await moveAbsoluteXY(machine.targetPosition.xMm + xMm, machine.targetPosition.yMm + yMm, speedMmPerMin);
     }
 
     function scheduleNextCheck() {
         try {
-            checkState();
+            checkMachine();
         } catch (e) {
             logError("Error in periodic check:", e);
         }
@@ -213,7 +263,7 @@ module.exports = async ({
         },
 
         getState() {
-            return state;
+            return machine;
         },
 
         moveRelativeABZ,
@@ -223,11 +273,11 @@ module.exports = async ({
         async manualMoveStart(kind, ...direction) {
 
             function getMoveSpeed() {
-                if (!isFinite(state.spindle.bitToMaterialMm)) {
+                if (!isFinite(machine.spindle.bitToMaterialMm)) {
                     throw new Error("Unknown position of router bit. Please calibrate.");
                 }
 
-                return state.spindle.bitToMaterialMm < 0 ?
+                return machine.spindle.bitToMaterialMm < 0 ?
                     moveSpeedRapidMmPerMin :
                     moveSpeedCuttingMmPerMin;
             }
@@ -275,7 +325,7 @@ module.exports = async ({
         },
 
         async setUserOrigin(xMm, yMm) {
-            state.userOrigin = { xMm, yMm };
+            machine.userOrigin = { xMm, yMm };
         }
     }
 }
