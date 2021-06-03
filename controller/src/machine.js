@@ -31,8 +31,8 @@ module.exports = async ({
             yMm: motorsToWorkspaceVerticalMm + 500
         },
         targetPosition: {
-            xMm: 0,
-            yMm: motorsToWorkspaceVerticalMm + 500,
+            xMm: 1000,
+            yMm: motorsToWorkspaceVerticalMm + 1000,
             speedMmPerMin: moveSpeedRapidMmPerMin
         },
         userOrigin: {
@@ -40,8 +40,8 @@ module.exports = async ({
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
         positionReference: { // TODO: this is calibration
-            xMm: -100,
-            yMm: motorsToWorkspaceVerticalMm + 700,
+            xMm: 0,
+            yMm: motorsToWorkspaceVerticalMm + 500,
             aSteps: 0,
             bSteps: 0
         },
@@ -188,11 +188,54 @@ module.exports = async ({
 
                         //let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
 
-                        await Promise.allSettled([
-                            motorDrivers.a.set(machine.motors.a.steps + distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
-                            motorDrivers.b.set(machine.motors.b.steps + distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
-                        ]);
+                        await Promise.allSettled(["a", "b"].map(motor => {
+                            let state = machine.motors[motor];
+                            let config = motorConfigs[motor];
+                            let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
+                            let actSteps = machine.motors[motor].steps;
 
+                            let duty;
+                            let lastStep = state.lastStep;
+
+                            if (!lastStep) {
+
+                                duty = 0.5;
+
+                            } else {
+
+                                duty = lastStep.duty;
+                                let error = actSteps - (lastStep.actSteps + lastStep.distanceSteps);
+
+                                let correction =  1000 * error / (config.maxRpm * config.encoderPpr * followIntervalMs);
+                                if (correction > 0.1) {
+                                    correction = 0.1;
+                                }
+                                if (correction < -0.1) {
+                                    correction = -0.1;
+                                }
+
+                                duty = duty + correction;
+
+                                if (duty > 1) {
+                                    duty = 1;
+                                }
+                                if (duty < 0) {
+                                    duty = 0;
+                                }
+
+                                console.info(`${motor}: err ${Math.round(error)} corr ${Math.round(correction * 1000) / 1000} D ${Math.round(duty * 1000) / 1000}`)
+                            }
+
+                            state.lastStep = {
+                                distanceSteps,
+                                actSteps,
+                                duty
+                            }
+
+                            if (distanceSteps !== 0) {
+                                return motorDrivers[motor].set(actSteps + distanceSteps, duty);
+                            }
+                        }));
                     }
 
                     checkMachine();
