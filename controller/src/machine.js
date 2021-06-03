@@ -27,12 +27,12 @@ module.exports = async ({
         relays: {},
         spindle: {},
         followPosition: {
-            xMm: -500,
-            yMm: 1200
+            xMm: 0,
+            yMm: motorsToWorkspaceVerticalMm + 500
         },
         targetPosition: {
-            xMm: -100,
-            yMm: 1600,
+            xMm: 0,
+            yMm: motorsToWorkspaceVerticalMm + 500,
             speedMmPerMin: moveSpeedRapidMmPerMin
         },
         userOrigin: {
@@ -40,8 +40,8 @@ module.exports = async ({
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
         positionReference: { // TODO: this is calibration
-            xMm: -1000,
-            yMm: 700,
+            xMm: -100,
+            yMm: motorsToWorkspaceVerticalMm + 700,
             aSteps: 0,
             bSteps: 0
         },
