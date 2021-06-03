@@ -192,47 +192,52 @@ module.exports = async ({
                             let state = machine.motors[motor];
                             let config = motorConfigs[motor];
                             let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
-                            let actSteps = machine.motors[motor].steps;
-
-                            let duty;
-                            let lastStep = state.lastStep;
-
-                            if (!lastStep) {
-
-                                duty = 0.5;
-
-                            } else {
-
-                                duty = lastStep.duty;
-                                let error = actSteps - (lastStep.actSteps + lastStep.distanceSteps);
-
-                                let correction =  1000 * error / (config.maxRpm * config.encoderPpr * followIntervalMs);
-                                if (correction > 0.1) {
-                                    correction = 0.1;
-                                }
-                                if (correction < -0.1) {
-                                    correction = -0.1;
-                                }
-
-                                duty = duty + correction;
-
-                                if (duty > 1) {
-                                    duty = 1;
-                                }
-                                if (duty < 0) {
-                                    duty = 0;
-                                }
-
-                                console.info(`${motor}: err ${Math.round(error)} corr ${Math.round(correction * 1000) / 1000} D ${Math.round(duty * 1000) / 1000}`)
-                            }
-
-                            state.lastStep = {
-                                distanceSteps,
-                                actSteps,
-                                duty
-                            }
 
                             if (distanceSteps !== 0) {
+
+                                let directionMultiplier = distanceSteps < 0 ? -1 : 1;
+                                let actSteps = machine.motors[motor].steps;
+
+                                let duty;
+                                let lastStep = state.lastStep;
+
+                                if (!lastStep) {
+
+                                    duty = isFinite(state.speedToDutyRatio) ? target.speedMmPerMin * state.speedToDutyRatio : 0.3;
+
+                                } else {
+
+                                    duty = lastStep.duty;
+                                    let error = actSteps - (lastStep.actSteps + lastStep.distanceSteps);
+
+                                    let correction = -directionMultiplier * 10 * error / (config.maxRpm * config.encoderPpr * followIntervalMs);
+                                    if (correction > 0.1) {
+                                        correction = 0.1;
+                                    }
+                                    if (correction < -0.1) {
+                                        correction = -0.1;
+                                    }
+
+                                    duty = duty + correction;
+
+                                    if (duty > 1) {
+                                        duty = 1;
+                                    }
+                                    if (duty < 0) {
+                                        duty = 0;
+                                    }
+
+                                    console.info(`${motor}: err ${Math.round(error)} corr ${Math.round(correction * 1000) / 1000} D ${Math.round(duty * 1000) / 1000}`)
+                                }
+
+                                state.lastStep = {
+                                    distanceSteps,
+                                    actSteps,
+                                    duty
+                                };
+
+                                state.speedToDutyRatio = duty / target.speedMmPerMin;
+
                                 return motorDrivers[motor].set(actSteps + distanceSteps, duty);
                             }
                         }));
@@ -257,32 +262,9 @@ module.exports = async ({
         machine.targetPosition.xMm = xMm;
         machine.targetPosition.yMm = yMm;
         machine.targetPosition.speedMmPerMin = speedMmPerMin;
+        delete machine.motors.a.lastStep;
+        delete machine.motors.b.lastStep;
         checkMachine();
-
-        // if (!state.positionReference) {
-        //     throw new Error("No position reference");
-        // }
-
-        // let base = (a, b) => Math.sqrt(a * a + b * b);
-
-        // let length = pos => ({
-        //     a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
-        //     b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
-        // });
-
-        // let pos1 = { x: state.sledPosition.xMm, y: state.sledPosition.yMm };
-        // let pos2 = { x: xMm, y: yMm };
-
-        // let len1 = length(pos1);
-        // let len2 = length(pos2);
-
-        // let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
-
-        // await Promise.allSettled([
-        //     motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
-        //     motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
-        // ]);
-
     }
 
     async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
