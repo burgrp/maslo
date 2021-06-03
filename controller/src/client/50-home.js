@@ -78,6 +78,25 @@ wg.pages.home = {
                 cy: sledY,
             });
 
+            $(".scene .follow").attr({
+                cx: state.followPosition.xMm,
+                cy: state.followPosition.yMm,
+            });
+
+            $(".scene .target.x").attr({
+                x1: state.targetPosition.xMm - 50,
+                y1: state.targetPosition.yMm - 50,
+                x2: state.targetPosition.xMm + 50,
+                y2: state.targetPosition.yMm + 50
+            });
+
+            $(".scene .target.y").attr({
+                x1: state.targetPosition.xMm - 50,
+                y1: state.targetPosition.yMm + 50,
+                x2: state.targetPosition.xMm + 50,
+                y2: state.targetPosition.yMm - 50
+            });
+
             $(".scene .userorigin.x").attr({
                 x1: state.userOrigin.xMm - 30,
                 y1: state.userOrigin.yMm,
@@ -120,7 +139,7 @@ wg.pages.home = {
                         y1: lastSledY,
                         x2: sledX,
                         y2: sledY,
-                        stroke: trackToggle? "red": "white",
+                        stroke: trackToggle ? "red" : "white",
                         "stroke-width": "10"
                     }).appendTo(".scene svg");
 
@@ -189,6 +208,9 @@ wg.pages.home = {
                 <line class="chain b" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>
                 <line class="userorigin y" stroke="yellow" stroke-width="10"/>
+                <line class="target x" stroke="white" stroke-width="10"/>
+                <line class="target y" stroke="white" stroke-width="10"/>
+                <circle class="follow" r="60" fill="none" stroke="white" stroke-width="10"/>
             </svg>                      
             `)]).css({ visibility: "hidden" }),
             DIV("state"),

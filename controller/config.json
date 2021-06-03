@@ -29,7 +29,7 @@
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
         "manualMoveMm": {
-            "xy": 1000,
+            "xy": 100,
             "ab": 100,
             "z": 1
         },

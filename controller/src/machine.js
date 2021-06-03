@@ -26,6 +26,15 @@ module.exports = async ({
         motors: {},
         relays: {},
         spindle: {},
+        followPosition: {
+            xMm: -500,
+            yMm: 1200
+        },
+        targetPosition: {
+            xMm: -100,
+            yMm: 1600,
+            speedMmPerMin: moveSpeedRapidMmPerMin
+        },
         userOrigin: {
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
@@ -122,99 +131,69 @@ module.exports = async ({
         state.relays[name] = relayDrivers[name].state;
     }
 
-    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin, stop) {
+    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
 
-        let totalTimeMs = 60000 * Math.abs(distanceMm) / speedMmPerMin;
-        let totalSteps = distanceMmToSteps(motorConfigs[motor], distanceMm);
-
-        let directionMultiplier = totalSteps < 0 ? -1 : 1;
-        let overshotSteps = directionMultiplier * distanceMmToSteps(motorConfigs[motor], 50);
-
-        let correctionFactor = 2 * motorConfigs[motor].maxRpm * motorConfigs[motor].encoderPpr;
-
-        let maxSpeedMmPerMin = motorConfigs[motor].maxRpm / motorConfigs[motor].gearRatio * motorConfigs[motor].mmPerRev;
-
-        let duty = isFinite(motorDrivers[motor].speedToDutyRelation) ?
-            motorDrivers[motor].speedToDutyRelation * speedMmPerMin :
-            speedMmPerMin / maxSpeedMmPerMin - .2 // intentional error to test
-            ;
-
-        if (duty > 1) {
-            duty = 1;
-        }
-        if (duty < 0) {
-            duty = 0;
-        }
-
-        let sectionCount = Math.ceil(totalTimeMs / 100);
-        let startAbsSteps = motorDrivers[motor].state.steps;
-
-        console.info(totalTimeMs, sectionCount, "---------------------------");
-        for (let section = 0; section < sectionCount; section++) {
-
-            let sectionAbsSteps = startAbsSteps + totalSteps * (section + 1) / sectionCount;
-
-            await motorDrivers[motor].set(sectionAbsSteps + overshotSteps, duty);
-            await new Promise(resolve => setTimeout(resolve, totalTimeMs / sectionCount));
-
-            let error = motorDrivers[motor].state.steps - sectionAbsSteps;
-
-            let correction = directionMultiplier * error / correctionFactor;
-            if (correction > 0.1) {
-                correction = 0.1;
-            }
-            if (correction < -0.1) {
-                correction = -0.1;
-            }
-
-            duty = duty - correction;
-            if (duty > 1) {
-                duty = 1;
-            }
-            if (duty < 0) {
-                duty = 0;
-            }
-
-            console.info(`#${section} Error: ${Math.round(error)}, Duty: ${Math.round(duty * 100) / 100}, Total error: ${Math.round(motorDrivers[motor].state.steps - sectionAbsSteps)}`);
-
-        }
-
-        motorDrivers[motor].speedToDutyRelation = duty / speedMmPerMin;
 
     }
 
-    async function moveAbsoluteXY(xMm, yMm, speedMmPerMin) {
-        checkState();
+    let followIntervalMs = 100;
+    setInterval(() => {
+        let target = state.targetPosition;
+        let follow = state.followPosition;
 
-        if (!state.positionReference) {
-            throw new Error("No position reference");
+        let distanceToTargetMm = sqrt(p2(target.xMm - follow.xMm) + p2(target.yMm - follow.yMm));
+        if (distanceToTargetMm > 0) {
+
+            let distanceToNextTickMm = followIntervalMs * target.speedMmPerMin / 60000;
+
+            if (distanceToNextTickMm > distanceToTargetMm) {
+                follow.xMm = target.xMm;
+                follow.yMm = target.yMm;
+            } else {
+                let ratio = distanceToNextTickMm / distanceToTargetMm;
+                follow.xMm += (target.xMm - follow.xMm) * ratio;
+                follow.yMm += (target.yMm - follow.yMm) * ratio;
+            }
+
+            checkState();
         }
 
-        let base = (a, b) => Math.sqrt(a * a + b * b);
+    }, followIntervalMs);
 
-        let length = pos => ({
-            a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
-            b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
-        });
+    async function moveAbsoluteXY(xMm, yMm, speedMmPerMin) {
+        state.targetPosition.xMm = xMm;
+        state.targetPosition.yMm = yMm;
+        state.targetPosition.speedMmPerMin = speedMmPerMin;
+        checkState();
 
-        let pos1 = { x: state.sledPosition.xMm, y: state.sledPosition.yMm };
-        let pos2 = { x: xMm, y: yMm };
+        // if (!state.positionReference) {
+        //     throw new Error("No position reference");
+        // }
 
-        let len1 = length(pos1);
-        let len2 = length(pos2);
+        // let base = (a, b) => Math.sqrt(a * a + b * b);
 
-        let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
+        // let length = pos => ({
+        //     a: base(motorsShaftDistanceMm / 2 + pos.x, pos.y),
+        //     b: base(motorsShaftDistanceMm / 2 - pos.x, pos.y)
+        // });
 
-        await Promise.allSettled([
-            motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
-            motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
-        ]);
+        // let pos1 = { x: state.sledPosition.xMm, y: state.sledPosition.yMm };
+        // let pos2 = { x: xMm, y: yMm };
+
+        // let len1 = length(pos1);
+        // let len2 = length(pos2);
+
+        // let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
+
+        // await Promise.allSettled([
+        //     motorDrivers.a.move(distanceMmToSteps(motorConfigs.a, len2.a - len1.a), 1),
+        //     motorDrivers.b.move(distanceMmToSteps(motorConfigs.b, len2.b - len1.b), 1)
+        // ]);
 
     }
 
     async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
-        checkState();
-        await moveAbsoluteXY(state.sledPosition.xMm + xMm, state.sledPosition.yMm + yMm, speedMmPerMin);
+        await moveAbsoluteXY(state.targetPosition.xMm + xMm, state.targetPosition.yMm + yMm, speedMmPerMin);
     }
 
     function scheduleNextCheck() {
