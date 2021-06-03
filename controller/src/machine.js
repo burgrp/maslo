@@ -33,8 +33,8 @@ module.exports = async ({
         positionReference: { // TODO: this is calibration
             xMm: -1000,
             yMm: 700,
-            ap: 0,
-            bp: 0
+            aSteps: 0,
+            bSteps: 0
         },
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
@@ -56,8 +56,8 @@ module.exports = async ({
         if (state.positionReference) {
 
             // calculate step counter as sled would be at motor A
-            let originAp = distanceMmToSteps(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.ap;
-            let originBp = distanceMmToSteps(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bp;
+            let originAp = distanceMmToSteps(motorConfigs.a, sqrt(p2(state.motorsShaftDistanceMm / 2 + state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.aSteps;
+            let originBp = distanceMmToSteps(motorConfigs.b, sqrt(p2(state.motorsShaftDistanceMm / 2 - state.positionReference.xMm) + p2(state.positionReference.yMm))) - state.positionReference.bSteps;
 
             // chain lengths
             let a = stepsToDistanceMm(motorConfigs.a, state.motors.a && state.motors.a.steps + originAp);
