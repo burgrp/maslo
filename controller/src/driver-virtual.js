@@ -45,6 +45,8 @@ module.exports = async ({ stopPositions }) => {
                 state.running = Math.abs(diff) > stepsPerCheck && state.duty > 0.2;
                 if (state.running) {
                     state.steps += stepsPerCheck * (diff < 0 ? 1 : -1);
+                } else {
+                    //if (name !== "z") log("no move");
                 }
                 checkStops();
             }, checkIntervalMs);

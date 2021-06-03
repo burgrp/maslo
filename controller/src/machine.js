@@ -186,8 +186,6 @@ module.exports = async ({
                         let len1 = length(pos1);
                         let len2 = length(pos2);
 
-                        //let timeMs = 60000 * base(pos2.x - pos1.x, pos2.y - pos1.y) / speedMmPerMin;
-
                         await Promise.allSettled(["a", "b"].map(motor => {
                             let state = machine.motors[motor];
                             let config = motorConfigs[motor];
@@ -203,14 +201,14 @@ module.exports = async ({
 
                                 if (!lastStep) {
 
-                                    duty = isFinite(state.speedToDutyRatio) ? target.speedMmPerMin * state.speedToDutyRatio : 0.3;
+                                    duty = isFinite(state.speedToDutyRatio) ? target.speedMmPerMin * state.speedToDutyRatio : 0.5;
 
                                 } else {
 
                                     duty = lastStep.duty;
                                     let error = actSteps - (lastStep.actSteps + lastStep.distanceSteps);
 
-                                    let correction = -directionMultiplier * 10 * error / (config.maxRpm * config.encoderPpr * followIntervalMs);
+                                    let correction = -directionMultiplier * 1000 * error / (config.maxRpm * config.encoderPpr * followIntervalMs);
                                     if (correction > 0.1) {
                                         correction = 0.1;
                                     }
@@ -262,9 +260,10 @@ module.exports = async ({
         machine.targetPosition.xMm = xMm;
         machine.targetPosition.yMm = yMm;
         machine.targetPosition.speedMmPerMin = speedMmPerMin;
+        checkMachine();
+
         delete machine.motors.a.lastStep;
         delete machine.motors.b.lastStep;
-        checkMachine();
     }
 
     async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
