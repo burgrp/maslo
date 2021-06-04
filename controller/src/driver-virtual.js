@@ -15,24 +15,20 @@ module.exports = async ({ stopPositions }) => {
 
             let state = {
                 steps: 0,
-                lo: {},
-                hi: {},
-                running: false,
+                stops: [false, false],
                 currentMA: 0,
                 duty: 0
             };
 
             let log = Debug(`app:motor:${name}`);
 
-            let endSteps = 0;
-
             function checkStops() {
-                for (let side of [{ name: "lo", multiplier: -1 }, { name: "hi", multiplier: 1 }]) {
-                    let stop = !!stopPositions && !!stopPositions[name] && isFinite(stopPositions[name][side.name]) && state.steps * side.multiplier >= stopPositions[name][side.name] * side.multiplier;
-                    if (stop && !state[side.name].stop) {
-                        state[side.name].steps = state.steps;
-                    }
-                    state[side.name].stop = stop;
+                for (let stopIndex = 0; stopIndex < state.stops.length ; stopIndex++) {
+                    state.stops[stopIndex] =
+                        stopPositions &&
+                        stopPositions[name] &&
+                        isFinite(stopPositions[name][stopIndex]) &&
+                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1);
                 }
             }
 
@@ -40,13 +36,9 @@ module.exports = async ({ stopPositions }) => {
 
             let checkIntervalMs = 10;
             setInterval(() => {
-                let stepsPerCheck = config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs);
-                let diff = state.steps - endSteps;
-                state.running = Math.abs(diff) > stepsPerCheck && state.duty > 0.2;
-                if (state.running) {
-                    state.steps += stepsPerCheck * (diff < 0 ? 1 : -1);
-                } else {
-                    //if (name !== "z") log("no move");
+                let stallDuty = 0.2;
+                if (state.duty > stallDuty || state.duty < -stallDuty) {
+                    state.steps += config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs);
                 }
                 checkStops();
             }, checkIntervalMs);
@@ -54,11 +46,9 @@ module.exports = async ({ stopPositions }) => {
             return {
                 name,
 
-                async set(steps, duty) {
-                    log(Math.round(steps), Math.round(duty * 100) / 100);
-                    endSteps = steps;
+                async set(duty) {
+                    log("set", Math.round(duty * 100) / 100);
                     state.duty = duty;
-
                 },
 
                 async get() {

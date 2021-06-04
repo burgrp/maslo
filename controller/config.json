@@ -5,10 +5,10 @@
             "virtual": {
                 "module": "./driver-virtual.js",
                 "stopPositions": {
-                    "z": {
-                        "lo": 0,
-                        "hi": 5000
-                    }
+                    "z": [
+                        0,
+                        5000
+                    ]
                 }
             },
             "i2c": {
@@ -22,12 +22,16 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "moveSpeedRapidMmPerMin": 100,
+        "moveSpeedRapidMmPerMin": 1000,
         "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
+        "defaultTargetPosition": {
+            "xMm": 0,
+            "yMm": 800
+        },
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,

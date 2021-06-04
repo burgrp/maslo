@@ -36,16 +36,14 @@ public:
     target::PORT.DIRSET.setDIRSET(1 << pinInA | 1 << pinInB);
   }
 
-  void set(unsigned int speed, bool direction) {
+  void set(unsigned char duty, bool direction) {
     target::PORT.OUTCLR.setOUTCLR(1 << pinInA | 1 << pinInB);
-    pwm.set(speed);
-    //if (speed) {
+      pwm.set(duty);
       if (direction) {
         target::PORT.OUTSET.setOUTSET(1 << pinInB);
       } else {
         target::PORT.OUTSET.setOUTSET(1 << pinInA);
       }
-    //}
   }
 
   int getCurrentMA() {

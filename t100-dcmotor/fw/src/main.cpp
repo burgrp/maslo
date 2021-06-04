@@ -21,7 +21,7 @@ const int STOP_TOLERANCE = 2;
 // const int MIN_SPEED = 50;
 const int LO_PRIO_CHECK_MS = 100;
 
-enum Command { NONE = 0, SET_SPEED = 1, SET_END_STEPS = 2 };
+enum Command { NONE = 0, SET = 1 };
 
 class Device : public atsamd::i2c::Slave, EncoderCallback, genericTimer::Timer {
 public:
@@ -29,23 +29,20 @@ public:
     unsigned char command = Command::NONE;
     union {
       struct __attribute__((packed)) {
-        unsigned char speed;
+        unsigned char duty;
+        bool direction : 1;
+        bool reserved : 7;
       } setSpeed;
-      struct __attribute__((packed)) {
-        int steps;
-      } setEndSteps;
     };
   } rxBuffer;
 
   struct __attribute__((packed)) {
-    unsigned char speed;
-    bool running : 1;
+    unsigned char duty;
+    bool direction : 1;
     bool endStop1 : 1;
     bool endStop2 : 1;
-    bool reserved : 2;
-    unsigned char error : 3;
+    bool reserved : 5;
     int actSteps;
-    int endSteps;
     short currentMA;
   } state;
 
@@ -53,7 +50,7 @@ public:
   Encoder encoder;
 
   void init(int axis) {
-    
+
     // TC1 for VNH7070 PWM
 
     target::PM.APBCMASK.setTC(1, true);
@@ -108,43 +105,20 @@ public:
 
   void checkState() {
 
-    int diff = state.endSteps - state.actSteps;
+    vnh7070.set(state.duty, state.direction);
 
-    bool running = state.speed && abs(diff) > STOP_TOLERANCE && !state.endStop1 && !state.endStop2 && state.error == 0;
-
-    if (state.running != running) {
-      state.running = running;
-      irqSet();
-    }
-
-    if (running) {
-      vnh7070.set(state.speed, diff > 0);
-    } else {
-      vnh7070.set(0, false);
-    }
-
-    if (state.error) {
-      target::PORT.OUTTGL.setOUTTGL(1 << PIN_LED);
-    } else {
-      target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
-      target::PORT.OUTSET.setOUTSET(running << PIN_LED);
-    }
+    bool running = state.duty != 0;
+    target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
+    target::PORT.OUTSET.setOUTSET(running << PIN_LED);
   }
 
   void ecoderChanged(int steps) {
     state.actSteps += steps;
     checkState();
+    //irqSet();
   }
 
-  void setSpeed(unsigned int speed) {
-    state.speed = speed;
-    checkState();
-  }
-
-  void setEndSteps(int endSteps) {
-    state.endSteps = endSteps;
-    checkState();
-  }
+  void setSpeed(unsigned int speed) {}
 
   bool checkCommand(Command command, int index, int value, int paramsSize) {
     return rxBuffer.command == command && index == paramsSize;
@@ -160,12 +134,10 @@ public:
     if (index < sizeof(rxBuffer)) {
       ((unsigned char *)&rxBuffer)[index] = value;
 
-      if (checkCommand(Command::SET_SPEED, index, value, sizeof(rxBuffer.setSpeed))) {
-        setSpeed(rxBuffer.setSpeed.speed);
-      }
-
-      if (checkCommand(Command::SET_END_STEPS, index, value, sizeof(rxBuffer.setEndSteps))) {
-        setEndSteps(rxBuffer.setEndSteps.steps);
+      if (checkCommand(Command::SET, index, value, sizeof(rxBuffer.setSpeed))) {
+        state.duty = rxBuffer.setSpeed.duty;
+        state.direction = rxBuffer.setSpeed.direction;
+        checkState();
       }
 
       return true;

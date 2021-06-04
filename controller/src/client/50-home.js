@@ -79,22 +79,25 @@ wg.pages.home = {
             });
 
             $(".scene .follow").attr({
-                cx: state.followPosition.xMm,
-                cy: state.followPosition.yMm,
+                cx: state.followPosition && state.followPosition.xMm,
+                cy: state.followPosition && state.followPosition.yMm,
+                visibility: state.followPosition ? "visible" : "hidden"
             });
 
             $(".scene .target.x").attr({
-                x1: state.targetPosition.xMm - 50,
-                y1: state.targetPosition.yMm - 50,
-                x2: state.targetPosition.xMm + 50,
-                y2: state.targetPosition.yMm + 50
+                x1: state.targetPosition && state.targetPosition.xMm - 50,
+                y1: state.targetPosition && state.targetPosition.yMm - 50,
+                x2: state.targetPosition && state.targetPosition.xMm + 50,
+                y2: state.targetPosition && state.targetPosition.yMm + 50,
+                visibility: state.targetPosition ? "visible" : "hidden"
             });
 
             $(".scene .target.y").attr({
-                x1: state.targetPosition.xMm - 50,
-                y1: state.targetPosition.yMm + 50,
-                x2: state.targetPosition.xMm + 50,
-                y2: state.targetPosition.yMm - 50
+                x1: state.targetPosition && state.targetPosition.xMm - 50,
+                y1: state.targetPosition && state.targetPosition.yMm + 50,
+                x2: state.targetPosition && state.targetPosition.xMm + 50,
+                y2: state.targetPosition && state.targetPosition.yMm - 50,
+                visibility: state.targetPosition ? "visible" : "hidden"
             });
 
             $(".scene .userorigin.x").attr({
