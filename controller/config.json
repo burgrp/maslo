@@ -6,7 +6,7 @@
                 "module": "./driver-virtual.js",
                 "stopPositions": {
                     "z": [
-                        -100,
+                        0,
                         5000
                     ]
                 }
@@ -22,16 +22,14 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "moveSpeedRapidMmPerMin": 1600,
+        "moveSpeedRapidMmPerMin": 1500,
         "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
-        "defaultTargetPosition": {
-            "xMm": 0,
-            "yMm": 800
-        },
+        "speedRampMm": 30,
+        "speedRampMinFactor": 0.1,
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,

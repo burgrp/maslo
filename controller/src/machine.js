@@ -19,8 +19,9 @@ module.exports = async ({
     workspaceWidthMm,
     workspaceHeightMm,
     motorsToWorkspaceVerticalMm,
-    defaultTargetPosition,
-    manualMoveMm
+    manualMoveMm,
+    speedRampMm,
+    speedRampMinFactor
 }) => {
 
     let machine = {
@@ -131,7 +132,12 @@ module.exports = async ({
                         }
 
                         if (!machine.targetPosition) {
-                            machine.targetPosition = { ...machine.sledPosition };
+                            machine.targetPosition = {
+                                ...machine.sledPosition,
+                                origin: {
+                                    ...machine.sledPosition
+                                }
+                            };
                         }
 
                     } else {
@@ -152,9 +158,20 @@ module.exports = async ({
                     if (follow && target) {
 
                         let distanceToTargetMm = sqrt(p2(target.xMm - follow.xMm) + p2(target.yMm - follow.yMm));
+                        let distanceFromOriginMm = sqrt(p2(target.origin.xMm - follow.xMm) + p2(target.origin.yMm - follow.yMm));
+
                         if (distanceToTargetMm > 0) {
 
-                            let distanceToNextTickMm = machineCheckIntervalMs * target.speedMmPerMin / 60000;
+                            let speedRampFactor = Math.max(
+                                speedRampMinFactor,
+                                Math.min(1,
+                                    Math.min(distanceFromOriginMm, distanceToTargetMm) / speedRampMm
+                                )
+                            );
+
+                            //console.info(`dO: ${Math.round(distanceFromOriginMm * 100) / 100} dT: ${Math.round(distanceToTargetMm * 100) / 100} slf: ${speedRampFactor}`);
+
+                            let distanceToNextTickMm = speedRampFactor * machineCheckIntervalMs * target.speedMmPerMin / 60000;
 
                             if (distanceToNextTickMm > distanceToTargetMm) {
                                 follow.xMm = target.xMm;
@@ -181,7 +198,7 @@ module.exports = async ({
                             let len2 = length(pos2);
 
                             await Promise.all(["a", "b"].map(motor => {
-
+                                let state = machine.motors[motor];
                                 let config = motorConfigs[motor];
                                 let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
 
@@ -198,11 +215,29 @@ module.exports = async ({
                                     duty = -1;
                                 }
 
-                                if (motor === "a") {
-                                    duty = duty / 2;
+                                let dutyAbsDiff = Math.abs(duty - state.duty);
+                                if (dutyAbsDiff > 0.5 && !state.breaking) {
+                                    let count =  Math.ceil(dutyAbsDiff / 0.1);                                    
+                                    state.breaking = {
+                                        count,
+                                        change: (duty - state.duty) / count
+                                    }
+                                    console.info(`BREAKING START ${motor} ${state.duty}->${duty} change: ${state.breaking.change} count: ${state.breaking.count}`);
                                 }
 
-                                return motorDrivers[motor].set(duty);
+                                if (state.breaking) {
+                                    console.info(`BREAKING ${motor} ${state.duty}->${state.duty + state.breaking.change} step: ${state.breaking.count} count: ${state.breaking.count}`);
+                                    duty = state.duty + state.breaking.change;
+                                    state.breaking.count--;
+                                    if (!state.breaking.count) {
+                                        delete state.breaking;
+                                    }
+                                }
+                                
+
+                                if (duty !== state.duty) {
+                                    return motorDrivers[motor].set(duty);
+                                }
 
                             }));
                         }
@@ -238,6 +273,13 @@ module.exports = async ({
         machine.targetPosition.xMm = xMm;
         machine.targetPosition.yMm = yMm;
         machine.targetPosition.speedMmPerMin = speedMmPerMin;
+
+        if (machine.followPosition) {
+            machine.targetPosition.origin = {
+                xMm: machine.followPosition.xMm,
+                yMm: machine.followPosition.yMm
+            }
+        }
 
         delete machine.motors.a.lastStep;
         delete machine.motors.b.lastStep;
