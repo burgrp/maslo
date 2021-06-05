@@ -73,11 +73,6 @@ module.exports = async ({
         machine.relays[name] = relayDrivers[name].state;
     }
 
-    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
-
-
-    }
-
     let machineCheckIntervalMs = 100;
     let machineCheckInProgress = false;
     setInterval(async () => {
@@ -190,20 +185,24 @@ module.exports = async ({
                                 let config = motorConfigs[motor];
                                 let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
 
-                                    let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
+                                let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
 
-                                    let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
+                                let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
 
-                                    let duty = speedStepsPerMs / maxSpeedStepsPerMs;
+                                let duty = speedStepsPerMs / maxSpeedStepsPerMs;
 
-                                    if (duty > 1) {
-                                        duty = 1;
-                                    }
-                                    if (duty < -1) {
-                                        duty = -1;
-                                    }
+                                if (duty > 1) {
+                                    duty = 1;
+                                }
+                                if (duty < -1) {
+                                    duty = -1;
+                                }
 
-                                    return motorDrivers[motor].set(duty);
+                                if (motor === "a") {
+                                    duty = duty / 2;
+                                }
+
+                                return motorDrivers[motor].set(duty);
 
                             }));
                         }
@@ -246,6 +245,9 @@ module.exports = async ({
 
     async function moveRelativeXY(xMm, yMm, speedMmPerMin) {
         await moveAbsoluteXY(machine.targetPosition.xMm + xMm, machine.targetPosition.yMm + yMm, speedMmPerMin);
+    }
+
+    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
     }
 
     return {
