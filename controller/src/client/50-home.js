@@ -20,13 +20,15 @@ wg.common = {
                     ])
                 ])
             ]),
-            DIV("content", content)
+            DIV("content", content),
+            DIV("errors")
         ]));
     },
 
     showError(error) {
-        alert(error);
-        console.error("showError", error);
+        console.error("Error:", error);
+        
+        $(".page .errors").append(DIV().text(error.message || error));        
     },
 
     async check(asyncAction) {
@@ -257,7 +259,7 @@ wg.pages.home = {
                         moveButton("down", "caret-down", "z", 1)
                     ])
                 ])
-            ]).onMachineStateChanged(updateMachineState)
+            ]).onMachineStateChanged(updateMachineState),
         ]);
 
         updateMachineState(await wg.machine.getState());

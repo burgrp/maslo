@@ -28,15 +28,6 @@ module.exports = async ({
         relays: {},
         spindle: {},
         stops: {},
-        // followPosition: {
-        //     xMm: -400,
-        //     yMm: motorsToWorkspaceVerticalMm + 500
-        // },
-        // targetPosition: {
-        //     xMm: defaultTargetPosition.xMm,
-        //     yMm: defaultTargetPosition.yMm,
-        //     speedMmPerMin: moveSpeedRapidMmPerMin
-        // },
         userOrigin: {
             xMm: -400,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
@@ -162,8 +153,8 @@ module.exports = async ({
 
                     let target = machine.targetPosition;
                     let follow = machine.followPosition;
-                    
-                    if (follow && target) {                        
+
+                    if (follow && target) {
 
                         let distanceToTargetMm = sqrt(p2(target.xMm - follow.xMm) + p2(target.yMm - follow.yMm));
                         if (distanceToTargetMm > 0) {
@@ -195,16 +186,15 @@ module.exports = async ({
                             let len2 = length(pos2);
 
                             await Promise.all(["a", "b"].map(motor => {
-                                let state = machine.motors[motor];
+
                                 let config = motorConfigs[motor];
                                 let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
-
-                                if (distanceSteps !== 0) {
 
                                     let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
 
                                     let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
-                                    duty = speedStepsPerMs / maxSpeedStepsPerMs;
+
+                                    let duty = speedStepsPerMs / maxSpeedStepsPerMs;
 
                                     if (duty > 1) {
                                         duty = 1;
@@ -214,7 +204,7 @@ module.exports = async ({
                                     }
 
                                     return motorDrivers[motor].set(duty);
-                                }
+
                             }));
                         }
 
