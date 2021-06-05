@@ -217,7 +217,7 @@ module.exports = async ({
 
                                 let dutyAbsDiff = Math.abs(duty - state.duty);
                                 if (dutyAbsDiff > 0.5 && !state.breaking) {
-                                    let count =  Math.ceil(dutyAbsDiff / 0.1);                                    
+                                    let count = Math.ceil(dutyAbsDiff / 0.1);
                                     state.breaking = {
                                         count,
                                         change: (duty - state.duty) / count
@@ -226,14 +226,18 @@ module.exports = async ({
                                 }
 
                                 if (state.breaking) {
-                                    console.info(`BREAKING ${motor} ${state.duty}->${state.duty + state.breaking.change} step: ${state.breaking.count} count: ${state.breaking.count}`);
-                                    duty = state.duty + state.breaking.change;
-                                    state.breaking.count--;
-                                    if (!state.breaking.count) {
+                                    console.info(`BREAKING ${motor} ${state.duty}->${state.duty + state.breaking.change} count: ${state.breaking.count} normal:${duty}`);
+                                    if (Math.sign(state.breaking.change) !== Math.sign(duty - state.duty)) {
+                                        console.info("BREAK early leave");
                                         delete state.breaking;
+                                    } else {
+                                        duty = state.duty + state.breaking.change;
+                                        state.breaking.count--;
+                                        if (!state.breaking.count) {
+                                            delete state.breaking;
+                                        }
                                     }
                                 }
-                                
 
                                 if (duty !== state.duty) {
                                     return motorDrivers[motor].set(duty);
