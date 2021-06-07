@@ -1,4 +1,5 @@
-const logError = require("debug")("app:error");
+const logError = require("debug")("app:machine:error");
+const logInfo = require("debug")("app:machine:info");
 
 function distanceMmToSteps(motorConfig, distanceMm) {
     return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
@@ -13,6 +14,7 @@ module.exports = async ({
     driver,
     motors: motorConfigs,
     relays: relayConfigs,
+    machineCheckIntervalMs,
     moveSpeedRapidMmPerMin,
     moveSpeedCuttingMmPerMin,
     motorsShaftDistanceMm,
@@ -21,7 +23,9 @@ module.exports = async ({
     motorsToWorkspaceVerticalMm,
     manualMoveMm,
     speedRampMm,
-    speedRampMinFactor
+    speedRampMinFactor,
+    motorDampingTrigger,
+    motorDampingStep
 }) => {
 
     let machine = {
@@ -39,6 +43,7 @@ module.exports = async ({
             aSteps: 0,
             bSteps: 0
         },
+        motorDamping: {},
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspaceWidthMm,
@@ -74,7 +79,6 @@ module.exports = async ({
         machine.relays[name] = relayDrivers[name].state;
     }
 
-    let machineCheckIntervalMs = 100;
     let machineCheckInProgress = false;
     setInterval(async () => {
 
@@ -169,8 +173,6 @@ module.exports = async ({
                                 )
                             );
 
-                            //console.info(`dO: ${Math.round(distanceFromOriginMm * 100) / 100} dT: ${Math.round(distanceToTargetMm * 100) / 100} slf: ${speedRampFactor}`);
-
                             let distanceToNextTickMm = speedRampFactor * machineCheckIntervalMs * target.speedMmPerMin / 60000;
 
                             if (distanceToNextTickMm > distanceToTargetMm) {
@@ -215,26 +217,29 @@ module.exports = async ({
                                     duty = -1;
                                 }
 
+                                let motorDamping = machine.motorDamping[motor];
+
                                 let dutyAbsDiff = Math.abs(duty - state.duty);
-                                if (dutyAbsDiff > 0.5 && !state.breaking) {
-                                    let count = Math.ceil(dutyAbsDiff / 0.1);
-                                    state.breaking = {
+                                if (dutyAbsDiff > motorDampingTrigger && !motorDamping) {
+                                    let count = Math.ceil(dutyAbsDiff / motorDampingStep);
+                                    motorDamping = {
                                         count,
                                         change: (duty - state.duty) / count
                                     }
-                                    console.info(`BREAKING START ${motor} ${state.duty}->${duty} change: ${state.breaking.change} count: ${state.breaking.count}`);
+                                    machine.motorDamping[motor] = motorDamping;
+                                    logInfo(`Motor dumping START ${motor} ${state.duty}->${duty} change: ${motorDamping.change} count: ${motorDamping.count}`);
                                 }
 
-                                if (state.breaking) {
-                                    console.info(`BREAKING ${motor} ${state.duty}->${state.duty + state.breaking.change} count: ${state.breaking.count} normal:${duty}`);
-                                    if (Math.sign(state.breaking.change) !== Math.sign(duty - state.duty)) {
-                                        console.info("BREAK early leave");
-                                        delete state.breaking;
+                                if (motorDamping) {
+                                    logInfo(`Motor dumping ${motor} ${state.duty}->${state.duty + motorDamping.change} count: ${motorDamping.count} normal:${duty}`);
+                                    if (Math.sign(motorDamping.change) !== Math.sign(duty - state.duty)) {
+                                        logInfo("BREAK early leave");
+                                        delete machine.motorDamping[motor];
                                     } else {
-                                        duty = state.duty + state.breaking.change;
-                                        state.breaking.count--;
-                                        if (!state.breaking.count) {
-                                            delete state.breaking;
+                                        duty = state.duty + motorDamping.change;
+                                        motorDamping.count--;
+                                        if (!motorDamping.count) {
+                                            delete machine.motorDamping[motor];
                                         }
                                     }
                                 }

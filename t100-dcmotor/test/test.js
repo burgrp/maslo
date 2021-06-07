@@ -18,8 +18,8 @@ async function start() {
 
         let motors = Object.entries({
             "a": 0x50,
-            "b": 0x51,
-            "z": 0x52
+            // "b": 0x51,
+            // "z": 0x52
         }).map(([name, address]) => {
             let motor = createMotor({ i2c, address });
             motor.name = name;
@@ -33,7 +33,7 @@ async function start() {
         }
 
         for (let motor of motors) {
-            await motor.set(0.3);
+            await motor.set(-0.3);
             let state = await motor.get();
             console.info(motor.name, state);
         }

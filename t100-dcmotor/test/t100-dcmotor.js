@@ -19,7 +19,7 @@ module.exports = ({ i2c, address }) => {
             let duty = buffer.readUInt8(0);
             let flags = buffer.readUInt8(1);
 
-            if (flags & 1 === 0) {
+            if ((flags & 1) === 0) {
                 duty = -duty;
             }
 

@@ -23,7 +23,7 @@ module.exports = async ({ stopPositions }) => {
             let log = Debug(`app:motor:${name}`);
 
             function checkStops() {
-                for (let stopIndex = 0; stopIndex < state.stops.length ; stopIndex++) {
+                for (let stopIndex = 0; stopIndex < state.stops.length; stopIndex++) {
                     state.stops[stopIndex] =
                         stopPositions &&
                         stopPositions[name] &&
@@ -52,7 +52,7 @@ module.exports = async ({ stopPositions }) => {
                 },
 
                 async get() {
-                    return state;
+                    return { ...state };
                 }
             }
         },

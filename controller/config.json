@@ -22,6 +22,7 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
+        "machineCheckIntervalMs": 100,
         "moveSpeedRapidMmPerMin": 1500,
         "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
@@ -30,6 +31,8 @@
         "motorsToWorkspaceVerticalMm": 500,
         "speedRampMm": 30,
         "speedRampMinFactor": 0.1,
+        "motorDampingTrigger": 0.8,
+        "motorDampingStep": 0.1,
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,
