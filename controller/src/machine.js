@@ -25,7 +25,8 @@ module.exports = async ({
     speedRampMm,
     speedRampMinFactor,
     motorDampingTrigger,
-    motorDampingStep
+    motorDampingStep,
+    motorMinDuty
 }) => {
 
     let machine = {
@@ -173,7 +174,7 @@ module.exports = async ({
                                 )
                             );
 
-                            let distanceToNextTickMm = speedRampFactor * machineCheckIntervalMs * target.speedMmPerMin / 60000;
+                            let distanceToNextTickMm = machineCheckIntervalMs * target.speedMmPerMin / 60000;
 
                             if (distanceToNextTickMm > distanceToTargetMm) {
                                 follow.xMm = target.xMm;
@@ -217,31 +218,35 @@ module.exports = async ({
                                     duty = -1;
                                 }
 
-                                let motorDamping = machine.motorDamping[motor];
+                                let dumping = machine.motorDamping[motor];
 
                                 let dutyAbsDiff = Math.abs(duty - state.duty);
-                                if (dutyAbsDiff > motorDampingTrigger && !motorDamping) {
+                                if (dutyAbsDiff > motorDampingTrigger && !dumping) {
                                     let count = Math.ceil(dutyAbsDiff / motorDampingStep);
-                                    motorDamping = {
+                                    dumping = {
                                         count,
                                         change: (duty - state.duty) / count
                                     }
-                                    machine.motorDamping[motor] = motorDamping;
-                                    logInfo(`Motor dumping START ${motor} ${state.duty}->${duty} change: ${motorDamping.change} count: ${motorDamping.count}`);
+                                    machine.motorDamping[motor] = dumping;
+                                    logInfo(`Motor dumping ${motor} START ${state.duty}->${duty} change: ${dumping.change} count: ${dumping.count}`);
                                 }
 
-                                if (motorDamping) {
-                                    logInfo(`Motor dumping ${motor} ${state.duty}->${state.duty + motorDamping.change} count: ${motorDamping.count} normal:${duty}`);
-                                    if (Math.sign(motorDamping.change) !== Math.sign(duty - state.duty)) {
-                                        logInfo("BREAK early leave");
+                                if (dumping) {
+                                    logInfo(`Motor dumping ${motor} ${state.duty}->${state.duty + dumping.change} count: ${dumping.count} normal:${duty}`);
+                                    if (Math.sign(dumping.change) !== Math.sign(duty - state.duty)) {
+                                        logInfo(`Motor dumping ${motor} early leave`);
                                         delete machine.motorDamping[motor];
                                     } else {
-                                        duty = state.duty + motorDamping.change;
-                                        motorDamping.count--;
-                                        if (!motorDamping.count) {
+                                        duty = state.duty + dumping.change;
+                                        dumping.count--;
+                                        if (!dumping.count) {
                                             delete machine.motorDamping[motor];
                                         }
                                     }
+                                }
+
+                                if (Math.abs(duty) < motorMinDuty) {
+                                    duty = 0;
                                 }
 
                                 if (duty !== state.duty) {

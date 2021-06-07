@@ -33,6 +33,7 @@
         "speedRampMinFactor": 0.1,
         "motorDampingTrigger": 0.8,
         "motorDampingStep": 0.1,
+        "motorMinDuty": 0.1,
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,
