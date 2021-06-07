@@ -107,7 +107,7 @@ module.exports = async ({
                                 stop.state = machine.motors[motor].stops[stopIndex];
                             }
                         } catch (e) {
-                            logError("PROPAGATE THIS TO UI:", e);
+                            logError("PROPAGATE THIS TO UI:", motor, e);
                             delete machine.motors[motor];
                         }
 
@@ -173,14 +173,27 @@ module.exports = async ({
 
                         if (distanceToTargetMm > 0) {
 
-                            let speedRampFactor = Math.max(
-                                speedRampMinFactor,
-                                Math.min(1,
-                                    Math.min(distanceFromOriginMm, distanceToTargetMm) / speedRampMm
-                                )
-                            );
+                            let minDepartureSpeedMmPerMin = 500;
+                            let maxDepartureSpeedMmPerMinPerMm = 100;
 
-                            let distanceToNextTickMm = speedRampFactor * machineCheckIntervalMs * target.speedMmPerMin / 60000;
+                            let minArrivalSpeedMmPerMin = 500;
+                            let maxArrivalSpeedMmPerMinPerMm = 50;
+
+                            let speedMmPerMin = Math.min(
+                                Math.max(
+                                    maxDepartureSpeedMmPerMinPerMm * distanceFromOriginMm,
+                                    minDepartureSpeedMmPerMin
+                                ),
+                                Math.max(
+                                    maxArrivalSpeedMmPerMinPerMm * distanceToTargetMm,
+                                    minArrivalSpeedMmPerMin
+                                ),
+                                target.speedMmPerMin
+                            );                            
+                            
+                            logInfo(`Speed ${speedMmPerMin} mm/min`);
+
+                            let distanceToNextTickMm = machineCheckIntervalMs * speedMmPerMin / 60000;
 
                             if (distanceToNextTickMm > distanceToTargetMm) {
                                 follow.xMm = target.xMm;
@@ -256,6 +269,7 @@ module.exports = async ({
                                 }
 
                                 if (duty !== state.duty) {
+                                    //logInfo(`Motor ${motor} duty ${Math.round(duty * 100)}`);
                                     return motorDrivers[motor].set(duty);
                                 }
 
