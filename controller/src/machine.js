@@ -377,7 +377,7 @@ module.exports = async ({
         let sy = machine.targetPosition.yMm;
         let r = 200;
 
-        for (let a = 0; a < Math.PI * 2; a = a+ 0.01) {
+        for (let a = 0; a <= Math.PI * 2; a = a + Math.PI / 100) {
             let x = Math.cos(a) * r + sx - r;
             let y = Math.sin(a) * r + sy;
             console.info(x, y);
