@@ -371,7 +371,19 @@ module.exports = async ({
     }
 
     async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
-        throw new Error("Not implemented yet.");
+        //throw new Error("Not implemented yet.");
+
+        let sx = machine.targetPosition.xMm;
+        let sy = machine.targetPosition.yMm;
+        let r = 200;
+
+        for (let a = 0; a < Math.PI * 2; a = a+ 0.01) {
+            let x = Math.cos(a) * r + sx - r;
+            let y = Math.sin(a) * r + sy;
+            console.info(x, y);
+            await moveAbsoluteXY({xMm: x, yMm: y,  speedMmPerMin: 1000});
+        }
+
     }
 
     return {
