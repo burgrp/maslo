@@ -36,7 +36,7 @@
         "maxDepartureSpeedMmPerMinPerMm": 200,
         "minArrivalSpeedMmPerMin": 100,
         "maxArrivalSpeedMmPerMinPerMm": 50,
-        "targetToleranceMm": 0.2,
+        "targetToleranceMm": 0.05,
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,
