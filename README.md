@@ -3,3 +3,4 @@ TODO:
   - improve duty ramp
   - origin switch (sled/follow/target/fixed?)
   - error messages on UI
+  - motor stop watchdog

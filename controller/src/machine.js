@@ -22,11 +22,14 @@ module.exports = async ({
     workspaceHeightMm,
     motorsToWorkspaceVerticalMm,
     manualMoveMm,
-    speedRampMm,
-    speedRampMinFactor,
     motorDampingTrigger,
     motorDampingStep,
-    motorMinDuty
+    motorMinDuty,
+    minDepartureSpeedMmPerMin,
+    maxDepartureSpeedMmPerMinPerMm,
+    minArrivalSpeedMmPerMin,
+    maxArrivalSpeedMmPerMinPerMm,
+    targetToleranceMm    
 }) => {
 
     let machine = {
@@ -173,25 +176,13 @@ module.exports = async ({
 
                         if (distanceToTargetMm > 0) {
 
-                            let minDepartureSpeedMmPerMin = 500;
-                            let maxDepartureSpeedMmPerMinPerMm = 100;
-
-                            let minArrivalSpeedMmPerMin = 500;
-                            let maxArrivalSpeedMmPerMinPerMm = 50;
-
                             let speedMmPerMin = Math.min(
-                                Math.max(
-                                    maxDepartureSpeedMmPerMinPerMm * distanceFromOriginMm,
-                                    minDepartureSpeedMmPerMin
-                                ),
-                                Math.max(
-                                    maxArrivalSpeedMmPerMinPerMm * distanceToTargetMm,
-                                    minArrivalSpeedMmPerMin
-                                ),
+                                minDepartureSpeedMmPerMin + maxDepartureSpeedMmPerMinPerMm * distanceFromOriginMm,
+                                minArrivalSpeedMmPerMin + maxArrivalSpeedMmPerMinPerMm * distanceToTargetMm,
                                 target.speedMmPerMin
-                            );                            
-                            
-                            logInfo(`Speed ${speedMmPerMin} mm/min`);
+                            );
+
+                            //logInfo(`Speed ${speedMmPerMin} mm/min`);
 
                             let distanceToNextTickMm = machineCheckIntervalMs * speedMmPerMin / 60000;
 
@@ -208,6 +199,10 @@ module.exports = async ({
 
                         if (machine.sledPosition) {
 
+                            if (Math.abs(machine.sledPosition.xMm - target.xMm) < targetToleranceMm && Math.abs(machine.sledPosition.yMm - target.yMm) < targetToleranceMm) {
+                                logInfo("Arrival to target");
+                            } 
+
                             let length = pos => ({
                                 a: sqrt(p2(motorsShaftDistanceMm / 2 + pos.x) + p2(pos.y)),
                                 b: sqrt(p2(motorsShaftDistanceMm / 2 - pos.x) + p2(pos.y))
@@ -219,7 +214,7 @@ module.exports = async ({
                             let len1 = length(pos1);
                             let len2 = length(pos2);
 
-                            await Promise.all(["a", "b"].map(motor => {
+                            let motorDuties = ["a", "b"].map(motor => {
                                 let state = machine.motors[motor];
                                 let config = motorConfigs[motor];
                                 let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
@@ -237,43 +232,62 @@ module.exports = async ({
                                     duty = -1;
                                 }
 
-                                let dumping = machine.motorDamping[motor];
-
-                                let dutyAbsDiff = Math.abs(duty - state.duty);
-                                if (dutyAbsDiff > motorDampingTrigger && !dumping) {
-                                    let count = Math.ceil(dutyAbsDiff / motorDampingStep);
-                                    dumping = {
-                                        count,
-                                        change: (duty - state.duty) / count
-                                    }
-                                    machine.motorDamping[motor] = dumping;
-                                    logInfo(`Motor dumping ${motor} START ${state.duty}->${duty} change: ${dumping.change} count: ${dumping.count}`);
+                                let reducedTime;
+                                if (Math.abs(duty) < motorMinDuty && duty !== 0) {
+                                    reducedTime = Math.abs(machineCheckIntervalMs * duty / motorMinDuty);
+                                    duty = Math.sign(duty) * motorMinDuty;
                                 }
 
-                                if (dumping) {
-                                    logInfo(`Motor dumping ${motor} ${state.duty}->${state.duty + dumping.change} count: ${dumping.count} normal:${duty}`);
-                                    if (Math.sign(dumping.change) !== Math.sign(duty - state.duty)) {
-                                        logInfo(`Motor dumping ${motor} early leave`);
-                                        delete machine.motorDamping[motor];
-                                    } else {
-                                        duty = state.duty + dumping.change;
-                                        dumping.count--;
-                                        if (!dumping.count) {
+                                if (reducedTime) {
+                                    delete machine.motorDamping[motor];
+                                } else {
+                                    let dumping = machine.motorDamping[motor];
+
+                                    let dutyAbsDiff = Math.abs(duty - state.duty);
+                                    if (dutyAbsDiff > motorDampingTrigger && !dumping) {
+                                        let count = Math.ceil(dutyAbsDiff / motorDampingStep);
+                                        dumping = {
+                                            count,
+                                            change: (duty - state.duty) / count
+                                        }
+                                        machine.motorDamping[motor] = dumping;
+                                        logInfo(`Motor dumping ${motor} START ${state.duty}->${duty} change: ${dumping.change} count: ${dumping.count}`);
+                                    }
+
+                                    if (dumping) {
+                                        logInfo(`Motor dumping ${motor} ${state.duty}->${state.duty + dumping.change} count: ${dumping.count} normal:${duty}`);
+                                        if (Math.sign(dumping.change) !== Math.sign(duty - state.duty)) {
+                                            logInfo(`Motor dumping ${motor} early leave`);
                                             delete machine.motorDamping[motor];
+                                        } else {
+                                            duty = state.duty + dumping.change;
+                                            dumping.count--;
+                                            if (!dumping.count) {
+                                                delete machine.motorDamping[motor];
+                                            }
                                         }
                                     }
                                 }
 
-                                if (Math.abs(duty) < motorMinDuty) {
-                                    duty = 0;
-                                }
+                                return { motor, duty, reducedTime };
 
-                                if (duty !== state.duty) {
-                                    //logInfo(`Motor ${motor} duty ${Math.round(duty * 100)}`);
-                                    return motorDrivers[motor].set(duty);
-                                }
+                            });
 
-                            }));
+                            for (let md of motorDuties) {
+                                if (machine.motors[md.motor].duty !== md.duty) {
+                                    await motorDrivers[md.motor].set(md.duty);
+                                }
+                                if (md.reducedTime) {
+                                    setTimeout(async () => {
+                                        try {
+                                            //logInfo(`Reduced time ${md.reducedTime} for motor ${md.motor} is gone.`)
+                                            await motorDrivers[md.motor].set(0);
+                                        } catch (e) {
+                                            logError(`Error stopping motor ${md.motor} in reduced time:`, e);
+                                        }
+                                    }, md.reducedTime);
+                                }
+                            }
                         }
 
                     }
