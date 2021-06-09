@@ -232,7 +232,7 @@ module.exports = async ({
 
     async function run(segments) {
 
-        let moveMm = 5;
+        let moveMm = 500;
 
         let minSpeedMmPerMin = 100;
         let maxSpeedMmPerMin = 2000;
@@ -278,7 +278,9 @@ module.exports = async ({
 
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
-            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + moveMm) {
+            let moveCount = Math.ceil(lengthMm / moveMm);
+
+            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
 
                 let { a: aMm, b: bMm } = chainLengthMm(sweep(posMm / lengthMm));
                 aMm = Math.round(aMm);
