@@ -245,18 +245,21 @@ module.exports = async ({
             console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
         }
 
-        function checkWindow() {
-            for (let i = 1; i < window.length - 1; i++) {
+        function checkWindow(lastIndex) {
+            for (let i = 0; i < window.length; i++) {
                 if (
-                    (window[i - 1].aMm - window[i].aMm) * (window[i].aMm - window[i + 1].aMm) < 0 ||
-                    (window[i - 1].bMm - window[i].bMm) * (window[i].bMm - window[i + 1].bMm) < 0
+                    (i > 0 && i < window.length - 1) && (
+                        (window[i - 1].aMm - window[i].aMm) * (window[i].aMm - window[i + 1].aMm) < 0 ||
+                        (window[i - 1].bMm - window[i].bMm) * (window[i].bMm - window[i + 1].bMm) < 0
+                    ) ||
+                    window[i].i === 0 || window[i].i === lastIndex
                 ) {
                     //console.info(`R ${window[i].i}`);
 
                     for (let r = 0; r < windowSize / 2; r++) {
 
                         function speedLimit(offset) {
-                            if (i + offset > 0 && i + offset < window.length) {
+                            if (i + offset >= 0 && i + offset < window.length) {
                                 window[i + offset].speedMmPerMin = Math.min(window[i + offset].speedMmPerMin,
                                     minSpeedMmPerMin + r * speedChangePerMove
                                 );
@@ -300,6 +303,8 @@ module.exports = async ({
             }
 
         }
+
+        checkWindow(segmentIndex - 1);
 
         while (window.length > 0) {
             push(window.shift());
