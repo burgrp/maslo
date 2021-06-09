@@ -232,7 +232,7 @@ module.exports = async ({
 
     async function run(segments) {
 
-        let moveMm = 500;
+        let moveMm = 5;
 
         let minSpeedMmPerMin = 100;
         let maxSpeedMmPerMin = 2000;
@@ -245,14 +245,15 @@ module.exports = async ({
             console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
         }
 
-        function checkWindow(lastIndex) {
+        function checkWindow() {
             for (let i = 0; i < window.length; i++) {
                 if (
                     (i > 0 && i < window.length - 1) && (
                         (window[i - 1].aMm - window[i].aMm) * (window[i].aMm - window[i + 1].aMm) < 0 ||
                         (window[i - 1].bMm - window[i].bMm) * (window[i].bMm - window[i + 1].bMm) < 0
                     ) ||
-                    window[i].i === 0 || window[i].i === lastIndex
+                    window[i].first ||
+                    window[i].last
                 ) {
                     //console.info(`R ${window[i].i}`);
 
@@ -274,25 +275,24 @@ module.exports = async ({
             }
         }
 
-        let segmentIndex = 0;
-
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
             let moveCount = Math.ceil(lengthMm / moveMm);
 
             for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
 
-                let { a: aMm, b: bMm } = chainLengthMm(sweep(posMm / lengthMm));
-                aMm = Math.round(aMm);
-                bMm = Math.round(bMm);
+                let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
+                let { a: aMm, b: bMm } = chainLengthMm({x: xMm, y: yMm});
 
                 if (window.length === 0 || (window[window.length - 1].aMm !== aMm && window[window.length - 1].bMm !== bMm)) {
 
                     window.push({
-                        i: segmentIndex++,
                         aMm,
                         bMm,
-                        speedMmPerMin
+                        xMm,
+                        yMm,
+                        speedMmPerMin,
+                        ...window.length === 0 ? { first: true } : {}
                     });
 
                     checkWindow();
@@ -306,7 +306,8 @@ module.exports = async ({
 
         }
 
-        checkWindow(segmentIndex - 1);
+        window[window.length - 1].last = true;
+        checkWindow();
 
         while (window.length > 0) {
             push(window.shift());
