@@ -82,29 +82,23 @@ module.exports = async ({
                     machineCheckInProgress = true;
 
                     for (let motor in machine.motors) {
-                        try {
-                            let driver = motorDrivers[motor];
-                            let state = machine.motors[motor];
-                            state.driver = await driver.get();;
+                        let driver = motorDrivers[motor];
+                        let state = machine.motors[motor];
+                        state.driver = await driver.get();;
 
 
 
-                            for (let stopIndex in state.driver.stops) {
-                                state.stops[stopIndex] = state.stops[stopIndex] || {};
+                        for (let stopIndex in state.driver.stops) {
+                            state.stops[stopIndex] = state.stops[stopIndex] || {};
 
-                                let stop = state.stops[stopIndex];
+                            let stop = state.stops[stopIndex];
 
-                                if (state.driver.stops[stopIndex] && !stop.state) {
-                                    stop.steps = machine.motors[motor].driver.steps;
-                                }
-
-                                stop.state = state.driver.stops[stopIndex];
+                            if (state.driver.stops[stopIndex] && !stop.state) {
+                                stop.steps = machine.motors[motor].driver.steps;
                             }
-                        } catch (e) {
-                            logError("PROPAGATE THIS TO UI:", motor, e);
-                            delete machine.motors[motor];
-                        }
 
+                            stop.state = state.driver.stops[stopIndex];
+                        }
                     }
 
                     let motorDuties = { a: 0, b: 0 };
@@ -247,6 +241,7 @@ module.exports = async ({
                     xMm: x,
                     yMm: y
                 };
+
                 await new Promise(resolve => setTimeout(resolve, stepMs));
             }
 
@@ -276,7 +271,7 @@ module.exports = async ({
 
         let xMm0 = machine.sledPosition.xMm;
         let yMm0 = machine.sledPosition.yMm;
-        let r = 200;
+        let r = 50;
 
         let line = (x0, y0, x1, y1) => ({
             sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),
