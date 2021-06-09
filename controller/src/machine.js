@@ -52,7 +52,7 @@ module.exports = async ({
     let oldStateJson;
 
     let pow2 = a => a * a;
-    let {sqrt, hypot, abs, cos, sin, PI, sign} = Math;
+    let { sqrt, hypot, abs, cos, sin, PI, sign } = Math;
 
     if (!drivers[driver]) {
         throw new Error(`Unknown machine driver "${driver}"`);
@@ -150,50 +150,47 @@ module.exports = async ({
                     }
 
                     let follow = machine.followPosition;
+                    let sled = machine.sledPosition;
 
                     if (follow) {
 
-                        if (machine.sledPosition) {
+                        let length = pos => ({
+                            a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
+                            b: hypot(motorsShaftDistanceMm / 2 - pos.x, pos.y)
+                        });
 
-                            let length = pos => ({
-                                a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
-                                b: hypot(motorsShaftDistanceMm / 2 - pos.x, pos.y)
-                            });
+                        let pos1 = { x: sled.xMm, y: sled.yMm };
+                        let pos2 = { x: follow.xMm, y: follow.yMm };
 
-                            let pos1 = { x: machine.sledPosition.xMm, y: machine.sledPosition.yMm };
-                            let pos2 = { x: follow.xMm, y: follow.yMm };
+                        let len1 = length(pos1);
+                        let len2 = length(pos2);
 
-                            let len1 = length(pos1);
-                            let len2 = length(pos2);
+                        for (let motor in motorDuties) {
 
-                            for (let motor in motorDuties) {
+                            let config = motorConfigs[motor];
+                            let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
 
-                                let config = motorConfigs[motor];
-                                let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
+                            let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
 
-                                let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
+                            let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
 
-                                let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
+                            let duty = speedStepsPerMs / maxSpeedStepsPerMs;
 
-                                let duty = speedStepsPerMs / maxSpeedStepsPerMs * 0.9;
-
-                                if (duty > 1) {
-                                    duty = 1;
-                                }
-                                if (duty < -1) {
-                                    duty = -1;
-                                }
-
-                                let reducedTime;
-                                if (abs(duty) < motorMinDuty && duty !== 0) {
-                                    reducedTime = abs(machineCheckIntervalMs * duty / motorMinDuty);
-                                    duty = sign(duty) * motorMinDuty;
-                                    logInfo(`Reduced step motor ${motor} duty ${duty} ${reducedTime} ms`);
-                                }
-
-                                motorDuties[motor] = { duty, reducedTime };
-
+                            if (duty > 1) {
+                                duty = 1;
                             }
+                            if (duty < -1) {
+                                duty = -1;
+                            }
+
+                            let reducedTime;
+                            if (abs(duty) < motorMinDuty && duty !== 0) {
+                                reducedTime = abs(machineCheckIntervalMs * duty / motorMinDuty);
+                                duty = sign(duty) * motorMinDuty;
+                                logInfo(`Reduced step motor ${motor} duty ${duty} ${reducedTime} ms`);
+                            }
+
+                            motorDuties[motor] = { duty, reducedTime };
 
                         }
 
