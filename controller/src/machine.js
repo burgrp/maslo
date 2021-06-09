@@ -232,7 +232,7 @@ module.exports = async ({
 
     async function run(segments) {
 
-        let moveMm = 5;
+        let moveMm = 0.1;
 
         let minSpeedMmPerMin = 100;
         let maxSpeedMmPerMin = 2000;
@@ -241,8 +241,15 @@ module.exports = async ({
         let window = [];
         let windowSize = 2 * (maxSpeedMmPerMin - minSpeedMmPerMin) / speedChangePerMove;
 
-        function push(move) {
+        async function push(move) {
             console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
+            let sled = machine.sledPosition;
+            let distanceMm = Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm);
+            if (distanceMm > 0) {
+                let timeMs = distanceMm / move.speedMmPerMin * 60000;
+                machine.followPosition = {xMm: move.xMm, yMm: move.yMm};
+                await new Promise(resolve => setTimeout(resolve, timeMs));
+            }
         }
 
         function checkWindow() {
@@ -280,7 +287,7 @@ module.exports = async ({
             for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
 
                 let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                let { a: aMm, b: bMm } = chainLengthMm({x: xMm, y: yMm});
+                let { a: aMm, b: bMm } = chainLengthMm({ x: xMm, y: yMm });
 
                 if (window.length === 0 || (window[window.length - 1].aMm !== aMm && window[window.length - 1].bMm !== bMm)) {
 
@@ -296,7 +303,7 @@ module.exports = async ({
                     checkWindow();
 
                     while (window.length > 10) {
-                        push(window.shift());
+                        await push(window.shift());
                     }
 
                 }
@@ -308,7 +315,7 @@ module.exports = async ({
         checkWindow();
 
         while (window.length > 0) {
-            push(window.shift());
+            await push(window.shift());
         }
 
         delete machine.followPosition;
