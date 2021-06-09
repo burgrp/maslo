@@ -28,7 +28,8 @@ module.exports = async ({ stopPositions }) => {
                         stopPositions &&
                         stopPositions[name] &&
                         isFinite(stopPositions[name][stopIndex]) &&
-                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1);
+                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1) || 
+                        false;
                 }
             }
 

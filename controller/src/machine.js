@@ -29,7 +29,6 @@ module.exports = async ({
         motors: {},
         relays: {},
         spindle: {},
-        stops: {},
         userOrigin: {
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
@@ -40,7 +39,6 @@ module.exports = async ({
             aSteps: 0,
             bSteps: 0
         },
-        motorDamping: {},
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspaceWidthMm,
@@ -64,6 +62,9 @@ module.exports = async ({
     let motorDrivers = {};
     for (let name in motorConfigs) {
         motorDrivers[name] = await driver.createMotor(name, motorConfigs[name]);
+        machine.motors[name] = {
+            stops: []
+        };
     }
 
     let relayDrivers = {};
@@ -80,25 +81,24 @@ module.exports = async ({
                 try {
                     machineCheckInProgress = true;
 
-                    for (let motor in motorDrivers) {
+                    for (let motor in machine.motors) {
                         try {
                             let driver = motorDrivers[motor];
-                            let state = await driver.get();
-                            machine.motors[motor] = state;
-                            for (let stopIndex in state.stops) {
-                                if (machine.stops[motor] === undefined) {
-                                    machine.stops[motor] = {};
-                                }
-                                if (machine.stops[motor][stopIndex] === undefined) {
-                                    machine.stops[motor][stopIndex] = {};
-                                }
-                                let stop = machine.stops[motor][stopIndex];
+                            let state = machine.motors[motor];
+                            state.driver = await driver.get();;
 
-                                if (machine.motors[motor].stops[stopIndex] && !stop.state) {
-                                    stop.steps = machine.motors[motor].steps;
+
+
+                            for (let stopIndex in state.driver.stops) {
+                                state.stops[stopIndex] = state.stops[stopIndex] || {};
+
+                                let stop = state.stops[stopIndex];
+
+                                if (state.driver.stops[stopIndex] && !stop.state) {
+                                    stop.steps = machine.motors[motor].driver.steps;
                                 }
 
-                                stop.state = machine.motors[motor].stops[stopIndex];
+                                stop.state = state.driver.stops[stopIndex];
                             }
                         } catch (e) {
                             logError("PROPAGATE THIS TO UI:", motor, e);
@@ -123,8 +123,8 @@ module.exports = async ({
                         let originBSteps = distanceMmToSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
 
                         // chain lengths
-                        let a = stepsToDistanceMm(motorConfigs.a, machine.motors.a.steps + originASteps);
-                        let b = stepsToDistanceMm(motorConfigs.b, machine.motors.b.steps + originBSteps);
+                        let a = stepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
+                        let b = stepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
 
                         // let's have triangle MotorA-MotorB-Sled, then:
                         // a is MotorA-Sled, i.e. chain length a
@@ -143,8 +143,8 @@ module.exports = async ({
 
                     machine.spindle.on = machine.relays.spindle.on;
 
-                    if (machine.motors.z && machine.stops.z && isFinite(machine.stops.z[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                        machine.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, machine.motors.z.steps - machine.stops.z[0].steps) - machine.bitToMaterialAtLoStopMm;
+                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
+                        machine.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
                     } else {
                         delete machine.spindle.bitToMaterialMm;
                     }
@@ -197,9 +197,9 @@ module.exports = async ({
                     }
 
                     for (let motor in motorDuties) {
-                        
+
                         let md = motorDuties[motor];
-                        
+
                         if (machine.motors[motor]) {
 
                             if (machine.motors[motor].duty !== md.duty) {
