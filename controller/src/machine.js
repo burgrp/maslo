@@ -33,12 +33,6 @@ module.exports = async ({
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
-        positionReference: { // TODO: this is calibration
-            xMm: 0,
-            yMm: motorsToWorkspaceVerticalMm + 500,
-            aSteps: 0,
-            bSteps: 0
-        },
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspaceWidthMm,
@@ -81,158 +75,119 @@ module.exports = async ({
     }
 
     let machineCheckInProgress = false;
-    setInterval(async () => {
+
+    async function checkMachineState() {
 
         if (!machineCheckInProgress) {
             try {
-                try {
-                    machineCheckInProgress = true;
+                machineCheckInProgress = true;
 
-                    for (let motor in machine.motors) {
-                        let driver = motorDrivers[motor];
-                        let state = machine.motors[motor];
-                        state.driver = await driver.get();;
-
+                for (let motor in machine.motors) {
+                    let driver = motorDrivers[motor];
+                    let state = machine.motors[motor];
+                    state.driver = await driver.get();;
 
 
-                        for (let stopIndex in state.driver.stops) {
-                            state.stops[stopIndex] = state.stops[stopIndex] || {};
 
-                            let stop = state.stops[stopIndex];
+                    for (let stopIndex in state.driver.stops) {
+                        state.stops[stopIndex] = state.stops[stopIndex] || {};
 
-                            if (state.driver.stops[stopIndex] && !stop.state) {
-                                stop.steps = machine.motors[motor].driver.steps;
-                            }
+                        let stop = state.stops[stopIndex];
 
-                            stop.state = state.driver.stops[stopIndex];
-                        }
-                    }
-
-                    let motorDuties = { a: 0, b: 0 };
-
-                    if (machine.positionReference && machine.motors.a && machine.motors.b) {
-
-                        // calculate step counter as sled would be at motor A
-                        let originASteps = distanceMmToSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.aSteps;
-                        let originBSteps = distanceMmToSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
-
-                        // chain lengths
-                        let a = stepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
-                        let b = stepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
-
-                        // let's have triangle MotorA-MotorB-Sled, then:
-                        // a is MotorA-Sled, i.e. chain length a
-                        // b is MotorA-Sled, i.e. chain length b
-                        // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                        let aa = (pow2(a) - pow2(b) + pow2(machine.motorsShaftDistanceMm)) / (2 * machine.motorsShaftDistanceMm);
-
-                        machine.sledPosition = {
-                            xMm: aa - machine.motorsShaftDistanceMm / 2,
-                            yMm: sqrt(pow2(a) - pow2(aa))
-                        };
-
-                    } else {
-                        delete machine.sledPosition;
-                    }
-
-                    machine.spindle.on = machine.relays.spindle.on;
-
-                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                        machine.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
-                    } else {
-                        delete machine.spindle.bitToMaterialMm;
-                    }
-
-                    let follow = machine.followPosition;
-                    let sled = machine.sledPosition;
-
-                    if (follow && sled) {
-
-                        let pos1 = { x: sled.xMm, y: sled.yMm };
-                        let pos2 = { x: follow.xMm, y: follow.yMm };
-
-                        let len1 = chainLengthMm(pos1);
-                        let len2 = chainLengthMm(pos2);
-
-                        for (let motor in motorDuties) {
-
-                            let config = motorConfigs[motor];
-                            let distanceSteps = distanceMmToSteps(motorConfigs[motor], len2[motor] - len1[motor]);
-
-                            let speedStepsPerMs = distanceSteps / machineCheckIntervalMs;
-
-                            let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
-
-                            let duty = speedStepsPerMs / maxSpeedStepsPerMs;
-
-                            if (duty > 1) {
-                                duty = 1;
-                            }
-                            if (duty < -1) {
-                                duty = -1;
-                            }
-
-                            motorDuties[motor] = duty;
+                        if (state.driver.stops[stopIndex] && !stop.state) {
+                            stop.steps = machine.motors[motor].driver.steps;
                         }
 
+                        stop.state = state.driver.stops[stopIndex];
                     }
-
-                    for (let motor in motorDuties) {
-
-                        let duty = motorDuties[motor];
-
-                        let reducedTime;
-                        if (abs(duty) < motorMinDuty && duty !== 0) {
-                            reducedTime = abs(machineCheckIntervalMs * duty / motorMinDuty);
-                            duty = sign(duty) * motorMinDuty;
-                            logInfo(`Reduced step motor ${motor} duty ${duty} ${reducedTime} ms`);
-                        }
-
-                        if (machine.motors[motor].driver.duty !== duty) {
-                            await motorDrivers[motor].set(duty);
-                        }
-
-                        if (reducedTime) {
-                            setTimeout(async () => {
-                                try {
-                                    logInfo(`Reduced time ${reducedTime} for motor ${motor} is gone.`)
-                                    await motorDrivers[motor].set(0);
-                                } catch (e) {
-                                    logError(`Error stopping motor ${motor} in reduced time:`, e);
-                                }
-                            }, reducedTime);
-                        }
-
-                    }
-
-                    let stateJson = JSON.stringify(machine);
-                    if (stateJson !== oldStateJson) {
-                        oldStateJson = stateJson;
-                        for (let listener of stateChangedListeners) {
-                            try {
-                                listener(machine);
-                            } catch (error) {
-                                logError("Error in machine state change listener:", error);
-                            }
-                        }
-                    }
-
-
-                } finally {
-                    machineCheckInProgress = false;
                 }
-            } catch (e) {
-                logError("Error in machine check:", e);
-            }
-        } else {
-            logError("Machine check too slow.");
-        }
 
-    }, machineCheckIntervalMs);
+                if (!machine.positionReference) {
+                    machine.positionReference = { // TODO: this is calibration, now assume motor is at 0,1500 (0,250 user)
+                        xMm: 500,
+                        yMm: 700,
+                        aSteps: machine.motors.a.driver.steps,
+                        bSteps: machine.motors.b.driver.steps
+                    };
+                }
+
+                let motorDuties = { a: 0, b: 0 };
+
+                if (machine.positionReference && machine.motors.a && machine.motors.b) {
+
+                    // calculate step counter as sled would be at motor A
+                    let originASteps = distanceMmToSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.aSteps;
+                    let originBSteps = distanceMmToSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
+
+                    // chain lengths
+                    let a = stepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
+                    let b = stepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
+
+                    // let's have triangle MotorA-MotorB-Sled, then:
+                    // a is MotorA-Sled, i.e. chain length a
+                    // b is MotorA-Sled, i.e. chain length b
+                    // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+                    let aa = (pow2(a) - pow2(b) + pow2(machine.motorsShaftDistanceMm)) / (2 * machine.motorsShaftDistanceMm);
+
+                    machine.sledPosition = {
+                        xMm: aa - machine.motorsShaftDistanceMm / 2,
+                        yMm: sqrt(pow2(a) - pow2(aa))
+                    };
+
+                } else {
+                    delete machine.sledPosition;
+                }
+
+                machine.spindle.on = machine.relays.spindle.on;
+
+                if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
+                    machine.spindle.bitToMaterialMm = stepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
+                } else {
+                    delete machine.spindle.bitToMaterialMm;
+                }
+
+            } finally {
+                machineCheckInProgress = false;
+            }
+
+        }
+    }
+
+
+
+    function checkMachineListeners() {
+        let stateJson = JSON.stringify(machine);
+        if (stateJson !== oldStateJson) {
+            oldStateJson = stateJson;
+            for (let listener of stateChangedListeners) {
+                try {
+                    listener(machine);
+                } catch (error) {
+                    logError("Error in machine state change listener:", error);
+                }
+            }
+        }
+    }
+
+
+    function scheduleNextMachineCheck() {
+        setTimeout(async () => {
+            try {
+                await checkMachineState();
+                checkMachineListeners();
+            } catch (e) {
+                logError("Error in regular machine check", e);
+            }
+            scheduleNextMachineCheck();
+        }, machineCheckIntervalMs);
+    }
+
+    scheduleNextMachineCheck();
+
 
     async function run(segments) {
 
-        let moveMm = 0.1;
+        let moveMm = 1;
 
         let minSpeedMmPerMin = 100;
         let maxSpeedMmPerMin = 2000;
@@ -242,13 +197,67 @@ module.exports = async ({
         let windowSize = 2 * (maxSpeedMmPerMin - minSpeedMmPerMin) / speedChangePerMove;
 
         async function push(move) {
-            console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
+            //console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
+
+            await checkMachineState();
+
             let sled = machine.sledPosition;
             let distanceMm = Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm);
-            if (distanceMm > 0) {
+            if (distanceMm > 0.01) {
+
                 let timeMs = distanceMm / move.speedMmPerMin * 60000;
-                machine.followPosition = {xMm: move.xMm, yMm: move.yMm};
+
+                let motorDuties = {};
+                for (let [motor, motorHorizontalPositionMm] of [
+                    ['a', -machine.motorsShaftDistanceMm / 2],
+                    ['b', machine.motorsShaftDistanceMm / 2]
+                ]) {
+                    let config = motorConfigs[motor];
+
+                    let originSteps = distanceMmToSteps(motorConfigs[motor],
+                        hypot(
+                            motorHorizontalPositionMm - machine.positionReference.xMm,
+                            machine.positionReference.yMm
+                        ))
+                        - machine.positionReference[motor + "Steps"];
+
+
+                    let currentSteps = machine.motors[motor].driver.steps;
+                    let targetSteps = distanceMmToSteps(config, move[motor + "Mm"]);
+                    let distanceSteps = targetSteps - originSteps - currentSteps;
+                    let speedStepsPerMs = distanceSteps / timeMs;
+
+                    let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
+
+                    let duty = speedStepsPerMs / maxSpeedStepsPerMs / 2;
+
+                    if (duty > 1) {
+                        duty = 1;
+                    }
+                    if (duty < -1) {
+                        duty = -1;
+                    }
+
+                    motorDuties[motor] = duty;                    
+                }
+
+                machine.targetPosition = {
+                    xMm: move.xMm,
+                    yMm: move.yMm
+                };
+
+                
+                logInfo(`speed: ${move.speedMmPerMin}mm/min A:${Math.round(motorDuties.a * 100) / 100} B:${Math.round(motorDuties.b * 100) / 100} ${Math.round(timeMs)}ms d:${Math.round(Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm)*100)/100}mm`);
+                for (let motor in motorDuties) {
+                    await motorDrivers[motor].set(motorDuties[motor]);
+                }
+
                 await new Promise(resolve => setTimeout(resolve, timeMs));
+            }
+
+            if (move.last) {
+                await motorDrivers.a.set(0);
+                await motorDrivers.a.set(1);
             }
         }
 
@@ -342,7 +351,7 @@ module.exports = async ({
 
         let xMm0 = machine.sledPosition.xMm;
         let yMm0 = machine.sledPosition.yMm;
-        let r = 50;
+        let r = 500;
 
         let line = (x0, y0, x1, y1) => ({
             sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),

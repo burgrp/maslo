@@ -6,9 +6,14 @@
                 "module": "./driver-virtual.js",
                 "stopPositions": {
                     "z": [
-                        0,
+                        100,
                         5000
                     ]
+                },
+                "defaultSteps": {
+                    "a": 1000,
+                    "b": -4000,
+                    "z": 100
                 }
             },
             "i2c": {
@@ -23,7 +28,7 @@
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
         "machineCheckIntervalMs": 100,
-        "moveSpeedRapidMmPerMin": 1000,
+        "moveSpeedRapidMmPerMin": 1500,
         "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
         "workspaceWidthMm": 2500,

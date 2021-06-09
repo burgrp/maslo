@@ -1,6 +1,6 @@
 const Debug = require("debug");
 
-module.exports = async ({ stopPositions }) => {
+module.exports = async ({ stopPositions, defaultSteps }) => {
 
     function now() {
         return new Date().getTime();
@@ -14,7 +14,7 @@ module.exports = async ({ stopPositions }) => {
         async createMotor(name, config) {
 
             let state = {
-                steps: 0,
+                steps: defaultSteps[name],
                 stops: [false, false],
                 currentMA: 0,
                 duty: 0
@@ -28,7 +28,7 @@ module.exports = async ({ stopPositions }) => {
                         stopPositions &&
                         stopPositions[name] &&
                         isFinite(stopPositions[name][stopIndex]) &&
-                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1) || 
+                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1) ||
                         false;
                 }
             }
