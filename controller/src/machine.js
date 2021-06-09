@@ -255,8 +255,6 @@ module.exports = async ({
                     window[i].first ||
                     window[i].last
                 ) {
-                    //console.info(`R ${window[i].i}`);
-
                     for (let r = 0; r < windowSize / 2; r++) {
 
                         function speedLimit(offset) {
