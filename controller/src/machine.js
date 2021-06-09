@@ -152,7 +152,7 @@ module.exports = async ({
                     let follow = machine.followPosition;
                     let sled = machine.sledPosition;
 
-                    if (follow) {
+                    if (follow && sled) {
 
                         let length = pos => ({
                             a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
@@ -197,20 +197,24 @@ module.exports = async ({
                     }
 
                     for (let motor in motorDuties) {
+                        
                         let md = motorDuties[motor];
+                        
+                        if (machine.motors[motor]) {
 
-                        if (machine.motors[motor].duty !== md.duty) {
-                            await motorDrivers[motor].set(md.duty);
-                        }
-                        if (md.reducedTime) {
-                            setTimeout(async () => {
-                                try {
-                                    //logInfo(`Reduced time ${md.reducedTime} for motor ${motor} is gone.`)
-                                    await motorDrivers[motor].set(0);
-                                } catch (e) {
-                                    logError(`Error stopping motor ${motor} in reduced time:`, e);
-                                }
-                            }, md.reducedTime);
+                            if (machine.motors[motor].duty !== md.duty) {
+                                await motorDrivers[motor].set(md.duty);
+                            }
+                            if (md.reducedTime) {
+                                setTimeout(async () => {
+                                    try {
+                                        //logInfo(`Reduced time ${md.reducedTime} for motor ${motor} is gone.`)
+                                        await motorDrivers[motor].set(0);
+                                    } catch (e) {
+                                        logError(`Error stopping motor ${motor} in reduced time:`, e);
+                                    }
+                                }, md.reducedTime);
+                            }
                         }
                     }
 
