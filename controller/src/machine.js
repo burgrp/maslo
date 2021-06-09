@@ -107,14 +107,7 @@ module.exports = async ({
 
                     }
 
-                    let motorDuties = {
-                        a: {
-                            duty: 0
-                        },
-                        b: {
-                            duty: 0
-                        }
-                    };
+                    let motorDuties = { a: 0, b: 0 };
 
                     if (machine.positionReference && machine.motors.a && machine.motors.b) {
 
@@ -183,39 +176,37 @@ module.exports = async ({
                                 duty = -1;
                             }
 
-                            let reducedTime;
-                            if (abs(duty) < motorMinDuty && duty !== 0) {
-                                reducedTime = abs(machineCheckIntervalMs * duty / motorMinDuty);
-                                duty = sign(duty) * motorMinDuty;
-                                logInfo(`Reduced step motor ${motor} duty ${duty} ${reducedTime} ms`);
-                            }
-
-                            motorDuties[motor] = { duty, reducedTime };
-
+                            motorDuties[motor] = duty;
                         }
 
                     }
 
                     for (let motor in motorDuties) {
 
-                        let md = motorDuties[motor];
+                        let duty = motorDuties[motor];
 
-                        if (machine.motors[motor]) {
-
-                            if (machine.motors[motor].duty !== md.duty) {
-                                await motorDrivers[motor].set(md.duty);
-                            }
-                            if (md.reducedTime) {
-                                setTimeout(async () => {
-                                    try {
-                                        //logInfo(`Reduced time ${md.reducedTime} for motor ${motor} is gone.`)
-                                        await motorDrivers[motor].set(0);
-                                    } catch (e) {
-                                        logError(`Error stopping motor ${motor} in reduced time:`, e);
-                                    }
-                                }, md.reducedTime);
-                            }
+                        let reducedTime;
+                        if (abs(duty) < motorMinDuty && duty !== 0) {
+                            reducedTime = abs(machineCheckIntervalMs * duty / motorMinDuty);
+                            duty = sign(duty) * motorMinDuty;
+                            logInfo(`Reduced step motor ${motor} duty ${duty} ${reducedTime} ms`);
                         }
+
+                        if (machine.motors[motor].driver.duty !== duty) {
+                            await motorDrivers[motor].set(duty);
+                        }
+
+                        if (reducedTime) {
+                            setTimeout(async () => {
+                                try {
+                                    logInfo(`Reduced time ${reducedTime} for motor ${motor} is gone.`)
+                                    await motorDrivers[motor].set(0);
+                                } catch (e) {
+                                    logError(`Error stopping motor ${motor} in reduced time:`, e);
+                                }
+                            }, reducedTime);
+                        }
+
                     }
 
                     let stateJson = JSON.stringify(machine);
