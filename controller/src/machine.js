@@ -232,36 +232,77 @@ module.exports = async ({
 
     async function run(segments) {
 
-        let stepMm = 10;
+        let moveMm = 5;
 
-        let prevAB;
-        let prevPrevAB;
+        let minSpeedMmPerMin = 100;
+        let maxSpeedMmPerMin = 2000;
+        let speedChangePerMove = 100;
+
+        let window = [];
+        let windowSize = 2 * (maxSpeedMmPerMin - minSpeedMmPerMin) / speedChangePerMove;
+
+        function push(move) {
+            console.info(Object.entries(move).map(([k, v]) => `${k}:${v}`).join(" "));
+        }
+
+        function checkWindow() {
+            for (let i = 1; i < window.length - 1; i++) {
+                if (
+                    (window[i - 1].aMm - window[i].aMm) * (window[i].aMm - window[i + 1].aMm) < 0 ||
+                    (window[i - 1].bMm - window[i].bMm) * (window[i].bMm - window[i + 1].bMm) < 0
+                ) {
+                    //console.info(`R ${window[i].i}`);
+
+                    for (let r = 0; r < windowSize / 2; r++) {
+
+                        function speedLimit(offset) {
+                            if (i + offset > 0 && i + offset < window.length) {
+                                window[i + offset].speedMmPerMin = Math.min(window[i + offset].speedMmPerMin,
+                                    minSpeedMmPerMin + r * speedChangePerMove
+                                );
+                            }
+                        }
+
+                        speedLimit(+r);
+                        speedLimit(-r);
+                    }
+                }
+
+            }
+        }
+
+        let segmentIndex = 0;
 
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
-            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + stepMm) {
-                let { x, y } = sweep(posMm / lengthMm);
-                //console.info("XY", x, y);
+            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + moveMm) {
 
-                let { a, b } = chainLengthMm({ x, y });
+                let { a: aMm, b: bMm } = chainLengthMm(sweep(posMm / lengthMm));
+                aMm = Math.round(aMm);
+                bMm = Math.round(bMm);
 
-                if (!prevAB || a !== prevAB.a && b !== prevAB.b) {
+                if (window.length === 0 || (window[window.length - 1].aMm !== aMm && window[window.length - 1].bMm !== bMm)) {
 
-                    if (prevAB && prevPrevAB && (
-                        (prevPrevAB.a - prevAB.a) * (prevAB.a - a) < 0 ||
-                        (prevPrevAB.b - prevAB.b) * (prevAB.b - b) < 0
-                    )) {
-                        console.info("---------------------------------------------------------------");
+                    window.push({
+                        i: segmentIndex++,
+                        aMm,
+                        bMm,
+                        speedMmPerMin
+                    });
+
+                    checkWindow();
+
+                    while (window.length > 10) {
+                        push(window.shift());
                     }
 
-
-                    prevPrevAB = prevAB;
-                    prevXY = { x, y };
-                    prevAB = { a, b };
-                    console.info("AB", a, b, speedMmPerMin);
                 }
             }
 
+        }
+
+        while (window.length > 0) {
+            push(window.shift());
         }
 
         delete machine.followPosition;
