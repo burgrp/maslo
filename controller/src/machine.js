@@ -52,6 +52,13 @@ module.exports = async ({
     let pow2 = a => a * a;
     let { sqrt, hypot, abs, cos, sin, PI, sign } = Math;
 
+    function chainLengthMm(pos) {
+        return {
+            a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
+            b: hypot(motorsShaftDistanceMm / 2 - pos.x, pos.y)
+        };
+    };
+
     if (!drivers[driver]) {
         throw new Error(`Unknown machine driver "${driver}"`);
     }
@@ -141,16 +148,11 @@ module.exports = async ({
 
                     if (follow && sled) {
 
-                        let length = pos => ({
-                            a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
-                            b: hypot(motorsShaftDistanceMm / 2 - pos.x, pos.y)
-                        });
-
                         let pos1 = { x: sled.xMm, y: sled.yMm };
                         let pos2 = { x: follow.xMm, y: follow.yMm };
 
-                        let len1 = length(pos1);
-                        let len2 = length(pos2);
+                        let len1 = chainLengthMm(pos1);
+                        let len2 = chainLengthMm(pos2);
 
                         for (let motor in motorDuties) {
 
@@ -229,20 +231,35 @@ module.exports = async ({
     }, machineCheckIntervalMs);
 
     async function run(segments) {
-        let stepMs = 100;
+
+        let stepMm = 10;
+
+        let prevAB;
+        let prevPrevAB;
 
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
-            let stepMm = speedMmPerMin / 60000 * stepMs;
-
             for (let posMm = 0; posMm <= lengthMm; posMm = posMm + stepMm) {
                 let { x, y } = sweep(posMm / lengthMm);
-                machine.followPosition = {
-                    xMm: x,
-                    yMm: y
-                };
+                //console.info("XY", x, y);
 
-                await new Promise(resolve => setTimeout(resolve, stepMs));
+                let { a, b } = chainLengthMm({ x, y });
+
+                if (!prevAB || a !== prevAB.a && b !== prevAB.b) {
+
+                    if (prevAB && prevPrevAB && (
+                        (prevPrevAB.a - prevAB.a) * (prevAB.a - a) < 0 ||
+                        (prevPrevAB.b - prevAB.b) * (prevAB.b - b) < 0
+                    )) {
+                        console.info("---------------------------------------------------------------");
+                    }
+
+
+                    prevPrevAB = prevAB;
+                    prevXY = { x, y };
+                    prevAB = { a, b };
+                    console.info("AB", a, b, speedMmPerMin);
+                }
             }
 
         }
