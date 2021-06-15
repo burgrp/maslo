@@ -1,4 +1,4 @@
-module.exports = ({ i2c, address }) => {
+module.exports = ({ i2c, address, maxRetries = 2 }) => {
 
     const COMMAND_SET = 1;
 
@@ -9,12 +9,34 @@ module.exports = ({ i2c, address }) => {
             buffer.writeUInt8(COMMAND_SET, 0);
             buffer.writeUInt8(Math.abs(duty * 0xFF), 1);
             buffer.writeUInt8(duty < 0 ? 0 : 1, 2);
-            await i2c.i2cWrite(address, buffer);
+
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    await i2c.i2cWrite(address, buffer);
+                    break;
+                } catch (e) {
+                    if (attempt > maxRetries) {
+                        throw e;
+                    }
+                }
+            }
         },
 
         async get() {
 
-            let buffer = await i2c.i2cRead(address, 1 + 1 + 4 + 2);
+            let buffer
+
+
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    buffer = await i2c.i2cRead(address, 1 + 1 + 4 + 2);
+                    break;
+                } catch (e) {
+                    if (attempt > maxRetries) {
+                        throw e;
+                    }
+                }
+            }
 
             let duty = buffer.readUInt8(0);
             let flags = buffer.readUInt8(1);

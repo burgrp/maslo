@@ -46,6 +46,8 @@ module.exports = async ({
     let pow2 = a => a * a;
     let { sqrt, hypot, abs, cos, sin, PI, sign } = Math;
 
+    let centRound = a => Math.round(a * 100) / 100;
+
     function chainLengthMm(pos) {
         return {
             a: hypot(motorsShaftDistanceMm / 2 + pos.x, pos.y),
@@ -110,8 +112,6 @@ module.exports = async ({
                         bSteps: machine.motors.b.driver.steps
                     };
                 }
-
-                let motorDuties = { a: 0, b: 0 };
 
                 if (machine.positionReference && machine.motors.a && machine.motors.b) {
 
@@ -189,7 +189,7 @@ module.exports = async ({
 
         let moveMm = 1;
 
-        let minSpeedMmPerMin = 100;
+        let minSpeedMmPerMin = 200;
         let maxSpeedMmPerMin = 2000;
         let speedChangePerMove = 100;
 
@@ -204,8 +204,6 @@ module.exports = async ({
             let sled = machine.sledPosition;
             let distanceMm = Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm);
             if (distanceMm > 0.01) {
-
-                let timeMs = distanceMm / move.speedMmPerMin * 60000;
 
                 let motorDuties = {};
                 for (let [motor, motorHorizontalPositionMm] of [
@@ -225,11 +223,8 @@ module.exports = async ({
                     let currentSteps = machine.motors[motor].driver.steps;
                     let targetSteps = distanceMmToSteps(config, move[motor + "Mm"]);
                     let distanceSteps = targetSteps - originSteps - currentSteps;
-                    let speedStepsPerMs = distanceSteps / timeMs;
 
-                    let maxSpeedStepsPerMs = config.maxRpm * config.encoderPpr / 60000;
-
-                    let duty = speedStepsPerMs / maxSpeedStepsPerMs / 2;
+                    let duty = move.speedMmPerMin / moveSpeedRapidMmPerMin * distanceSteps / 200;
 
                     if (duty > 1) {
                         duty = 1;
@@ -238,7 +233,7 @@ module.exports = async ({
                         duty = -1;
                     }
 
-                    motorDuties[motor] = duty;                    
+                    motorDuties[motor] = duty;
                 }
 
                 machine.targetPosition = {
@@ -246,18 +241,45 @@ module.exports = async ({
                     yMm: move.yMm
                 };
 
-                
-                logInfo(`speed: ${move.speedMmPerMin}mm/min A:${Math.round(motorDuties.a * 100) / 100} B:${Math.round(motorDuties.b * 100) / 100} ${Math.round(timeMs)}ms d:${Math.round(Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm)*100)/100}mm`);
+                logInfo(`speed: ${move.speedMmPerMin}mm/min A:${centRound(motorDuties.a)} B:${centRound(motorDuties.b)}`);
                 for (let motor in motorDuties) {
                     await motorDrivers[motor].set(motorDuties[motor]);
                 }
 
-                await new Promise(resolve => setTimeout(resolve, timeMs));
+                let coordStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
+
+                let lastDistanceMm;
+                let stallCounter = 0;
+                while (true) {
+                    await checkMachineState();
+                    sled = machine.sledPosition;
+                    let distanceMm = Math.round(Math.hypot(move.xMm - sled.xMm, move.yMm - sled.yMm) * 100) / 100
+                    logInfo(`dist: ${distanceMm} sled: ${coordStr(machine.sledPosition)} move: ${coordStr(move)}`);
+
+                    if (distanceMm > lastDistanceMm) {
+                        break;
+                    }
+
+                    if (distanceMm === lastDistanceMm) {
+                        stallCounter++
+                    } else {
+                        stallCounter = 0;
+                    }
+
+                    if (stallCounter > 5) {
+                        break;
+                    }
+
+                    lastDistanceMm = distanceMm;
+                    //await new Promise(resolve => setImmediate(resolve));
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+
             }
 
             if (move.last) {
                 await motorDrivers.a.set(0);
-                await motorDrivers.a.set(1);
+                await motorDrivers.b.set(0);
             }
         }
 
@@ -351,7 +373,7 @@ module.exports = async ({
 
         let xMm0 = machine.sledPosition.xMm;
         let yMm0 = machine.sledPosition.yMm;
-        let r = 500;
+        let r = 200;
 
         let line = (x0, y0, x1, y1) => ({
             sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),
