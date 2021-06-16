@@ -11,7 +11,10 @@ module.exports = async ({ bus, motorAddresses }) => {
 
         async open() {
             i2c = await I2C(bus);
-            i2c.nop();
+            i2c.setReset(false);
+            i2c.setReset(true);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             i2c.onIRQ(async () => {
                 for (let stateUpdate of stateUpdates) {
                     await stateUpdate();
