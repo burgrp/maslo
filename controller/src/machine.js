@@ -89,8 +89,6 @@ module.exports = async ({
                     let state = machine.motors[motor];
                     state.driver = await driver.get();;
 
-
-
                     for (let stopIndex in state.driver.stops) {
                         state.stops[stopIndex] = state.stops[stopIndex] || {};
 
@@ -196,9 +194,6 @@ module.exports = async ({
         let window = [];
         let windowSize = ceil(2 * (maxSpeedMmPerMin - minSpeedMmPerMin) / speedChangePerMove);
 
-        let prevDuties = {};
-        let reversing = {};
-
         async function push(move) {
 
             machine.targetPosition = {
@@ -213,7 +208,7 @@ module.exports = async ({
             if (distanceMm > 0.01) {
 
 
-                let motorDuties = {};
+                let newDuties = {};
                 for (let [motor, motorHorizontalPositionMm] of [
                     ['a', -machine.motorsShaftDistanceMm / 2],
                     ['b', machine.motorsShaftDistanceMm / 2]
@@ -231,43 +226,48 @@ module.exports = async ({
                     let targetSteps = distanceMmToSteps(config, move[motor + "Mm"]);
                     let distanceSteps = targetSteps - originSteps - currentSteps;
 
-                    let newDuty = move.speedMmPerMin * distanceSteps / 100000;
+                    let duty = move.speedMmPerMin * distanceSteps / 100000;
 
-                    if (newDuty > 1) {
-                        newDuty = 1;
+                    if (duty > 1) {
+                        duty = 1;
                     }
-                    if (newDuty < -1) {
-                        newDuty = -1;
+                    if (duty < -1) {
+                        duty = -1;
                     }
 
-                    reversing[motor] = sign(prevDuties[motor]) === -sign(newDuty) && !reversing[motor];
-
-                    let duty = reversing[motor] ? prevDuties[motor] : newDuty;
-
-                    if (reversing[motor]) {
-                        console.info("--------------------");
-                    } 
-
-                    prevDuties[motor] = duty;
-
-                    motorDuties[motor] = duty;
+                    newDuties[motor] = duty;
                 }
 
-                logInfo(`speed: ${move.speedMmPerMin}mm/min A:${centRound(motorDuties.a)} B:${centRound(motorDuties.b)}`);
+                logInfo(`speed: ${move.speedMmPerMin}mm/min A:${centRound(machine.motors.a.driver.duty)}->${centRound(newDuties.a)} B:${centRound(machine.motors.b.driver.duty)}->${centRound(newDuties.b)}`);
 
-                for (let motor in motorDuties) {
-                    await motorDrivers[motor].set(motorDuties[motor]);
-                }
-
-                //let coordStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
+                let coordStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
 
                 let lastDistanceMm;
                 let stallCounter = 0;
                 while (true) {
+
                     await checkMachineState();
+
+                    for (let motor in newDuties) {
+                        let duty = machine.motors[motor].driver.duty;
+                        let s = sign(newDuties[motor] - duty);                        
+                        duty += s * 0.1;
+                        if (s * duty > s * newDuties[motor]) {
+                            duty = newDuties[motor];
+                        }
+                        if (duty > 1) {
+                            duty = 1;
+                        }
+                        if (duty < -1) {
+                            duty = -1;
+                        }                        
+                        await motorDrivers[motor].set(duty);
+                        //console.info(`${motor} ${s * 0.1} ${duty}`);
+                    }
+
                     sled = machine.sledPosition;
                     let distanceMm = round(hypot(move.xMm - sled.xMm, move.yMm - sled.yMm) * 100) / 100
-                    //logInfo(`dist: ${distanceMm} sled: ${coordStr(machine.sledPosition)} move: ${coordStr(move)}`);
+                    logInfo(`  dist: ${distanceMm} sled: ${coordStr(machine.sledPosition)} move: ${coordStr(move)}`);
 
                     if (distanceMm > lastDistanceMm) {
                         break;
