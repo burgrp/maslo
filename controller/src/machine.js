@@ -65,7 +65,8 @@ module.exports = async ({
     for (let name in motorConfigs) {
         motorDrivers[name] = await driver.createMotor(name, motorConfigs[name]);
         machine.motors[name] = {
-            stops: []
+            stops: [],
+            config: motorConfigs[name]
         };
     }
 
@@ -133,6 +134,31 @@ module.exports = async ({
 
                 } else {
                     delete machine.sledPosition;
+                }
+
+                if (machine.sledPosition && machine.targetPosition && machine.positionReference) {
+
+                    let chainLengthsMm = calculateChainLengthMm(machine.targetPosition);
+
+                    for (let [motor, motorHorizontalPositionMm] of [
+                        ['a', -machine.motorsShaftDistanceMm / 2],
+                        ['b', machine.motorsShaftDistanceMm / 2]
+                    ]) {
+                        let config = machine.motors[motor].config;
+                        let originSteps = distanceMmToAbsSteps(config,
+                            hypot(
+                                motorHorizontalPositionMm - machine.positionReference.xMm,
+                                machine.positionReference.yMm
+                            ))
+                            - machine.positionReference[motor + "Steps"];
+        
+                        let currentSteps = machine.motors[motor].driver.steps;
+                        let targetSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
+                        machine.motors[motor].toTargetSteps = targetSteps - originSteps - currentSteps;    
+                    }
+                } else {
+                    delete machine.motors.a.toTargetSteps;
+                    delete machine.motors.b.toTargetSteps;
                 }
 
                 machine.spindle.on = machine.relays.spindle.on;
@@ -265,8 +291,6 @@ module.exports = async ({
 
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
 
-        let move;
-
         machine.targetPosition = { xMm, yMm };
 
         await checkMachineState();
@@ -274,10 +298,6 @@ module.exports = async ({
         let sled = machine.sledPosition;
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
-
-            let chainLengthsMm = calculateChainLengthMm({xMm, yMm});;
-
-            //logInfo(`speed: ${speedMmPerMin}mm/min A:${centRound(machine.motors.a.driver.duty)}->${centRound(newDuties.a)} B:${centRound(machine.motors.b.driver.duty)}->${centRound(newDuties.b)}`);
 
             let coordStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
 
@@ -289,25 +309,11 @@ module.exports = async ({
 
                 let duties = {};
 
-                for (let [motor, motorHorizontalPositionMm] of [
-                    ['a', -machine.motorsShaftDistanceMm / 2],
-                    ['b', machine.motorsShaftDistanceMm / 2]
-                ]) {
+                for (let motor of ["a", "b"]) {
 
-                    let config = motorConfigs[motor];
-
-                    let originSteps = distanceMmToAbsSteps(motorConfigs[motor],
-                        hypot(
-                            motorHorizontalPositionMm - machine.positionReference.xMm,
-                            machine.positionReference.yMm
-                        ))
-                        - machine.positionReference[motor + "Steps"];
+                    let toTargetSteps = machine.motors[motor].toTargetSteps;
     
-                    let currentSteps = machine.motors[motor].driver.steps;
-                    let targetSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
-                    let distanceSteps = targetSteps - originSteps - currentSteps;
-    
-                    let newDuty = speedMmPerMin * distanceSteps / 100000;
+                    let newDuty = speedMmPerMin * toTargetSteps / 100000;
     
                     if (newDuty > 1) {
                         newDuty = 1;
@@ -366,6 +372,7 @@ module.exports = async ({
         logInfo("move STOP");
         await motorDrivers.a.set(0);
         await motorDrivers.b.set(0);
+        delete machine.targetPosition;        
     }
 
     async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
