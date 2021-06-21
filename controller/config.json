@@ -34,7 +34,6 @@
         "workspaceWidthMm": 2500,
         "workspaceHeightMm": 1250,
         "motorsToWorkspaceVerticalMm": 500,
-        "motorMinDuty": 0.1,
         "manualMoveMm": {
             "xy": 100,
             "ab": 100,
