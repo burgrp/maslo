@@ -46,6 +46,11 @@ module.exports = async ({
     let { sqrt, hypot, abs, cos, sin, PI, sign, round, ceil, min, max } = Math;
 
     let centRound = a => round(a * 100) / 100;
+    let crdStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
+
+    function sigmoid(t) {
+        return 1 / (1 + Math.pow(Math.E, -t));
+    }
 
     function calculateChainLengthMm(pos) {
         return {
@@ -151,10 +156,10 @@ module.exports = async ({
                                 machine.positionReference.yMm
                             ))
                             - machine.positionReference[motor + "Steps"];
-        
+
                         let currentSteps = machine.motors[motor].driver.steps;
                         let targetSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
-                        machine.motors[motor].toTargetSteps = targetSteps - originSteps - currentSteps;    
+                        machine.motors[motor].toTargetSteps = targetSteps - originSteps - currentSteps;
                     }
                 } else {
                     delete machine.motors.a.toTargetSteps;
@@ -213,41 +218,6 @@ module.exports = async ({
 
         let moveMm = 1;
 
-        let minSpeedMmPerMin = 200;
-        let maxSpeedMmPerMin = 2000;
-        let speedChangePerMove = 100;
-
-        let window = [];
-        let windowSize = ceil(2 * (maxSpeedMmPerMin - minSpeedMmPerMin) / speedChangePerMove);
-
-        function checkWindow() {
-            for (let i = 0; i < window.length; i++) {
-                if (
-                    (i > 0 && i < window.length - 1) && (
-                        (window[i - 1].aMm - window[i].aMm) * (window[i].aMm - window[i + 1].aMm) < 0 ||
-                        (window[i - 1].bMm - window[i].bMm) * (window[i].bMm - window[i + 1].bMm) < 0
-                    ) ||
-                    window[i].first ||
-                    window[i].last
-                ) {
-                    for (let r = 0; r < windowSize / 2; r++) {
-
-                        function speedLimit(offset) {
-                            if (i + offset >= 0 && i + offset < window.length) {
-                                window[i + offset].speedMmPerMin = min(window[i + offset].speedMmPerMin,
-                                    minSpeedMmPerMin + r * speedChangePerMove
-                                );
-                            }
-                        }
-
-                        speedLimit(+r);
-                        speedLimit(-r);
-                    }
-                }
-
-            }
-        }
-
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
             let moveCount = ceil(lengthMm / moveMm);
@@ -255,38 +225,13 @@ module.exports = async ({
             for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
 
                 let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                let { aMm, bMm } = calculateChainLengthMm({ xMm, yMm });
-
-                if (window.length === 0 || (window[window.length - 1].aMm !== aMm && window[window.length - 1].bMm !== bMm)) {
-
-                    window.push({
-                        aMm,
-                        bMm,
-                        xMm,
-                        yMm,
-                        speedMmPerMin,
-                        ...window.length === 0 ? { first: true } : {}
-                    });
-
-                    checkWindow();
-
-                    while (window.length > 10) {
-                        await push(window.shift());
-                    }
-
-                }
+                logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
+                await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
             }
 
         }
 
-        window[window.length - 1].last = true;
-        checkWindow();
-
-        while (window.length > 0) {
-            await push(window.shift());
-        }
-
-        delete machine.followPosition;
+        await moveStop();
     }
 
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
@@ -299,10 +244,9 @@ module.exports = async ({
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
 
-            let coordStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
-
             let lastDistanceMm;
             let stallCounter = 0;
+
             while (true) {
 
                 await checkMachineState();
@@ -310,43 +254,33 @@ module.exports = async ({
                 let duties = {};
 
                 for (let motor of ["a", "b"]) {
-
                     let toTargetSteps = machine.motors[motor].toTargetSteps;
-    
-                    let newDuty = speedMmPerMin * toTargetSteps / 100000;
-    
-                    if (newDuty > 1) {
-                        newDuty = 1;
-                    }
-                    if (newDuty < -1) {
-                        newDuty = -1;
-                    }                    
+                    duties[motor] = toTargetSteps / 1000;                   
+                }
 
-                    let duty = machine.motors[motor].driver.duty;
-                    let s = sign(newDuty - duty);
-                    duty += s * 0.1;
-                    if (s * duty > s * newDuty) {
-                        duty = newDuty;
-                    }
-                    if (duty > 1) {
-                        duty = 1;
-                    }
-                    if (duty < -1) {
-                        duty = -1;
-                    }
+                if (abs(duties.a) > 1) {
+                    duties.b = duties.b / abs(duties.a);
+                    duties.a = sign(duties.a);
+                }
 
-                    duties[motor] = duty;                                       
+                if (abs(duties.b) > 1) {
+                    duties.a = duties.a / abs(duties.b);
+                    duties.b = sign(duties.b);
                 }
 
                 for (let motor in duties) {
+                    duties[motor] = (machine.motors[motor].driver.duty * 3 + duties[motor]) / 4;
                     await motorDrivers[motor].set(duties[motor]);
                 }
 
                 sled = machine.sledPosition;
                 let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100
-                logInfo(`move target:${coordStr({xMm, yMm})} sled:${coordStr(machine.sledPosition)} dist:${distanceMm} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
+                logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
 
-                if (distanceMm > lastDistanceMm) {
+                if (
+                    (distanceMm > lastDistanceMm && distanceMm < 0.7) ||
+                    (abs(duties.a) < 0.05 && abs(duties.b) < 0.05)
+                ) {
                     break;
                 }
 
@@ -356,7 +290,8 @@ module.exports = async ({
                     stallCounter = 0;
                 }
 
-                if (stallCounter > 5) {
+                if (stallCounter > 10) {
+                    logInfo("motor stall");
                     break;
                 }
 
@@ -372,7 +307,7 @@ module.exports = async ({
         logInfo("move STOP");
         await motorDrivers.a.set(0);
         await motorDrivers.b.set(0);
-        delete machine.targetPosition;        
+        delete machine.targetPosition;
     }
 
     async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
