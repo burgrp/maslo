@@ -141,31 +141,6 @@ module.exports = async ({
                     delete machine.sledPosition;
                 }
 
-                if (machine.sledPosition && machine.targetPosition && machine.positionReference) {
-
-                    let chainLengthsMm = calculateChainLengthMm(machine.targetPosition);
-
-                    for (let [motor, motorHorizontalPositionMm] of [
-                        ['a', -machine.motorsShaftDistanceMm / 2],
-                        ['b', machine.motorsShaftDistanceMm / 2]
-                    ]) {
-                        let config = machine.motors[motor].config;
-                        let originSteps = distanceMmToAbsSteps(config,
-                            hypot(
-                                motorHorizontalPositionMm - machine.positionReference.xMm,
-                                machine.positionReference.yMm
-                            ))
-                            - machine.positionReference[motor + "Steps"];
-
-                        let currentSteps = machine.motors[motor].driver.steps;
-                        let targetSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
-                        machine.motors[motor].toTargetSteps = targetSteps - originSteps - currentSteps;
-                    }
-                } else {
-                    delete machine.motors.a.toTargetSteps;
-                    delete machine.motors.b.toTargetSteps;
-                }
-
                 machine.spindle.on = machine.relays.spindle.on;
 
                 if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
@@ -241,6 +216,11 @@ module.exports = async ({
         await checkMachineState();
 
         let sled = machine.sledPosition;
+
+
+        let xExtMm = sled.xMm + 5 * (xMm - sled.xMm);
+        let yExtMm = sled.yMm + 5 * (yMm - sled.yMm);
+
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
 
@@ -253,9 +233,25 @@ module.exports = async ({
 
                 let duties = {};
 
-                for (let motor of ["a", "b"]) {
-                    let toTargetSteps = machine.motors[motor].toTargetSteps;
-                    duties[motor] = toTargetSteps / 1000;                   
+                let chainLengthsMm = calculateChainLengthMm({ xMm: xExtMm, yMm: yExtMm });
+
+                for (let [motor, motorHorizontalPositionMm] of [
+                    ['a', -machine.motorsShaftDistanceMm / 2],
+                    ['b', machine.motorsShaftDistanceMm / 2]
+                ]) {
+                    let config = machine.motors[motor].config;
+                    let originSteps = distanceMmToAbsSteps(config,
+                        hypot(
+                            motorHorizontalPositionMm - machine.positionReference.xMm,
+                            machine.positionReference.yMm
+                        ))
+                        - machine.positionReference[motor + "Steps"];
+
+                    let currentSteps = machine.motors[motor].driver.steps;
+                    let distanceToExtAbsSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
+                    let distanceToExtRelSteps = distanceToExtAbsSteps - originSteps - currentSteps;
+
+                    duties[motor] = distanceToExtRelSteps / 1000;
                 }
 
                 if (abs(duties.a) > 1) {
@@ -269,16 +265,16 @@ module.exports = async ({
                 }
 
                 for (let motor in duties) {
-                    duties[motor] = (machine.motors[motor].driver.duty * 3 + duties[motor]) / 4;
+                    duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
                     await motorDrivers[motor].set(duties[motor]);
                 }
 
                 sled = machine.sledPosition;
-                let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100
+                let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
                 logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
 
                 if (
-                    (distanceMm > lastDistanceMm && distanceMm < 0.7) ||
+                    (distanceMm > lastDistanceMm) ||
                     (abs(duties.a) < 0.05 && abs(duties.b) < 0.05)
                 ) {
                     break;
@@ -319,7 +315,7 @@ module.exports = async ({
 
         let xMm0 = machine.sledPosition.xMm;
         let yMm0 = machine.sledPosition.yMm;
-        let r = 200;
+        let r = 100;
 
         let line = (x0, y0, x1, y1) => ({
             sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),
