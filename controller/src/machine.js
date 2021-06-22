@@ -218,8 +218,8 @@ module.exports = async ({
         let sled = machine.sledPosition;
 
 
-        let xExtMm = sled.xMm + 5 * (xMm - sled.xMm);
-        let yExtMm = sled.yMm + 5 * (yMm - sled.yMm);
+        let xExtMm = sled.xMm + 2 * (xMm - sled.xMm);
+        let yExtMm = sled.yMm + 2 * (yMm - sled.yMm);
 
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
@@ -251,18 +251,13 @@ module.exports = async ({
                     let distanceToExtAbsSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
                     let distanceToExtRelSteps = distanceToExtAbsSteps - originSteps - currentSteps;
 
-                    duties[motor] = distanceToExtRelSteps / 1000;
+                    duties[motor] = distanceToExtRelSteps;
                 }
 
-                if (abs(duties.a) > 1) {
-                    duties.b = duties.b / abs(duties.a);
-                    duties.a = sign(duties.a);
-                }
+                let normalize = max(abs(duties.a), abs(duties.b)) / 0.2;
 
-                if (abs(duties.b) > 1) {
-                    duties.a = duties.a / abs(duties.b);
-                    duties.b = sign(duties.b);
-                }
+                duties.b = duties.b / normalize;
+                duties.a = duties.a / normalize;
 
                 for (let motor in duties) {
                     duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
