@@ -193,6 +193,8 @@ module.exports = async ({
 
         let moveMm = 1;
 
+        let t0 = new Date().getTime();
+
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
             let moveCount = ceil(lengthMm / moveMm);
@@ -206,7 +208,14 @@ module.exports = async ({
 
         }
 
+        let t1 = new Date().getTime();
+
         await moveStop();
+
+        let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
+        let tSec = (t1 - t0) / 1000;
+
+        logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
     }
 
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
@@ -217,9 +226,8 @@ module.exports = async ({
 
         let sled = machine.sledPosition;
 
-
-        let xExtMm = sled.xMm + 2 * (xMm - sled.xMm);
-        let yExtMm = sled.yMm + 2 * (yMm - sled.yMm);
+        let xExtMm = sled.xMm + 10 * (xMm - sled.xMm);
+        let yExtMm = sled.yMm + 10 * (yMm - sled.yMm);
 
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
@@ -254,13 +262,16 @@ module.exports = async ({
                     duties[motor] = distanceToExtRelSteps;
                 }
 
-                let normalize = max(abs(duties.a), abs(duties.b)) / 0.2;
+                let normalize = max(abs(duties.a), abs(duties.b)) / 0.4;
 
                 duties.b = duties.b / normalize;
                 duties.a = duties.a / normalize;
 
                 for (let motor in duties) {
-                    duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
+                    //duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
+                    if (sign(machine.motors[motor].driver.duty) === -sign(duties[motor])) {
+                        logInfo("REVERSAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    }
                     await motorDrivers[motor].set(duties[motor]);
                 }
 
@@ -268,10 +279,7 @@ module.exports = async ({
                 let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
                 logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
 
-                if (
-                    (distanceMm > lastDistanceMm) ||
-                    (abs(duties.a) < 0.05 && abs(duties.b) < 0.05)
-                ) {
+                if (distanceMm > lastDistanceMm) {
                     break;
                 }
 
@@ -287,7 +295,7 @@ module.exports = async ({
                 }
 
                 lastDistanceMm = distanceMm;
-                await new Promise(resolve => setTimeout(resolve, 10));
+                await new Promise(resolve => setTimeout(resolve, 1));
             }
 
         }
