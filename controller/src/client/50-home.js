@@ -79,6 +79,11 @@ wg.pages.home = {
                 cy: sledY,
             });
 
+            $(".scene .sled.outline").attr({
+                r: state.sledDiameterMm / 2
+            });
+            
+
             $(".scene .follow").attr({
                 cx: state.followPosition && state.followPosition.xMm,
                 cy: state.followPosition && state.followPosition.yMm,
@@ -206,7 +211,7 @@ wg.pages.home = {
                 <circle class="motor b" cy="0" r="50" fill="red"/>
                 <rect class="workspace" fill="none" stroke="silver" stroke-width="10"/>
                 <circle class="sled center" r="50" fill="red"/>
-                <circle class="sled outline" r="125" fill="none" stroke="gray" stroke-width="20"/>
+                <circle class="sled outline" fill="none" stroke="gray" stroke-width="20"/>
                 <line class="chain a" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
                 <line class="chain b" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>

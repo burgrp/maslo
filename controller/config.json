@@ -33,6 +33,7 @@
             "widthMm": 2500,
             "heightMm": 1250
         },
+        "sledDiameterMm": 250,
         "motorsToWorkspaceVerticalMm": 500,
         "kinematicsAB": {
             "minDuty": 0.1,

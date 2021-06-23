@@ -19,6 +19,7 @@ module.exports = async ({
     workspace,
     motorsToWorkspaceVerticalMm,
     kinematicsAB,
+    sledDiameterMm,
 }) => {
 
     let machine = {
@@ -30,6 +31,7 @@ module.exports = async ({
             yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
         },
         errors: {},
+        sledDiameterMm,
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         currentDutyAB: kinematicsAB.minDuty,
         motorsShaftDistanceMm,
@@ -210,9 +212,6 @@ module.exports = async ({
 
         let sled = machine.sledPosition;
 
-        let xExtMm = sled.xMm + 10 * (xMm - sled.xMm);
-        let yExtMm = sled.yMm + 10 * (yMm - sled.yMm);
-
         let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
         if (distanceMm > 0.01) {
 
@@ -225,7 +224,7 @@ module.exports = async ({
 
                 let duties = {};
 
-                let chainLengthsMm = calculateChainLengthMm({ xMm: xExtMm, yMm: yExtMm });
+                let chainLengthsMm = calculateChainLengthMm({ xMm, yMm });
 
                 for (let [motor, motorHorizontalPositionMm] of [
                     ['a', -machine.motorsShaftDistanceMm / 2],
@@ -269,7 +268,7 @@ module.exports = async ({
                 let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
                 logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} M:${centRound(machine.currentDutyAB)} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
 
-                if (distanceMm > lastDistanceMm) {
+                if (distanceMm > lastDistanceMm && distanceMm < 1) {
                     break;
                 }
 

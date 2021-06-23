@@ -18,13 +18,15 @@ module.exports = async ({
 
     let motorAccelerationTimers = {};
 
+    let { min, max, abs } = Math;
+
     async function manualMotorStart(motor, direction) {
         if (machine.getState().motors[motor].driver.duty === 0 && !motorAccelerationTimers[motor]) {
             let duty = manualMotorControl[motor].min * direction;
             await machine.setMotorDuty(motor, duty);
             motorAccelerationTimers[motor] = setInterval(async () => {
                 try {
-                    duty = Math.min(duty + 0.02 * direction, manualMotorControl[motor].max);
+                    duty = min(duty + 0.02 * direction, manualMotorControl[motor].max);
                     await machine.setMotorDuty(motor, duty);
                 } catch (e) {
                     logError("Error in manual motor acceleration timer", e);
@@ -48,13 +50,31 @@ module.exports = async ({
 
         let speedMmPerMin = state.spindle.depthMm < 0 ? moveSpeedRapidMmPerMin : moveSpeedCuttingMmPerMin;
 
-        if (state.sledPosition) {
+        let sled = state.sledPosition;
+        if (!sled) {
+            throw new Error("Unknown sled position.");
+        }
+
+        let safeToEdge = state.sledDiameterMm / 4;
+
+        let xMm = directionX ? directionX * (state.workspace.widthMm - safeToEdge) / 2 : sled.xMm;
+        let yMm = directionY ? (directionY / 2 + 0.5) * (state.workspace.heightMm) + state.motorsToWorkspaceVerticalMm - safeToEdge * directionY : sled.yMm;
+
+        if (directionX && directionY) {
+            let d = min(xMm  * directionX- sled.xMm * directionX, yMm * directionY- sled.yMm* directionY);
+            xMm = sled.xMm + d * directionX;
+            yMm = sled.yMm + d * directionY;
+        }
+
+        try {
             await machine.moveXY({
-                xMm: directionX ? directionX * state.workspace.widthMm / 2 : state.sledPosition.xMm,
-                yMm: directionY ? state.motorsToWorkspaceVerticalMm + (directionY / 2 + 0.5) * state.workspace.heightMm : state.sledPosition.yMm,
+                xMm,
+                yMm,
                 speedMmPerMin,
                 firstMove: true
             });
+        } finally {
+            await machine.stopAB();
         }
     }
 
