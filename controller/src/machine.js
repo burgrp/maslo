@@ -22,7 +22,7 @@ module.exports = async ({
     workspaceHeightMm,
     motorsToWorkspaceVerticalMm,
     manualMoveMm,
-    minDutyAB,
+    kinematicsAB,
 }) => {
 
     let machine = {
@@ -33,7 +33,7 @@ module.exports = async ({
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
-        currentDutyAB: 0,
+        currentDutyAB: kinematicsAB.minDuty,
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspaceWidthMm,
@@ -197,7 +197,7 @@ module.exports = async ({
 
         let t0 = new Date().getTime();
 
-        machine.currentDutyAB = minDutyAB;
+        machine.currentDutyAB = kinematicsAB.minDuty;
 
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
@@ -220,7 +220,7 @@ module.exports = async ({
         let tSec = (t1 - t0) / 1000;
 
         logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
-    }    
+    }
 
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
 
@@ -238,8 +238,6 @@ module.exports = async ({
 
             let lastDistanceMm;
             let stallCounter = 0;
-
-            
 
             while (true) {
 
@@ -273,18 +271,17 @@ module.exports = async ({
                 duties.b = duties.b / normalize;
                 duties.a = duties.a / normalize;
 
-                for (let motor in duties) { 
-                    duties[motor] = (machine.motors[motor].driver.duty * 2 + duties[motor]) / 3;                   
-                    if (sign(machine.motors[motor].driver.duty) * sign(duties[motor]) === -1) {                        
+                for (let motor in duties) {
+                    duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
+                    if (sign(machine.motors[motor].driver.duty) * sign(duties[motor]) === -1) {
                         logInfo(`reversing motor ${motor}`);
-                        duties[motor] = 0;                        
-                        machine.currentDutyAB = max(machine.currentDutyAB - 0.05, minDutyAB);
+                        duties[motor] = 0;
+                        machine.currentDutyAB = max(machine.currentDutyAB - kinematicsAB.slowDownOnReverse, kinematicsAB.minDuty);
                     }
                 }
-                machine.currentDutyAB = min(machine.currentDutyAB + 0.0001, 1);
-                
+                machine.currentDutyAB = machine.currentDutyAB + (0.3 - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
 
-                for (let motor in duties) {                                        
+                for (let motor in duties) {
                     await motorDrivers[motor].set(duties[motor]);
                 }
 
@@ -308,7 +305,7 @@ module.exports = async ({
                 }
 
                 lastDistanceMm = distanceMm;
-                await new Promise(resolve => setTimeout(resolve, 1));
+                await new Promise(resolve => setTimeout(resolve, 10));
             }
 
         }
@@ -331,7 +328,7 @@ module.exports = async ({
 
         let xMm0 = machine.sledPosition.xMm;
         let yMm0 = machine.sledPosition.yMm;
-        let r = 300;
+        let r = 100;
 
         let line = (x0, y0, x1, y1) => ({
             sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),

@@ -39,7 +39,11 @@
             "ab": 100,
             "z": 1
         },
-        "minDutyAB": 0.1,
+        "kinematicsAB": {
+            "minDuty": 0.1,
+            "accelerationFactor": 0.001,
+            "slowDownOnReverse": 0.01
+        },        
         "motors": {
             "a": {
                 "maxRpm": 7800,
