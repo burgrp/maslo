@@ -189,37 +189,6 @@ module.exports = async ({
 
     scheduleNextMachineCheck();
 
-
-
-    async function run(segments) {
-
-        let t0 = new Date().getTime();
-
-        machine.currentDutyAB = kinematicsAB.minDuty;
-
-        for (let { sweep, lengthMm, speedMmPerMin } of segments) {
-
-            let moveCount = ceil(lengthMm / kinematicsAB.moveMm);
-
-            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
-
-                let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
-            }
-
-        }
-
-        let t1 = new Date().getTime();
-
-        await moveStop();
-
-        let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
-        let tSec = (t1 - t0) / 1000;
-
-        logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
-    }
-
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
 
         machine.targetPosition = { xMm, yMm };
@@ -315,6 +284,35 @@ module.exports = async ({
         await motorDrivers.a.set(0);
         await motorDrivers.b.set(0);
         delete machine.targetPosition;
+    }
+    
+    async function run(segments) {
+
+        let t0 = new Date().getTime();
+
+        machine.currentDutyAB = kinematicsAB.minDuty;
+
+        for (let { sweep, lengthMm, speedMmPerMin } of segments) {
+
+            let moveCount = ceil(lengthMm / kinematicsAB.moveMm);
+
+            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
+
+                let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
+                logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
+                await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
+            }
+
+        }
+
+        let t1 = new Date().getTime();
+
+        await moveStop();
+
+        let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
+        let tSec = (t1 - t0) / 1000;
+
+        logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
     }
 
     async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
