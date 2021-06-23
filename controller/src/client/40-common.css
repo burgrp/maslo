@@ -137,6 +137,7 @@ button:active {
 
 .page .errors>* {
     margin-bottom: 1em;
+    cursor: pointer;
 }
 
 /*---------------------------------------------------------------*/

@@ -27,8 +27,7 @@ wg.common = {
 
     showError(error) {
         console.error("Error:", error);
-        
-        $(".page .errors").append(DIV().text(error.message || error));        
+        $(".page .errors").append(DIV().text(error.message || error).click(e => $(e.target).fadeOut(() => $(e.target).remove())));
     },
 
     async check(asyncAction) {

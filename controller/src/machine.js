@@ -33,8 +33,9 @@ module.exports = async ({
             xMm: 0,
             yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
         },
-        currentDutyAB: kinematicsAB.minDuty,
+        errors: {},
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
+        currentDutyAB: kinematicsAB.minDuty,
         motorsShaftDistanceMm,
         workspaceWidthMm,
         workspaceHeightMm,
@@ -49,10 +50,6 @@ module.exports = async ({
 
     let centRound = a => round(a * 100) / 100;
     let crdStr = c => `${centRound(c.xMm || c.x)},${centRound(c.yMm || c.y)}`;
-
-    function sigmoid(t) {
-        return 1 / (1 + Math.pow(Math.E, -t));
-    }
 
     function calculateChainLengthMm(pos) {
         return {
@@ -91,64 +88,73 @@ module.exports = async ({
             try {
                 machineCheckInProgress = true;
 
-                for (let motor in machine.motors) {
-                    let driver = motorDrivers[motor];
-                    let state = machine.motors[motor];
-                    state.driver = await driver.get();;
+                try {
+                    for (let motor in machine.motors) {
+                        let driver = motorDrivers[motor];
+                        let state = machine.motors[motor];
+                        state.driver = await driver.get();;
 
-                    for (let stopIndex in state.driver.stops) {
-                        state.stops[stopIndex] = state.stops[stopIndex] || {};
+                        for (let stopIndex in state.driver.stops) {
+                            state.stops[stopIndex] = state.stops[stopIndex] || {};
 
-                        let stop = state.stops[stopIndex];
+                            let stop = state.stops[stopIndex];
 
-                        if (state.driver.stops[stopIndex] && !stop.state) {
-                            stop.steps = machine.motors[motor].driver.steps;
+                            if (state.driver.stops[stopIndex] && !stop.state) {
+                                stop.steps = machine.motors[motor].driver.steps;
+                            }
+
+                            stop.state = state.driver.stops[stopIndex];
                         }
-
-                        stop.state = state.driver.stops[stopIndex];
                     }
-                }
 
-                if (!machine.positionReference) {
-                    machine.positionReference = { // TODO: this is calibration, now assume motor is at 0,1500 (0,250 user)
-                        xMm: 500,
-                        yMm: 700,
-                        aSteps: machine.motors.a.driver.steps,
-                        bSteps: machine.motors.b.driver.steps
-                    };
-                }
+                    if (!machine.positionReference) {
+                        machine.positionReference = { // TODO: this is calibration, now assume motor is at 0,1500 (0,250 user)
+                            xMm: 500,
+                            yMm: 700,
+                            aSteps: machine.motors.a.driver.steps,
+                            bSteps: machine.motors.b.driver.steps
+                        };
+                    }
 
-                if (machine.positionReference && machine.motors.a && machine.motors.b) {
+                    if (machine.positionReference) {
 
-                    // calculate step counter as sled would be at motor A
-                    let originASteps = distanceMmToAbsSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.aSteps;
-                    let originBSteps = distanceMmToAbsSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
+                        // calculate step counter as sled would be at motor A
+                        let originASteps = distanceMmToAbsSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.aSteps;
+                        let originBSteps = distanceMmToAbsSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
 
-                    // chain lengths
-                    let a = absStepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
-                    let b = absStepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
+                        // chain lengths
+                        let a = absStepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
+                        let b = absStepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
 
-                    // let's have triangle MotorA-MotorB-Sled, then:
-                    // a is MotorA-Sled, i.e. chain length a
-                    // b is MotorA-Sled, i.e. chain length b
-                    // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                    let aa = (pow2(a) - pow2(b) + pow2(machine.motorsShaftDistanceMm)) / (2 * machine.motorsShaftDistanceMm);
+                        // let's have triangle MotorA-MotorB-Sled, then:
+                        // a is MotorA-Sled, i.e. chain length a
+                        // b is MotorA-Sled, i.e. chain length b
+                        // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+                        let aa = (pow2(a) - pow2(b) + pow2(machine.motorsShaftDistanceMm)) / (2 * machine.motorsShaftDistanceMm);
 
-                    machine.sledPosition = {
-                        xMm: aa - machine.motorsShaftDistanceMm / 2,
-                        yMm: sqrt(pow2(a) - pow2(aa))
-                    };
+                        machine.sledPosition = {
+                            xMm: aa - machine.motorsShaftDistanceMm / 2,
+                            yMm: sqrt(pow2(a) - pow2(aa))
+                        };
 
-                } else {
+                    } else {
+                        delete machine.sledPosition;
+                    }
+
+                    machine.spindle.on = machine.relays.spindle.on;
+
+                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
+                        machine.spindle.bitToMaterialMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
+                    } else {
+                        delete machine.spindle.bitToMaterialMm;
+                    }
+
+                    delete machine.errors.machineCheck;
+                } catch (e) {
+                    let message = e.message || e;
                     delete machine.sledPosition;
-                }
-
-                machine.spindle.on = machine.relays.spindle.on;
-
-                if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                    machine.spindle.bitToMaterialMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
-                } else {
-                    delete machine.spindle.bitToMaterialMm;
+                    machine.errors.machineCheck = message;
+                    throw e;
                 }
 
             } finally {
@@ -157,8 +163,6 @@ module.exports = async ({
 
         }
     }
-
-
 
     function checkMachineListeners() {
         let stateJson = JSON.stringify(machine);
@@ -174,14 +178,17 @@ module.exports = async ({
         }
     }
 
-
     function scheduleNextMachineCheck() {
         setTimeout(async () => {
             try {
                 await checkMachineState();
-                checkMachineListeners();
             } catch (e) {
                 logError("Error in regular machine check", e);
+            }
+            try {
+                checkMachineListeners();
+            } catch (e) {
+                logError("Error in regular machine check listeners", e);
             }
             scheduleNextMachineCheck();
         }, machineCheckIntervalMs);
@@ -189,7 +196,15 @@ module.exports = async ({
 
     scheduleNextMachineCheck();
 
+    function checkSledPosition() {
+        if (!machine.sledPosition) {
+            throw new Error("Unknown sled position.");
+        }
+    }
+
     async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
+
+        checkSledPosition();
 
         machine.targetPosition = { xMm, yMm };
 
@@ -281,41 +296,47 @@ module.exports = async ({
 
     async function moveStop() {
         logInfo("move STOP");
+        delete machine.targetPosition;
         await motorDrivers.a.set(0);
         await motorDrivers.b.set(0);
-        delete machine.targetPosition;
     }
-    
+
     async function run(segments) {
 
         let t0 = new Date().getTime();
 
         machine.currentDutyAB = kinematicsAB.minDuty;
 
-        for (let { sweep, lengthMm, speedMmPerMin } of segments) {
+        try {
 
-            let moveCount = ceil(lengthMm / kinematicsAB.moveMm);
+            for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
-            for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
+                let moveCount = ceil(lengthMm / kinematicsAB.moveMm);
 
-                let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
+                for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
+
+                    let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
+                    logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
+                    await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
+                }
+
             }
 
+            let t1 = new Date().getTime();
+
+            let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
+            let tSec = (t1 - t0) / 1000;
+
+            logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
+        
+        } finally {
+            await moveStop();
         }
 
-        let t1 = new Date().getTime();
-
-        await moveStop();
-
-        let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
-        let tSec = (t1 - t0) / 1000;
-
-        logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
     }
 
     async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
+        checkSledPosition();
         await moveAbsoluteXY({ xMm: machine.sledPosition.xMm + xMm, yMm: machine.sledPosition.yMm + yMm, speedMmPerMin });
     }
 
