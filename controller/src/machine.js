@@ -15,13 +15,9 @@ module.exports = async ({
     motors: motorConfigs,
     relays: relayConfigs,
     machineCheckIntervalMs,
-    moveSpeedRapidMmPerMin,
-    moveSpeedCuttingMmPerMin,
     motorsShaftDistanceMm,
-    workspaceWidthMm,
-    workspaceHeightMm,
+    workspace,
     motorsToWorkspaceVerticalMm,
-    manualMoveMm,
     kinematicsAB,
 }) => {
 
@@ -31,14 +27,13 @@ module.exports = async ({
         spindle: {},
         userOrigin: {
             xMm: 0,
-            yMm: motorsToWorkspaceVerticalMm + workspaceHeightMm
+            yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
         },
         errors: {},
         bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
         currentDutyAB: kinematicsAB.minDuty,
         motorsShaftDistanceMm,
-        workspaceWidthMm,
-        workspaceHeightMm,
+        workspace,
         motorsToWorkspaceVerticalMm
     };
 
@@ -144,9 +139,9 @@ module.exports = async ({
                     machine.spindle.on = machine.relays.spindle.on;
 
                     if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                        machine.spindle.depth = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
+                        machine.spindle.depthMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
                     } else {
-                        delete machine.spindle.depth;
+                        delete machine.spindle.depthMm;
                     }
 
                     delete machine.errors.machineCheck;
@@ -202,7 +197,7 @@ module.exports = async ({
         }
     }
 
-    async function moveTo({ xMm, yMm, speedMmPerMin, firstMove }) {
+    async function moveXY({ xMm, yMm, speedMmPerMin, firstMove }) {
 
         checkSledPosition();
 
@@ -297,8 +292,8 @@ module.exports = async ({
 
     }
 
-    async function moveStop() {
-        logInfo("move STOP");
+    async function stopAB() {
+        logInfo("stop AB");
         delete machine.targetPosition;
         await motorDrivers.a.set(0);
         await motorDrivers.b.set(0);
@@ -320,7 +315,7 @@ module.exports = async ({
 
                     let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
                     logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                    await moveTo({ xMm, yMm, speedMmPerMin });
+                    await moveXY({ xMm, yMm, speedMmPerMin });
                 }
 
             }
@@ -333,7 +328,7 @@ module.exports = async ({
             logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
 
         } finally {
-            await moveStop();
+            await stopAB();
         }
 
     }
@@ -378,8 +373,8 @@ module.exports = async ({
             return machine;
         },
 
-        moveTo,
-        moveStop,
+        moveXY,
+        stopAB,
 
         async setMotorDuty(motor, duty) {
             await motorDrivers[motor].set(duty);
@@ -388,11 +383,11 @@ module.exports = async ({
         // async manualMoveStart(kind, ...direction) {
 
         //     function getMoveSpeed() {
-        //         if (!isFinite(machine.spindle.depth)) {
+        //         if (!isFinite(machine.spindle.depthMm)) {
         //             throw new Error("Unknown position of router bit. Please calibrate.");
         //         }
 
-        //         return machine.spindle.depth < 0 ?
+        //         return machine.spindle.depthMm < 0 ?
         //             moveSpeedRapidMmPerMin :
         //             moveSpeedCuttingMmPerMin;
         //     }

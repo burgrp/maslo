@@ -28,24 +28,19 @@
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
         "machineCheckIntervalMs": 100,
-        "moveSpeedRapidMmPerMin": 1000,
-        "moveSpeedCuttingMmPerMin": 200,
         "motorsShaftDistanceMm": 3500,
-        "workspaceWidthMm": 2500,
-        "workspaceHeightMm": 1250,
-        "motorsToWorkspaceVerticalMm": 500,
-        "manualMoveMm": {
-            "xy": 100,
-            "ab": 100,
-            "z": 1
+        "workspace": {
+            "widthMm": 2500,
+            "heightMm": 1250
         },
+        "motorsToWorkspaceVerticalMm": 500,
         "kinematicsAB": {
             "minDuty": 0.1,
             "accelerationFactor": 0.001,
             "slowDownOnReverse": 0.01,
             "fullSpeedMmPerMin": 1000,
             "moveMm": 1
-        },        
+        },
         "motors": {
             "a": {
                 "maxRpm": 7800,
@@ -75,7 +70,23 @@
         "modules": [
             {
                 "module": "./ui.js",
-                "machine": "-> machine"
+                "machine": "-> machine",
+                "moveSpeedRapidMmPerMin": 1000,
+                "moveSpeedCuttingMmPerMin": 200,
+                "manualMotorControl": {
+                    "a": {
+                        "min": 0.2,
+                        "max": 1
+                    },
+                    "b": {
+                        "min": 0.2,
+                        "max": 1
+                    },
+                    "z": {
+                        "min": 0.3,
+                        "max": 1
+                    }
+                }
             }
         ]
     }
