@@ -144,9 +144,9 @@ module.exports = async ({
                     machine.spindle.on = machine.relays.spindle.on;
 
                     if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                        machine.spindle.bitToMaterialMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
+                        machine.spindle.depth = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
                     } else {
-                        delete machine.spindle.bitToMaterialMm;
+                        delete machine.spindle.depth;
                     }
 
                     delete machine.errors.machineCheck;
@@ -388,11 +388,11 @@ module.exports = async ({
         // async manualMoveStart(kind, ...direction) {
 
         //     function getMoveSpeed() {
-        //         if (!isFinite(machine.spindle.bitToMaterialMm)) {
+        //         if (!isFinite(machine.spindle.depth)) {
         //             throw new Error("Unknown position of router bit. Please calibrate.");
         //         }
 
-        //         return machine.spindle.bitToMaterialMm < 0 ?
+        //         return machine.spindle.depth < 0 ?
         //             moveSpeedRapidMmPerMin :
         //             moveSpeedCuttingMmPerMin;
         //     }
