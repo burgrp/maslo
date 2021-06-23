@@ -39,6 +39,7 @@
             "ab": 100,
             "z": 1
         },
+        "minDutyAB": 0.1,
         "motors": {
             "a": {
                 "maxRpm": 7800,
