@@ -161,23 +161,23 @@ wg.pages.home = {
         }
 
 
-        function moveButton(clazz, icon, kind, ...moveArgs) {
+        function motorPushButton(clazz, icon, motor, direction) {
             let button = BUTTON(clazz, [ICON(icon)]);
             let isDown = false;
 
             function down() {
                 if (!isDown) {
                     isDown = true;
-                    console.info("start move", ...moveArgs);
-                    wg.common.check(async () => await wg.machine.manualMoveStart(kind, ...moveArgs));
+                    console.info("start move", motor, direction);
+                    wg.common.check(async () => await wg.machine.manualMotorStart(motor, direction));
                 }
             }
 
             function up() {
                 if (isDown) {
                     isDown = false;
-                    console.info("stop move", ...moveArgs);
-                    wg.common.check(async () => await wg.machine.manualMoveStop(kind));
+                    console.info("stop move", motor, direction);
+                    wg.common.check(async () => await wg.machine.manualMotorStop(motor));
                 }
             }
 
@@ -193,9 +193,8 @@ wg.pages.home = {
                 e.preventDefault();
             });
 
-            button.on("touchstart", () => {
-                console.info("1");
-            })
+            button.on("touchstart", down);
+            button.on("touchend", up);
 
             return button;
         }
@@ -223,24 +222,24 @@ wg.pages.home = {
                     DIV("title").text("chains"),
                     DIV("buttons", [
                         DIV("a side").text("A"),
-                        moveButton("a up", "caret-up", "a", -1),
-                        moveButton("a down", "caret-down", "a", 1),
+                        motorPushButton("a up", "caret-up", "a", -1),
+                        motorPushButton("a down", "caret-down", "a", 1),
                         DIV("b side").text("B"),
-                        moveButton("b up", "caret-up", "b", -1),
-                        moveButton("b down", "caret-down", "b", 1)
+                        motorPushButton("b up", "caret-up", "b", -1),
+                        motorPushButton("b down", "caret-down", "b", 1)
                     ])
                 ]),
                 DIV("group xyaxis", [
                     DIV("title").text("X,Y axis"),
                     DIV("buttons", [
-                        moveButton("dir0", "caret-up", "xy", 0, -1),
-                        moveButton("dir45", "caret-up", "xy", 1, -1),
-                        moveButton("dir90", "caret-up", "xy", 1, 0),
-                        moveButton("dir135", "caret-up", "xy", 1, 1),
-                        moveButton("dir180", "caret-up", "xy", 0, 1),
-                        moveButton("dir225", "caret-up", "xy", -1, 1),
-                        moveButton("dir270", "caret-up", "xy", -1, 0),
-                        moveButton("dir315", "caret-up", "xy", -1, -1),
+                        motorPushButton("dir0", "caret-up", "xy", 0, -1),
+                        motorPushButton("dir45", "caret-up", "xy", 1, -1),
+                        motorPushButton("dir90", "caret-up", "xy", 1, 0),
+                        motorPushButton("dir135", "caret-up", "xy", 1, 1),
+                        motorPushButton("dir180", "caret-up", "xy", 0, 1),
+                        motorPushButton("dir225", "caret-up", "xy", -1, 1),
+                        motorPushButton("dir270", "caret-up", "xy", -1, 0),
+                        motorPushButton("dir315", "caret-up", "xy", -1, -1),
                         BUTTON("position", [
                             DIV("x dimension").text("-"),
                             DIV("y dimension").text("-")
@@ -254,8 +253,8 @@ wg.pages.home = {
                         BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
-                        moveButton("up", "caret-up", "z", -1),
-                        moveButton("down", "caret-down", "z", 1)
+                        motorPushButton("up", "caret-up", "z", -1),
+                        motorPushButton("down", "caret-down", "z", 1)
                     ])
                 ])
             ]).onMachineStateChanged(updateMachineState),

@@ -17,9 +17,17 @@ module.exports = async ({ machine }) => {
         api: {
             machine: {
                 getState: machine.getState,
-                manualMoveStart: machine.manualMoveStart,
-                manualMoveStop: machine.manualMoveStop,
+
+                async manualMotorStart(motor, direction) {
+                    await machine.setMotorDuty(motor, 0.5 * direction);
+                }, 
+
+                async manualMotorStop(motor) {
+                    await machine.setMotorDuty(motor, 0);
+                },
+
                 manualSwitch: machine.manualSwitch,
+
                 async resetUserOrigin() {
                     let state = machine.getState();
                     if (state.sledPosition) {

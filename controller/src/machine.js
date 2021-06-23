@@ -202,11 +202,14 @@ module.exports = async ({
         }
     }
 
-    async function moveAbsoluteXY({ xMm, yMm, speedMmPerMin }) {
+    async function moveTo({ xMm, yMm, speedMmPerMin, firstMove }) {
 
         checkSledPosition();
 
         machine.targetPosition = { xMm, yMm };
+        if (firstMove) {
+            machine.currentDutyAB = kinematicsAB.minDuty;
+        }
 
         await checkMachineState();
 
@@ -305,7 +308,7 @@ module.exports = async ({
 
         let t0 = new Date().getTime();
 
-        machine.currentDutyAB = kinematicsAB.minDuty;
+
 
         try {
 
@@ -317,7 +320,7 @@ module.exports = async ({
 
                     let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
                     logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                    await moveAbsoluteXY({ xMm, yMm, speedMmPerMin });
+                    await moveTo({ xMm, yMm, speedMmPerMin });
                 }
 
             }
@@ -328,43 +331,43 @@ module.exports = async ({
             let tSec = (t1 - t0) / 1000;
 
             logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
-        
+
         } finally {
             await moveStop();
         }
 
     }
 
-    async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
-        checkSledPosition();
-        await moveAbsoluteXY({ xMm: machine.sledPosition.xMm + xMm, yMm: machine.sledPosition.yMm + yMm, speedMmPerMin });
-    }
+    // async function moveRelativeXY({ xMm, yMm, speedMmPerMin }) {
+    //     checkSledPosition();
+    //     await moveAbsoluteXY({ xMm: machine.sledPosition.xMm + xMm, yMm: machine.sledPosition.yMm + yMm, speedMmPerMin });
+    // }
 
-    async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
-        //throw new Error("Not implemented yet.");
+    // async function moveRelativeABZ(motor, distanceMm, speedMmPerMin) {
+    //     //throw new Error("Not implemented yet.");
 
-        let xMm0 = machine.sledPosition.xMm;
-        let yMm0 = machine.sledPosition.yMm;
-        let r = 100;
+    //     let xMm0 = machine.sledPosition.xMm;
+    //     let yMm0 = machine.sledPosition.yMm;
+    //     let r = 100;
 
-        let line = (x0, y0, x1, y1) => ({
-            sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),
-            lengthMm: hypot(x1 - x0, y1 - y0),
-            speedMmPerMin
-        });
+    //     let line = (x0, y0, x1, y1) => ({
+    //         sweep: pos => ({ x: x0 + pos * (x1 - x0), y: y0 + pos * (y1 - y0) }),
+    //         lengthMm: hypot(x1 - x0, y1 - y0),
+    //         speedMmPerMin
+    //     });
 
-        await run([
-            {
-                sweep: pos => ({ x: xMm0 + r * cos(PI * (pos - 0.5)), y: yMm0 + r + r * sin(PI * (pos - 0.5)) }),
-                lengthMm: PI * r,
-                speedMmPerMin
-            },
-            line(xMm0, yMm0 + 2 * r, xMm0 - r, yMm0 + 2 * r),
-            line(xMm0 - r, yMm0 + 2 * r, xMm0 - r, yMm0),
-            line(xMm0 - r, yMm0, xMm0, yMm0)
-        ]);
+    //     await run([
+    //         {
+    //             sweep: pos => ({ x: xMm0 + r * cos(PI * (pos - 0.5)), y: yMm0 + r + r * sin(PI * (pos - 0.5)) }),
+    //             lengthMm: PI * r,
+    //             speedMmPerMin
+    //         },
+    //         line(xMm0, yMm0 + 2 * r, xMm0 - r, yMm0 + 2 * r),
+    //         line(xMm0 - r, yMm0 + 2 * r, xMm0 - r, yMm0),
+    //         line(xMm0 - r, yMm0, xMm0, yMm0)
+    //     ]);
 
-    }
+    // }
 
     return {
         onStateChanged(listener) {
@@ -375,62 +378,65 @@ module.exports = async ({
             return machine;
         },
 
-        moveRelativeABZ,
-        moveAbsoluteXY,
-        moveRelativeXY,
+        moveTo,
+        moveStop,
 
-        async manualMoveStart(kind, ...direction) {
-
-            function getMoveSpeed() {
-                if (!isFinite(machine.spindle.bitToMaterialMm)) {
-                    throw new Error("Unknown position of router bit. Please calibrate.");
-                }
-
-                return machine.spindle.bitToMaterialMm < 0 ?
-                    moveSpeedRapidMmPerMin :
-                    moveSpeedCuttingMmPerMin;
-            }
-
-            if (kind == "a" || kind == "b") {
-
-                await moveRelativeABZ(
-                    kind,
-                    direction[0] * manualMoveMm.ab,
-                    getMoveSpeed()
-                );
-
-            } if (kind == "z") {
-
-                await moveRelativeABZ(
-                    kind,
-                    direction[0] * manualMoveMm.z,
-                    30
-                );
-
-            } else if (kind === "xy") {
-                await moveRelativeXY({
-                    xMm: direction[0] * manualMoveMm.xy,
-                    yMm: direction[1] * manualMoveMm.xy,
-                    speedMmPerMin: getMoveSpeed()
-                });
-                await moveStop();
-            }
+        async setMotorDuty(motor, duty) {
+            await motorDrivers[motor].set(duty);
         },
 
-        async manualMoveStop(kind) {
-            // if (motorDrivers[kind]) {
-            //     await motorDrivers[kind].stop();
-            // } else if (kind === "xy") {
-            //     await Promise.allSettled([
-            //         motorDrivers.a.stop(),
-            //         motorDrivers.b.stop()
-            //     ]);
-            // }
-        },
+        // async manualMoveStart(kind, ...direction) {
 
-        async manualSwitch(relay, state) {
-            await relayDrivers[relay].switch(state);
-        },
+        //     function getMoveSpeed() {
+        //         if (!isFinite(machine.spindle.bitToMaterialMm)) {
+        //             throw new Error("Unknown position of router bit. Please calibrate.");
+        //         }
+
+        //         return machine.spindle.bitToMaterialMm < 0 ?
+        //             moveSpeedRapidMmPerMin :
+        //             moveSpeedCuttingMmPerMin;
+        //     }
+
+        //     if (kind == "a" || kind == "b") {
+
+        //         await moveRelativeABZ(
+        //             kind,
+        //             direction[0] * manualMoveMm.ab,
+        //             getMoveSpeed()
+        //         );
+
+        //     } if (kind == "z") {
+
+        //         await moveRelativeABZ(
+        //             kind,
+        //             direction[0] * manualMoveMm.z,
+        //             30
+        //         );
+
+        //     } else if (kind === "xy") {
+        //         await moveRelativeXY({
+        //             xMm: direction[0] * manualMoveMm.xy,
+        //             yMm: direction[1] * manualMoveMm.xy,
+        //             speedMmPerMin: getMoveSpeed()
+        //         });
+        //         await moveStop();
+        //     }
+        // },
+
+        // async manualMoveStop(kind) {
+        //     // if (motorDrivers[kind]) {
+        //     //     await motorDrivers[kind].stop();
+        //     // } else if (kind === "xy") {
+        //     //     await Promise.allSettled([
+        //     //         motorDrivers.a.stop(),
+        //     //         motorDrivers.b.stop()
+        //     //     ]);
+        //     // }
+        // },
+
+        // async manualSwitch(relay, state) {
+        //     await relayDrivers[relay].switch(state);
+        // },
 
         async setUserOrigin(xMm, yMm) {
             machine.userOrigin = { xMm, yMm };
