@@ -193,15 +193,13 @@ module.exports = async ({
 
     async function run(segments) {
 
-        let moveMm = 1;
-
         let t0 = new Date().getTime();
 
         machine.currentDutyAB = kinematicsAB.minDuty;
 
         for (let { sweep, lengthMm, speedMmPerMin } of segments) {
 
-            let moveCount = ceil(lengthMm / moveMm);
+            let moveCount = ceil(lengthMm / kinematicsAB.moveMm);
 
             for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
 
@@ -279,7 +277,7 @@ module.exports = async ({
                         machine.currentDutyAB = max(machine.currentDutyAB - kinematicsAB.slowDownOnReverse, kinematicsAB.minDuty);
                     }
                 }
-                machine.currentDutyAB = machine.currentDutyAB + (0.3 - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
+                machine.currentDutyAB = machine.currentDutyAB + (min(speedMmPerMin / kinematicsAB.fullSpeedMmPerMin, 1) - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
 
                 for (let motor in duties) {
                     await motorDrivers[motor].set(duties[motor]);
