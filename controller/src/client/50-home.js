@@ -17,7 +17,7 @@ wg.common = {
                     BUTTON("stop", [
                         ICON("exclamation-triangle"),
                         DIV().text("STOP")
-                    ])
+                    ]).click(() => wg.common.check(async () => await wg.machine.emergencyStop()))
                 ])
             ]),
             DIV("content", content),

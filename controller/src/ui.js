@@ -121,6 +121,10 @@ module.exports = async ({
                             await machine.setUserOrigin(state.sledPosition.xMm, state.sledPosition.yMm);
                         }
                     }
+                },
+
+                async emergencyStop() {
+                    await machine.interruptMove();
                 }
             },
             router: {

@@ -42,38 +42,6 @@ module.exports = ({ moveLengthMm, machine }) => {
         return parseGcodeStream(fs.createReadStream(fileName));
     }
 
-    function sweep(segments) {
-
-        let t0 = new Date().getTime();
-
-        try {
-
-            for (let { sweep, lengthMm, speedMmPerMin } of segments) {
-
-                let moveCount = ceil(lengthMm / moveLengthMm);
-
-                for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
-
-                    let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                    logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                    // await moveXY({ xMm, yMm, speedMmPerMin });
-                }
-
-            }
-
-            let t1 = new Date().getTime();
-
-            let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
-            let tSec = (t1 - t0) / 1000;
-
-            logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
-
-        } finally {
-            //await stopAB();
-        }
-
-    }
-
     async function loadGcode(gcodeAsyncIter) {
         code = [];
         for await (let command of gcodeAsyncIter) {
@@ -117,31 +85,22 @@ module.exports = ({ moveLengthMm, machine }) => {
 
                 let lengthMm = hypot(xMm - posXY.xMm, yMm - posXY.yMm);
 
-                if (lengthMm > 1) {
 
-                    let moveCount = ceil(lengthMm / moveLengthMm);
+                let moveCount = ceil(lengthMm / moveLengthMm);
 
-                    for (let move = 0; move < moveCount; move++) {
-                        await machine.moveXY({
-                            xMm: posXY.xMm + (xMm - posXY.xMm) * move / moveCount,
-                            yMm: posXY.yMm + (yMm - posXY.yMm) * move / moveCount,
-                            speedMmPerMin: rapid ? undefined : xyFeedMmPerMin,
-                            firstMove: firstMoveXY
-                        });
-
-                    }
-
-                } else {
+                for (let move = 0; move < moveCount; move++) {
                     await machine.moveXY({
-                        xMm,
-                        yMm,
+                        xMm: posXY.xMm + (xMm - posXY.xMm) * move / moveCount,
+                        yMm: posXY.yMm + (yMm - posXY.yMm) * move / moveCount,
                         speedMmPerMin: rapid ? undefined : xyFeedMmPerMin,
                         firstMove: firstMoveXY
                     });
+
+                    firstMoveXY = false;
                 }
 
+
                 posXY = { xMm, yMm };
-                firstMoveXY = false;
             }
 
             let handler = {
@@ -183,11 +142,16 @@ module.exports = ({ moveLengthMm, machine }) => {
                 async M30() { }
             };
 
-            for (let command of code) {
-                if (!(handler[command.code] instanceof Function)) {
-                    throw new Error(`Unsupported GCODE ${command.code}`);
+            try {
+                for (let command of code) {
+                    if (!(handler[command.code] instanceof Function)) {
+                        throw new Error(`Unsupported GCODE ${command.code}`);
+                    }
+                    await handler[command.code](command);
                 }
-                await handler[command.code](command);
+
+            } finally {
+                await machine.stopAB();
             }
         }
 

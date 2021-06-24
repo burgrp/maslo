@@ -36,9 +36,7 @@
         "sledDiameterMm": 250,
         "motorsToWorkspaceVerticalMm": 500,
         "kinematicsAB": {
-            "minDuty": 0.2,
-            "accelerationFactor": 0.001,
-            "slowDownOnReverse": 0.01,
+
             "fullSpeedMmPerMin": 1000
         },
         "motors": {
