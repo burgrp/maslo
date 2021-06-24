@@ -2,7 +2,7 @@ const logError = require("debug")("app:ui:error");
 
 module.exports = async ({
     machine,
-    manualMotorControl,    
+    manualMotorControl,
     cuttingSpeedMmPerMin,
     router
 }) => {
@@ -48,17 +48,18 @@ module.exports = async ({
             throw new Error("Unknown position of router bit. Please calibrate.");
         }
 
-        let speedMmPerMin = state.spindle.depthMm < 0 ? undefined : cuttingSpeedMmPerMin;
-
-        let sled = state.sledPosition;
+        let sled = { ...state.sledPosition };
         if (!sled) {
             throw new Error("Unknown sled position.");
         }
 
+        sled.xMm = state.workspace.widthMm / 2 + sled.xMm;
+        sled.yMm = state.motorsToWorkspaceVerticalMm + state.workspace.heightMm - sled.yMm;
+
         let safeToEdge = state.sledDiameterMm / 4;
 
-        let xMm = directionX ? directionX * (state.workspace.widthMm - safeToEdge) / 2 : sled.xMm;
-        let yMm = directionY ? (directionY / 2 + 0.5) * (state.workspace.heightMm) + state.motorsToWorkspaceVerticalMm - safeToEdge * directionY : sled.yMm;
+        let xMm = directionX ? (directionX / 2 + 0.5) * state.workspace.widthMm - safeToEdge * directionX : sled.xMm;
+        let yMm = directionY ? (directionY / 2 + 0.5) * state.workspace.heightMm - safeToEdge * directionY : sled.yMm;
 
         if (directionX && directionY) {
             let d = min(xMm * directionX - sled.xMm * directionX, yMm * directionY - sled.yMm * directionY);
@@ -66,19 +67,21 @@ module.exports = async ({
             yMm = sled.yMm + d * directionY;
         }
 
+        let cutting = state.spindle.depthMm >= 0;
+
         try {
-            await machine.moveXY({
-                xMm,
-                yMm,
-                speedMmPerMin
-            });
+            await router.start([{
+                code: cutting ? "G1" : "G0",
+                x: xMm,
+                y: yMm,
+                f: cutting ? cuttingSpeedMmPerMin : undefined
+            }]);
         } catch (e) {
             if (!e.moveInterrupted) {
                 throw e;
             }
-        } finally {
-            await machine.stopAB();
         }
+
     }
 
     async function manualMoveStop() {

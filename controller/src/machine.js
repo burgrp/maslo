@@ -176,6 +176,15 @@ module.exports = async ({
         }
     }
 
+    function checkInterrupt() {
+        if (moveInterruptXY) {
+            moveInterruptXY = false;
+            let error = new Error("Move interrupted");
+            error.moveInterrupted = true;
+            throw error;
+        }
+    }
+
     function scheduleNextMachineCheck() {
         setTimeout(async () => {
             try {
@@ -211,7 +220,6 @@ module.exports = async ({
 
             try {
                 moveInProgressXY = true;
-                moveInterruptXY = false;;
 
                 if (!machine.sledPosition) {
                     throw new Error("Unknown sled position.");
@@ -268,6 +276,7 @@ module.exports = async ({
                     let accuracyMm = speedMmPerMin * kinematicsAB.speedToAccuracyFactor;
 
                     while (true) {
+                        checkInterrupt();
 
                         await checkMachineState();
 
@@ -291,14 +300,7 @@ module.exports = async ({
 
                         lastDistanceMm = distanceMm;
 
-                        if (moveInterruptXY) {
-                            let error = new Error("Move interrupted");
-                            error.moveInterrupted = true;
-                            throw error;
-                        }
-
                         await new Promise(resolve => setTimeout(resolve, kinematicsAB.checkPeriodMs));
-
                     }
 
                 }

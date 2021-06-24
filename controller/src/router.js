@@ -9,9 +9,7 @@ let { round, ceil, hypot } = Math;
 
 module.exports = ({ moveLengthMm, machine }) => {
 
-    let code = [];
-
-
+    let loadedCode = [];
 
     async function* parseGcodeLines(linesAsyncIter) {
         for await (let line of linesAsyncIter) {
@@ -43,23 +41,23 @@ module.exports = ({ moveLengthMm, machine }) => {
     }
 
     async function loadGcode(gcodeAsyncIter) {
-        code = [];
+        loadedCode = [];
         for await (let command of gcodeAsyncIter) {
-            code.push(command);
+            loadedCode.push(command);
         }
     }
 
     return {
 
         getCode() {
-            return code;
+            return loadedCode;
         },
 
         async loadLocalFile(fileName) {
             await loadGcode(parseLocalFile(fileName));
         },
 
-        async start() {
+        async start(code = loadedCode) {
 
             let machineState = machine.getState();
 
@@ -76,11 +74,11 @@ module.exports = ({ moveLengthMm, machine }) => {
             async function moveXY(xMm, yMm, feedMmPerMin, rapid) {
 
                 if (isFinite(feedMmPerMin)) {
-                    xyFeedMmPerMin = 100;// feedMmPerMin;
+                    xyFeedMmPerMin = feedMmPerMin;
                 }
 
-                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : pos.x;
-                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : pos.y;
+                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : posXY.xMm;
+                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : posXY.yMm;
 
                 let lengthMm = hypot(xMm - posXY.xMm, yMm - posXY.yMm);
 
@@ -142,6 +140,7 @@ module.exports = ({ moveLengthMm, machine }) => {
                     if (!(handler[command.code] instanceof Function)) {
                         throw new Error(`Unsupported GCODE ${command.code}`);
                     }
+                    logInfo(command);
                     await handler[command.code](command);
                 }
 

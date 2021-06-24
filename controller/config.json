@@ -37,7 +37,7 @@
         "motorsToWorkspaceVerticalMm": 500,
         "kinematicsAB": {            
             "fullSpeedMmPerMin": 1000,
-            "rapidSpeedMmPerMin": 1000,
+            "rapidSpeedMmPerMin": 600,
             "maxStalls": 10,
             "checkPeriodMs": 10,
             "speedToAccuracyFactor": 0.002

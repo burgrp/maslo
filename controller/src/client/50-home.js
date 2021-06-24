@@ -275,14 +275,14 @@ wg.pages.home = {
                 DIV("group xyaxis", [
                     DIV("title").text("X,Y axis"),
                     DIV("buttons", [
-                        manualMoveButton("dir0", "caret-up", "xy", 0, -1),
-                        manualMoveButton("dir45", "caret-up", "xy", 1, -1),
+                        manualMoveButton("dir0", "caret-up", "xy", 0, 1),
+                        manualMoveButton("dir45", "caret-up", "xy", 1, 1),
                         manualMoveButton("dir90", "caret-up", "xy", 1, 0),
-                        manualMoveButton("dir135", "caret-up", "xy", 1, 1),
-                        manualMoveButton("dir180", "caret-up", "xy", 0, 1),
-                        manualMoveButton("dir225", "caret-up", "xy", -1, 1),
+                        manualMoveButton("dir135", "caret-up", "xy", 1, -1),
+                        manualMoveButton("dir180", "caret-up", "xy", 0, -1),
+                        manualMoveButton("dir225", "caret-up", "xy", -1, -1),
                         manualMoveButton("dir270", "caret-up", "xy", -1, 0),
-                        manualMoveButton("dir315", "caret-up", "xy", -1, -1),
+                        manualMoveButton("dir315", "caret-up", "xy", -1, 1),
                         BUTTON("position", [
                             DIV("x dimension").text("-"),
                             DIV("y dimension").text("-")
