@@ -26,7 +26,7 @@ module.exports = async ({
             await machine.setMotorDuty(motor, duty);
             motorAccelerationTimers[motor] = setInterval(async () => {
                 try {
-                    duty = min(duty + 0.02 * direction, manualMotorControl[motor].max);
+                    duty = direction * min(abs(duty + 0.02 * direction), manualMotorControl[motor].max);
                     await machine.setMotorDuty(motor, duty);
                 } catch (e) {
                     logError("Error in manual motor acceleration timer", e);
