@@ -65,33 +65,35 @@
             "spindle": {}
         }
     },
+    "router": {
+        "module": "./router.js",
+        "moveLengthMm": 1
+    },
+    "ui": {
+        "module": "./ui.js",
+        "machine": "-> machine",
+        "moveSpeedRapidMmPerMin": 1000,
+        "moveSpeedCuttingMmPerMin": 200,
+        "manualMotorControl": {
+            "a": {
+                "min": 0.2,
+                "max": 1
+            },
+            "b": {
+                "min": 0.2,
+                "max": 1
+            },
+            "z": {
+                "min": 0.3,
+                "max": 1
+            }
+        },
+        "router": "-> router"
+    },
     "webserver": {
         "module": "@device.farm/webglue",
         "modules": [
-            {
-                "module": "./ui.js",
-                "machine": "-> machine",
-                "moveSpeedRapidMmPerMin": 1000,
-                "moveSpeedCuttingMmPerMin": 200,
-                "manualMotorControl": {
-                    "a": {
-                        "min": 0.2,
-                        "max": 1
-                    },
-                    "b": {
-                        "min": 0.2,
-                        "max": 1
-                    },
-                    "z": {
-                        "min": 0.3,
-                        "max": 1
-                    }
-                },
-                "router": {
-                    "module": "./router.js",
-                    "moveLengthMm": 1
-                }
-            }
+            "-> ui"
         ]
     }
 }

@@ -4,7 +4,8 @@ module.exports = async ({
     machine,
     manualMotorControl,
     moveSpeedRapidMmPerMin,
-    moveSpeedCuttingMmPerMin
+    moveSpeedCuttingMmPerMin,
+    router
 }) => {
     let events = {
         machine: {
@@ -19,6 +20,8 @@ module.exports = async ({
     let motorAccelerationTimers = {};
 
     let { min, max, abs } = Math;
+
+    let preview;
 
     async function manualMotorStart(motor, direction) {
         if (machine.getState().motors[motor].driver.duty === 0 && !motorAccelerationTimers[motor]) {
@@ -121,7 +124,53 @@ module.exports = async ({
                         }
                     }
                 }
+            },
+            router: {
+                getPreview() {
+                    return preview;
+                },
+                async loadTest() {
+                    await router.loadLocalFile("test1.nc");;
+                    // await router.loadGCodeText(`
+                    // G21 ; set units to MM (required)
+                    // G90 ; absolute position mode (required)
+                    // ; starting outline op
+                    // M6 T1 ; change tool to 'end 1/4'
+                    // G0 Z15.0 F300
+                    // G0 X1073.2211 Y443.7576 F1000
+                    // G1 Z7.9940 F250
+                    // G1 X1092.1455 Y427.0567 F800
+                    // G1 X1112.6387 Y412.3231
+                    // G1 X1134.4971 Y399.7032
+                    // G1 X1157.5033 Y389.3224
+                    // ; ending outline op after 23 seconds
+                    // M30 ; program end
+                    // `);;
+
+                }
             }
+        },
+
+        async preview(gcodeAsyncIter) {
+
+            // function move(x, y, rapid) {
+            //     if (pos) {
+            //         let color = rapid? "yellow": "gray";
+            //         add(`<line x1="${pos.x}" y1="${pos.y}" x2="${x}" y2="${y}" stroke="${color}" stroke-width="5">`);
+            //     }
+            //     pos = { x, y };
+            // }
+
+            // if (!(handler[command.code] instanceof Function)) {
+            //     throw new Error(`Unsupported GCODE ${command.code}`);
+            // }
+
+            preview = [];
+            
+            for await (let command of gcodeAsyncIter) {
+                preview.push(command);
+            }           
+
         }
     }
 }

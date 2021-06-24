@@ -45,7 +45,44 @@ wg.pages.home = {
         let lastSledX, lastSledY;
         let trackToggle = false;
 
+        let machineState;
+
+        function svg(name) {
+            return $(document.createElementNS('http://www.w3.org/2000/svg', name));
+        }
+
+        function updatePreview(preview) {
+            let previewSvg = $("#previewSvg").empty();
+            let pos;
+            for (let command of preview) {
+                if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
+
+                    let x = isFinite(command.x) ?
+                        command.x - machineState.workspace.widthMm / 2
+                        : pos.x;
+
+                    let y = isFinite(command.y) ?
+                        (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - command.y
+                        : pos.y;
+
+                    if (pos) {
+                        previewSvg.append(svg("line").attr({
+                            x1: pos.x,
+                            y1: pos.y,
+                            x2: x,
+                            y2: y,
+                            stroke: command.code === "G0" ? "gray" : "silver",
+                            "stroke-width": 5
+                        }));
+                    }
+                    pos = { x, y };
+                }
+            }
+        }
+
         function updateMachineState(state) {
+
+            machineState = state;
 
             let sledX = state.sledPosition && state.sledPosition.xMm;
             let sledY = state.sledPosition && state.sledPosition.yMm;
@@ -143,7 +180,7 @@ wg.pages.home = {
 
                 if (isFinite(lastSledX) && isFinite(lastSledY) && isFinite(sledX) && isFinite(sledY)) {
 
-                    $(document.createElementNS('http://www.w3.org/2000/svg', 'line')).attr({
+                    svg("line").attr({
                         x1: lastSledX,
                         y1: lastSledY,
                         x2: sledX,
@@ -219,6 +256,7 @@ wg.pages.home = {
                 <line class="target x" stroke="white" stroke-width="10"/>
                 <line class="target y" stroke="white" stroke-width="10"/>
                 <circle class="follow" r="60" fill="none" stroke="white" stroke-width="10"/>
+                <g id="previewSvg"/>
             </svg>                      
             `)]).css({ visibility: "hidden" }),
             DIV("state"),
@@ -254,7 +292,7 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.loadTest() /*await wg.machine.manualSwitch("spindle", true)*/)),
                         BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
@@ -266,6 +304,7 @@ wg.pages.home = {
         ]);
 
         updateMachineState(await wg.machine.getState());
+        updatePreview(await wg.router.getPreview());
     }
 }
 
