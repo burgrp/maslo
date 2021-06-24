@@ -82,7 +82,7 @@ wg.pages.home = {
             $(".scene .sled.outline").attr({
                 r: state.sledDiameterMm / 2
             });
-            
+
 
             $(".scene .follow").attr({
                 cx: state.followPosition && state.followPosition.xMm,
@@ -198,8 +198,8 @@ wg.pages.home = {
                 e.preventDefault();
             });
 
-            button.on("touchstart", down);
-            button.on("touchend", up);
+            button.on("touchstart", down, { passive: true });
+            button.on("touchend", up, { passive: true });
 
             return button;
         }
