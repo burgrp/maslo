@@ -235,11 +235,13 @@ module.exports = async ({
             return machine;
         },
 
-        async moveXY({ xMm, yMm, speedMmPerMin, firstMove }) {
+        async moveXY({ xMm, yMm, speedMmPerMin = kinematicsAB.fullSpeedMmPerMin, firstMove }) {
 
             if (moveInProgress) {
                 throw new Error("Another move in progress.");
             }
+
+            logInfo(`-------- moveXY ${centRound(xMm)},${centRound(yMm)} at ${centRound(speedMmPerMin)}mm/min${firstMove ? " first move" : ""} --------`);
 
             try {
                 moveInProgress = true;
@@ -265,6 +267,9 @@ module.exports = async ({
                     let lastDistanceMm;
                     let stallCounter = 0;
 
+                    let xExtMm = sled.xMm + 1 * (xMm - sled.xMm);
+                    let yExtMm = sled.yMm + 1 * (yMm - sled.yMm);
+
                     while (true) {
 
                         await checkMachineState();
@@ -277,7 +282,7 @@ module.exports = async ({
 
                         let duties = {};
 
-                        let chainLengthsMm = calculateChainLengthMm({ xMm, yMm });
+                        let chainLengthsMm = calculateChainLengthMm({ xMm: xExtMm, yMm: yExtMm });
 
                         for (let [motor, motorHorizontalPositionMm] of [
                             ['a', -machine.motorsShaftDistanceMm / 2],
@@ -309,6 +314,7 @@ module.exports = async ({
                                 logInfo(`reversing motor ${motor}`);
                                 duties[motor] = 0;
                                 machine.currentDutyAB = max(machine.currentDutyAB - kinematicsAB.slowDownOnReverse, kinematicsAB.minDuty);
+                                break;
                             }
                         }
                         machine.currentDutyAB = machine.currentDutyAB + (min(speedMmPerMin / kinematicsAB.fullSpeedMmPerMin, 1) - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
@@ -356,7 +362,7 @@ module.exports = async ({
 
         async interruptMove() {
             moveInterruptRequest = true;
-        },   
+        },
 
         async setMotorDuty(motor, duty) {
             await motorDrivers[motor].set(duty);

@@ -51,10 +51,10 @@ wg.pages.home = {
             return $(document.createElementNS('http://www.w3.org/2000/svg', name));
         }
 
-        function updatePreview(preview) {
+        function updateRouterCode(code) {
             let previewSvg = $("#previewSvg").empty();
             let pos;
-            for (let command of preview) {
+            for (let command of code) {
                 if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
 
                     let x = isFinite(command.x) ?
@@ -292,7 +292,7 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.loadTest() /*await wg.machine.manualSwitch("spindle", true)*/)),
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.start() /*await wg.machine.manualSwitch("spindle", true)*/)),
                         BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
@@ -304,7 +304,7 @@ wg.pages.home = {
         ]);
 
         updateMachineState(await wg.machine.getState());
-        updatePreview(await wg.router.getPreview());
+        updateRouterCode(await wg.router.getCode());
     }
 }
 
