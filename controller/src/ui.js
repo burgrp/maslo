@@ -61,7 +61,7 @@ module.exports = async ({
         let yMm = directionY ? (directionY / 2 + 0.5) * (state.workspace.heightMm) + state.motorsToWorkspaceVerticalMm - safeToEdge * directionY : sled.yMm;
 
         if (directionX && directionY) {
-            let d = min(xMm  * directionX- sled.xMm * directionX, yMm * directionY- sled.yMm* directionY);
+            let d = min(xMm * directionX - sled.xMm * directionX, yMm * directionY - sled.yMm * directionY);
             xMm = sled.xMm + d * directionX;
             yMm = sled.yMm + d * directionY;
         }
@@ -73,12 +73,17 @@ module.exports = async ({
                 speedMmPerMin,
                 firstMove: true
             });
+        } catch (e) {
+            if (!e.moveInterrupted) {
+                throw e;
+            }
         } finally {
             await machine.stopAB();
         }
     }
 
     async function manualMoveStop() {
+        await machine.interruptMove();
     }
 
     return {

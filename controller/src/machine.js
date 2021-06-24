@@ -39,6 +39,10 @@ module.exports = async ({
         motorsToWorkspaceVerticalMm
     };
 
+    let machineCheckInProgress = false;
+    let moveInProgress = false;
+    let moveInterruptRequest = false;
+
     let stateChangedListeners = [];
     let oldStateJson;
 
@@ -76,8 +80,6 @@ module.exports = async ({
         relayDrivers[name] = await driver.createRelay(name, relayConfigs[name]);
         machine.relays[name] = relayDrivers[name].state;
     }
-
-    let machineCheckInProgress = false;
 
     async function checkMachineState() {
 
@@ -193,110 +195,6 @@ module.exports = async ({
 
     scheduleNextMachineCheck();
 
-    function checkSledPosition() {
-        if (!machine.sledPosition) {
-            throw new Error("Unknown sled position.");
-        }
-    }
-
-    async function moveXY({ xMm, yMm, speedMmPerMin, firstMove }) {
-
-        checkSledPosition();
-
-        machine.targetPosition = { xMm, yMm };
-        if (firstMove) {
-            machine.currentDutyAB = kinematicsAB.minDuty;
-        }
-
-        await checkMachineState();
-
-        let sled = machine.sledPosition;
-
-        let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
-        if (distanceMm > 0.01) {
-
-            let lastDistanceMm;
-            let stallCounter = 0;
-
-            while (true) {
-
-                await checkMachineState();
-
-                let duties = {};
-
-                let chainLengthsMm = calculateChainLengthMm({ xMm, yMm });
-
-                for (let [motor, motorHorizontalPositionMm] of [
-                    ['a', -machine.motorsShaftDistanceMm / 2],
-                    ['b', machine.motorsShaftDistanceMm / 2]
-                ]) {
-                    let config = machine.motors[motor].config;
-                    let originSteps = distanceMmToAbsSteps(config,
-                        hypot(
-                            motorHorizontalPositionMm - machine.positionReference.xMm,
-                            machine.positionReference.yMm
-                        ))
-                        - machine.positionReference[motor + "Steps"];
-
-                    let currentSteps = machine.motors[motor].driver.steps;
-                    let distanceToExtAbsSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
-                    let distanceToExtRelSteps = distanceToExtAbsSteps - originSteps - currentSteps;
-
-                    duties[motor] = distanceToExtRelSteps;
-                }
-
-                let normalize = max(abs(duties.a), abs(duties.b)) / machine.currentDutyAB;
-
-                duties.b = duties.b / normalize;
-                duties.a = duties.a / normalize;
-
-                for (let motor in duties) {
-                    duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
-                    if (sign(machine.motors[motor].driver.duty) * sign(duties[motor]) === -1) {
-                        logInfo(`reversing motor ${motor}`);
-                        duties[motor] = 0;
-                        machine.currentDutyAB = max(machine.currentDutyAB - kinematicsAB.slowDownOnReverse, kinematicsAB.minDuty);
-                    }
-                }
-                machine.currentDutyAB = machine.currentDutyAB + (min(speedMmPerMin / kinematicsAB.fullSpeedMmPerMin, 1) - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
-
-                for (let motor in duties) {
-                    await motorDrivers[motor].set(duties[motor]);
-                }
-
-                sled = machine.sledPosition;
-                let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
-                logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} M:${centRound(machine.currentDutyAB)} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
-
-                if (distanceMm > lastDistanceMm && distanceMm < 1) {
-                    break;
-                }
-
-                if (distanceMm === lastDistanceMm) {
-                    stallCounter++
-                } else {
-                    stallCounter = 0;
-                }
-
-                if (stallCounter > 10) {
-                    logInfo("motor stall");
-                    break;
-                }
-
-                lastDistanceMm = distanceMm;
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
-
-        }
-
-    }
-
-    async function stopAB() {
-        logInfo("stop AB");
-        delete machine.targetPosition;
-        await motorDrivers.a.set(0);
-        await motorDrivers.b.set(0);
-    }
 
     async function run(segments) {
 
@@ -372,8 +270,128 @@ module.exports = async ({
             return machine;
         },
 
-        moveXY,
-        stopAB,
+        async moveXY({ xMm, yMm, speedMmPerMin, firstMove }) {
+
+            if (moveInProgress) {
+                throw new Error("Another move in progress.");
+            }
+
+            try {
+                moveInProgress = true;
+
+                if (!machine.sledPosition) {
+                    throw new Error("Unknown sled position.");
+                }
+
+                machine.targetPosition = { xMm, yMm };
+                if (firstMove) {
+                    machine.currentDutyAB = kinematicsAB.minDuty;
+                }
+
+                moveInterruptRequest = false;
+
+                await checkMachineState();
+
+                let sled = machine.sledPosition;
+
+                let distanceMm = hypot(xMm - sled.xMm, yMm - sled.yMm);
+                if (distanceMm > 0.01) {
+
+                    let lastDistanceMm;
+                    let stallCounter = 0;
+
+                    while (true) {
+
+                        await checkMachineState();
+
+                        if (moveInterruptRequest) {
+                            let error = new Error("Move interrupted.");
+                            error.moveInterrupted = true;
+                            throw error;
+                        }
+
+                        let duties = {};
+
+                        let chainLengthsMm = calculateChainLengthMm({ xMm, yMm });
+
+                        for (let [motor, motorHorizontalPositionMm] of [
+                            ['a', -machine.motorsShaftDistanceMm / 2],
+                            ['b', machine.motorsShaftDistanceMm / 2]
+                        ]) {
+                            let config = machine.motors[motor].config;
+                            let originSteps = distanceMmToAbsSteps(config,
+                                hypot(
+                                    motorHorizontalPositionMm - machine.positionReference.xMm,
+                                    machine.positionReference.yMm
+                                ))
+                                - machine.positionReference[motor + "Steps"];
+
+                            let currentSteps = machine.motors[motor].driver.steps;
+                            let distanceToExtAbsSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
+                            let distanceToExtRelSteps = distanceToExtAbsSteps - originSteps - currentSteps;
+
+                            duties[motor] = distanceToExtRelSteps;
+                        }
+
+                        let normalize = max(abs(duties.a), abs(duties.b)) / machine.currentDutyAB;
+
+                        duties.b = duties.b / normalize;
+                        duties.a = duties.a / normalize;
+
+                        for (let motor in duties) {
+                            duties[motor] = (machine.motors[motor].driver.duty + duties[motor]) / 2;
+                            if (sign(machine.motors[motor].driver.duty) * sign(duties[motor]) === -1) {
+                                logInfo(`reversing motor ${motor}`);
+                                duties[motor] = 0;
+                                machine.currentDutyAB = max(machine.currentDutyAB - kinematicsAB.slowDownOnReverse, kinematicsAB.minDuty);
+                            }
+                        }
+                        machine.currentDutyAB = machine.currentDutyAB + (min(speedMmPerMin / kinematicsAB.fullSpeedMmPerMin, 1) - machine.currentDutyAB) * kinematicsAB.accelerationFactor;
+
+                        for (let motor in duties) {
+                            await motorDrivers[motor].set(duties[motor]);
+                        }
+
+                        sled = machine.sledPosition;
+                        let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
+                        logInfo(`move target:${crdStr({ xMm, yMm })} sled:${crdStr(machine.sledPosition)} dist:${distanceMm} M:${centRound(machine.currentDutyAB)} A:${centRound(duties.a)} B:${centRound(duties.b)}`);
+
+                        if (distanceMm > lastDistanceMm && distanceMm < 1) {
+                            break;
+                        }
+
+                        if (distanceMm === lastDistanceMm) {
+                            stallCounter++
+                        } else {
+                            stallCounter = 0;
+                        }
+
+                        if (stallCounter > 10) {
+                            logInfo("motor stall");
+                            break;
+                        }
+
+                        lastDistanceMm = distanceMm;
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+
+                }
+
+            } finally {
+                moveInProgress = false;
+            }
+        },
+
+        async stopAB() {
+            logInfo("stop AB");
+            delete machine.targetPosition;
+            await motorDrivers.a.set(0);
+            await motorDrivers.b.set(0);
+        },
+
+        async interruptMove() {
+            moveInterruptRequest = true;
+        },   
 
         async setMotorDuty(motor, duty) {
             await motorDrivers[motor].set(duty);
