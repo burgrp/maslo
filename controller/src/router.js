@@ -68,7 +68,6 @@ module.exports = ({ moveLengthMm, machine }) => {
             }
 
             let xyFeedMmPerMin;
-            let firstMoveXY = true;
             let posXY = {
                 xMm: machineState.sledPosition.xMm,
                 yMm: machineState.sledPosition.yMm
@@ -77,7 +76,7 @@ module.exports = ({ moveLengthMm, machine }) => {
             async function moveXY(xMm, yMm, feedMmPerMin, rapid) {
 
                 if (isFinite(feedMmPerMin)) {
-                    xyFeedMmPerMin = feedMmPerMin;
+                    xyFeedMmPerMin = 100;// feedMmPerMin;
                 }
 
                 xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : pos.x;
@@ -85,18 +84,14 @@ module.exports = ({ moveLengthMm, machine }) => {
 
                 let lengthMm = hypot(xMm - posXY.xMm, yMm - posXY.yMm);
 
-
                 let moveCount = ceil(lengthMm / moveLengthMm);
 
                 for (let move = 0; move < moveCount; move++) {
                     await machine.moveXY({
                         xMm: posXY.xMm + (xMm - posXY.xMm) * move / moveCount,
                         yMm: posXY.yMm + (yMm - posXY.yMm) * move / moveCount,
-                        speedMmPerMin: rapid ? undefined : xyFeedMmPerMin,
-                        firstMove: firstMoveXY
+                        speedMmPerMin: rapid ? undefined : xyFeedMmPerMin
                     });
-
-                    firstMoveXY = false;
                 }
 
 

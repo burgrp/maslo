@@ -35,9 +35,12 @@
         },
         "sledDiameterMm": 250,
         "motorsToWorkspaceVerticalMm": 500,
-        "kinematicsAB": {
-
-            "fullSpeedMmPerMin": 1000
+        "kinematicsAB": {            
+            "fullSpeedMmPerMin": 1000,
+            "rapidSpeedMmPerMin": 1000,
+            "maxStalls": 10,
+            "checkPeriodMs": 10,
+            "speedToAccuracyFactor": 0.002
         },
         "motors": {
             "a": {
@@ -75,8 +78,7 @@
                 "module": "./ui.js",
                 "machine": "-> machine",
                 "router": "-> router",
-                "moveSpeedRapidMmPerMin": 1000,
-                "moveSpeedCuttingMmPerMin": 200,
+                "cuttingSpeedMmPerMin": 200,
                 "manualMotorControl": {
                     "a": {
                         "min": 0.2,

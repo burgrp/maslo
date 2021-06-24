@@ -203,7 +203,7 @@ module.exports = async ({
             return machine;
         },
 
-        async moveXY({ xMm, yMm, speedMmPerMin = kinematicsAB.fullSpeedMmPerMin / 2, firstMove }) {
+        async moveXY({ xMm, yMm, speedMmPerMin = kinematicsAB.rapidSpeedMmPerMin }) {
 
             if (moveInProgressXY) {
                 throw new Error("Another move in progress.");
@@ -230,6 +230,8 @@ module.exports = async ({
 
                     let chainLengthsMm = calculateChainLengthMm({ xMm, yMm });
 
+                    speedMmPerMin = min(speedMmPerMin, kinematicsAB.fullSpeedMmPerMin);
+
                     for (let [motor, motorHorizontalPositionMm] of [
                         ['a', -machine.motorsShaftDistanceMm / 2],
                         ['b', machine.motorsShaftDistanceMm / 2]
@@ -250,7 +252,7 @@ module.exports = async ({
 
                     }
 
-                    let normalize = max(abs(duties.a), abs(duties.b)) / min(speedMmPerMin / kinematicsAB.fullSpeedMmPerMin, 1);
+                    let normalize = max(abs(duties.a), abs(duties.b)) / (speedMmPerMin / kinematicsAB.fullSpeedMmPerMin);
 
                     duties.a = (duties.a / normalize + machine.motors.a.driver.duty) / 2;
                     duties.b = (duties.b / normalize + machine.motors.b.driver.duty) / 2;
@@ -263,6 +265,8 @@ module.exports = async ({
 
                     let lastDistanceMm;
                     let stallCounter = 0;
+                    let accuracyMm = speedMmPerMin * kinematicsAB.speedToAccuracyFactor;
+
                     while (true) {
 
                         await checkMachineState();
@@ -270,7 +274,7 @@ module.exports = async ({
                         sled = machine.sledPosition;
                         let distanceMm = round(hypot(xMm - sled.xMm, yMm - sled.yMm) * 100) / 100;
 
-                        if (distanceMm > lastDistanceMm || distanceMm < 0.2) {
+                        if (distanceMm > lastDistanceMm || distanceMm <= accuracyMm) {
                             break;
                         }
 
@@ -280,7 +284,7 @@ module.exports = async ({
                             stallCounter = 0;
                         }
 
-                        if (stallCounter > 10) {
+                        if (stallCounter > kinematicsAB.maxStalls) {
                             logInfo("motor stall");
                             break;
                         }
@@ -293,7 +297,7 @@ module.exports = async ({
                             throw error;
                         }
 
-                        await new Promise(resolve => setTimeout(resolve, 10));
+                        await new Promise(resolve => setTimeout(resolve, kinematicsAB.checkPeriodMs));
 
                     }
 

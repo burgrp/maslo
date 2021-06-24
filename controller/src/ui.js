@@ -2,9 +2,8 @@ const logError = require("debug")("app:ui:error");
 
 module.exports = async ({
     machine,
-    manualMotorControl,
-    moveSpeedRapidMmPerMin,
-    moveSpeedCuttingMmPerMin,
+    manualMotorControl,    
+    cuttingSpeedMmPerMin,
     router
 }) => {
     let events = {
@@ -49,7 +48,7 @@ module.exports = async ({
             throw new Error("Unknown position of router bit. Please calibrate.");
         }
 
-        let speedMmPerMin = state.spindle.depthMm < 0 ? moveSpeedRapidMmPerMin : moveSpeedCuttingMmPerMin;
+        let speedMmPerMin = state.spindle.depthMm < 0 ? undefined : cuttingSpeedMmPerMin;
 
         let sled = state.sledPosition;
         if (!sled) {
@@ -71,8 +70,7 @@ module.exports = async ({
             await machine.moveXY({
                 xMm,
                 yMm,
-                speedMmPerMin,
-                firstMove: true
+                speedMmPerMin
             });
         } catch (e) {
             if (!e.moveInterrupted) {
