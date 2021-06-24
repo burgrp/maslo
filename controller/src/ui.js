@@ -1,4 +1,4 @@
-const logError = require("debug")("app:machine:error");
+const logError = require("debug")("app:ui:error");
 
 module.exports = async ({
     machine,

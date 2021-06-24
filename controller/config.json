@@ -39,8 +39,7 @@
             "minDuty": 0.1,
             "accelerationFactor": 0.001,
             "slowDownOnReverse": 0.01,
-            "fullSpeedMmPerMin": 1000,
-            "moveMm": 1
+            "fullSpeedMmPerMin": 1000
         },
         "motors": {
             "a": {
@@ -87,6 +86,10 @@
                         "min": 0.3,
                         "max": 1
                     }
+                },
+                "router": {
+                    "module": "./router.js",
+                    "moveLengthMm": 1
                 }
             }
         ]
