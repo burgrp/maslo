@@ -206,6 +206,8 @@ module.exports = async ({
 
     scheduleNextMachineCheck();
 
+    let dumping;
+
     return {
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
@@ -285,12 +287,24 @@ module.exports = async ({
                         await new Promise(resolve => setTimeout(resolve, kinematicsAB.reversingDelayMs));
                     }
 
-                    let needsDumping = motor => abs(duties[motor] - currentDuties[motor]) > 0.6;
-                    if (needsDumping("a") || needsDumping("b")) {
+                    let needsDumping = motor => abs(duties[motor] - currentDuties[motor]) > 0.3;
+                    if (!dumping && (needsDumping("a") || needsDumping("b"))) {
                         logInfo(`dumping motors`, currentDuties, duties);
-                        duties.a = duties.a / 3;
-                        duties.b = duties.b / 3;
+                        dumping = new Date().getTime();
                     }
+
+                    if (dumping) {
+                        let now = new Date().getTime();
+                        let position = (now - dumping) / 1000;
+                        if (position > 1) {
+                            dumping = undefined;
+                        } else {
+                            duties.a = currentDuties.a + (duties.a - currentDuties.a) * position;
+                            duties.b = currentDuties.b + (duties.b - currentDuties.b) * position;
+                            logInfo(`dumped a:${centRound(duties.a)} b:${centRound(duties.b)}`)
+                        }
+                    }
+
 
                     for (let motor in duties) {
                         await motorDrivers[motor].set(duties[motor]);
