@@ -42,7 +42,9 @@ module.exports = async ({
     let machineCheckInProgress = false;
 
     let moveInProgressXY = false;
-    let moveInterruptXY = false;
+    let moveInProgressZ = false;
+
+    let moveInterrupt = false;
 
     let stateChangedListeners = [];
     let oldStateJson;
@@ -178,8 +180,8 @@ module.exports = async ({
     }
 
     function checkInterrupt() {
-        if (moveInterruptXY) {
-            moveInterruptXY = false;
+        if (moveInterrupt) {
+            moveInterrupt = false;
             let error = new Error("Move interrupted");
             error.moveInterrupted = true;
             throw error;
@@ -341,57 +343,66 @@ module.exports = async ({
         },
 
         async interruptMove() {
-            moveInterruptXY = true;
+            moveInterrupt = true;
         },
 
         async moveZ({ zMm }) {
 
+            if (moveInProgressZ) {
+                throw new Error("Another move in progress.");
+            }
 
             try {
+                moveInProgressZ = true;
 
-                let lastDistanceMm;
-                let stallCounter = 0;
-                let direction;
+                try {
 
-                while (true) {
-                    checkInterrupt();
+                    let lastDistanceMm;
+                    let stallCounter = 0;
+                    let direction;
 
-                    await checkMachineState();
-                    let distanceMm = zMm - machine.spindle.depthMm;
+                    while (true) {
+                        checkInterrupt();
 
-                    if (!isFinite(direction)) {
-                         direction = sign(distanceMm);
+                        await checkMachineState();
+                        let distanceMm = zMm - machine.spindle.depthMm;
+
+                        if (!isFinite(direction)) {
+                            direction = sign(distanceMm);
+                        }
+
+                        if (distanceMm * direction <= kinematicsZ.accuracyMm * direction) {
+                            break;
+                        }
+
+                        if (distanceMm === lastDistanceMm) {
+                            stallCounter++
+                        } else {
+                            stallCounter = 0;
+                        }
+
+                        if (stallCounter > kinematicsZ.maxStalls) {
+                            logInfo(`motor z stall`);
+                            break;
+                        }
+
+                        lastDistanceMm = distanceMm;
+
+                        let duty = (max(min(distanceMm, 1), -1) + 4 * machine.motors.z.driver.duty) / 5;
+
+                        logInfo(`move Z ${centRound(zMm)} at dist:${centRound(distanceMm)}mm duty:${centRound(duty)}`);
+
+                        await motorDrivers.z.set(duty);
+                        await new Promise(resolve => setTimeout(resolve, kinematicsZ.checkPeriodMs));
                     }
 
-                    if (distanceMm * direction <= kinematicsZ.accuracyMm * direction) {
-                        break;
-                    }
-
-                    if (distanceMm === lastDistanceMm) {
-                        stallCounter++
-                    } else {
-                        stallCounter = 0;
-                    }
-
-                    if (stallCounter > kinematicsZ.maxStalls) {
-                        logInfo(`motor z stall`);
-                        break;
-                    }
-
-                    lastDistanceMm = distanceMm;
-
-                    let duty = (max(min(distanceMm, 1), -1) + 4 * machine.motors.z.driver.duty) / 5;
-
-                    console.info(`move Z ${centRound(zMm)} at dist:${centRound(distanceMm)}mm duty:${centRound(duty)}`);
-
-                    await motorDrivers.z.set(duty);
-                    await new Promise(resolve => setTimeout(resolve, kinematicsZ.checkPeriodMs));
+                } finally {
+                    await motorDrivers.z.set(0);
                 }
 
             } finally {
-                await motorDrivers.z.set(0);
+                moveInProgressZ = false;
             }
-
         },
 
         async setMotorDuty(motor, duty) {
