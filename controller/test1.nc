@@ -93,6 +93,7 @@ G21 ; set units to MM (required)
 G90 ; absolute position mode (required)
 ; starting outline op
 M6 T1 ; change tool to 'end 1/4'
+;G0 X1250 Y255 F500
 G0 Z15.0 F300
 G0 X1086.9552 Y458.9393 F500
 G1 Z5.0 F250

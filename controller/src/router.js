@@ -71,6 +71,8 @@ module.exports = ({ moveLengthMm, machine }) => {
                 yMm: machineState.sledPosition.yMm
             };
 
+            let nextStepCheck;
+
             async function moveXY(xMm, yMm, feedMmPerMin) {
 
                 if (isFinite(feedMmPerMin)) {
@@ -92,8 +94,16 @@ module.exports = ({ moveLengthMm, machine }) => {
                     });
                 }
 
-
                 xyPos = { xMm, yMm };
+
+                nextStepCheck = async ({ code, x, y }) => {
+                    if (!(
+                        (code === "G0" || code === "G1") &&
+                        (isFinite(x) || isFinite(y))
+                    )) {
+                        await machine.stopAB();
+                    }
+                };
             }
 
             let zFeedMmPerMin;
@@ -162,6 +172,10 @@ module.exports = ({ moveLengthMm, machine }) => {
                         throw new Error(`Unsupported GCODE ${command.code}`);
                     }
                     logInfo(command);
+                    if (nextStepCheck) {
+                        await nextStepCheck(command);
+                        nextStepCheck = undefined;
+                    }
                     await handler[command.code](command);
                 }
 

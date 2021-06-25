@@ -344,41 +344,53 @@ module.exports = async ({
             moveInterruptXY = true;
         },
 
-        async moveZ({ zMm, speedMmPerMin }) {
+        async moveZ({ zMm }) {
 
-            let lastDistanceMm;
-            let stallCounter = 0;
 
-            // while (true) {
-            //     checkInterrupt();
+            try {
 
-            //     await checkMachineState();
-            //     let distanceMm = zMm - machine.spindle.depthMm;
+                let lastDistanceMm;
+                let stallCounter = 0;
+                let direction;
 
-            //     if (abs(distanceMm) > abs(lastDistanceMm) || abs(distanceMm) <= 0.5) {
-            //         break;
-            //     }
+                while (true) {
+                    checkInterrupt();
 
-            //     if (distanceMm === lastDistanceMm) {
-            //         stallCounter++
-            //     } else {
-            //         stallCounter = 0;
-            //     }
+                    await checkMachineState();
+                    let distanceMm = zMm - machine.spindle.depthMm;
 
-            //     if (stallCounter > kinematicsAB.maxStalls) {
-            //         logInfo(`motor z stall`);
-            //         break;
-            //     }                
+                    if (!isFinite(direction)) {
+                         direction = sign(distanceMm);
+                    }
 
-            //     lastDistanceMm = distanceMm;
+                    if (distanceMm * direction <= kinematicsZ.accuracyMm * direction) {
+                        break;
+                    }
 
-            //     let duty = sign(distanceMm) * 1;
+                    if (distanceMm === lastDistanceMm) {
+                        stallCounter++
+                    } else {
+                        stallCounter = 0;
+                    }
 
-            //     console.info(`move Z ${centRound(zMm)} at ${centRound(speedMmPerMin)}mm/min dist:${centRound(distanceMm)}mm Z:${centRound(duty)}`);
+                    if (stallCounter > kinematicsZ.maxStalls) {
+                        logInfo(`motor z stall`);
+                        break;
+                    }
 
-            //     await motorDrivers.z.set(duty);
-            //     await new Promise(resolve => setTimeout(resolve, kinematicsAB.checkPeriodMs));
-            // }            
+                    lastDistanceMm = distanceMm;
+
+                    let duty = (max(min(distanceMm, 1), -1) + 4 * machine.motors.z.driver.duty) / 5;
+
+                    console.info(`move Z ${centRound(zMm)} at dist:${centRound(distanceMm)}mm duty:${centRound(duty)}`);
+
+                    await motorDrivers.z.set(duty);
+                    await new Promise(resolve => setTimeout(resolve, kinematicsZ.checkPeriodMs));
+                }
+
+            } finally {
+                await motorDrivers.z.set(0);
+            }
 
         },
 
