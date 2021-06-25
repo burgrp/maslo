@@ -268,20 +268,30 @@ module.exports = async ({
 
                     logInfo(`move XY ${centRound(xMm)},${centRound(yMm)} at ${centRound(speedMmPerMin)}mm/min dist:${centRound(distanceMm)}mm A:${centRound(duties.a)} B:${centRound(duties.b)}`);
 
-                    let isReversing = motor => sign(duties[motor]) === -sign(machine.motors[motor].driver.duty);
+                    let currentDuties = {
+                        a: machine.motors.a.driver.duty,
+                        b: machine.motors.b.driver.duty
+                    };
+
+                    let isReversing = motor => sign(duties[motor]) === -sign(currentDuties[motor]);
 
                     if (isReversing("a") || isReversing("b")) {
                         logInfo(`motor reversing, inserting delay...`);
                         await motorDrivers.a.set(0);
                         await motorDrivers.b.set(0);
+                        currentDuties = { a: 0, b: 0 };
                         await new Promise(resolve => setTimeout(resolve, kinematicsAB.reversingDelayMs));
+                    }
+
+                    let needsDumping = motor => abs(duties[motor] - currentDuties[motor]) > 0.6;
+                    if (needsDumping("a") || needsDumping("b")) {
+                        logInfo(`dumping motors`, currentDuties, duties);
                         duties.a = duties.a / 3;
                         duties.b = duties.b / 3;
                     }
 
                     for (let motor in duties) {
                         await motorDrivers[motor].set(duties[motor]);
-
                     }
 
                     let lastDistanceMm;
