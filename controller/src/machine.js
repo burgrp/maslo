@@ -206,8 +206,6 @@ module.exports = async ({
 
     scheduleNextMachineCheck();
 
-    let dumping;
-
     return {
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
@@ -218,7 +216,7 @@ module.exports = async ({
         },
 
         async moveXY({ xMm, yMm, speedMmPerMin }) {
-
+            
             if (moveInProgressXY) {
                 throw new Error("Another move in progress.");
             }
@@ -280,31 +278,20 @@ module.exports = async ({
                     let isReversing = motor => sign(duties[motor]) === -sign(currentDuties[motor]);
 
                     if (isReversing("a") || isReversing("b")) {
-                        logInfo(`motor reversing, inserting delay...`);
                         await motorDrivers.a.set(0);
                         await motorDrivers.b.set(0);
                         currentDuties = { a: 0, b: 0 };
-                        await new Promise(resolve => setTimeout(resolve, kinematicsAB.reversingDelayMs));
+                        let waitMs = max(abs(duties.a - currentDuties.a), abs(duties.b - currentDuties.b)) * (kinematicsAB.reversingDelayMs - 100) + 100;
+                        logInfo(`motor reversing, inserting ${round(waitMs)}ms delay...`);
+                        await new Promise(resolve => setTimeout(resolve, waitMs));
                     }
 
-                    let needsDumping = motor => abs(duties[motor] - currentDuties[motor]) > 0.3;
-                    if (!dumping && (needsDumping("a") || needsDumping("b"))) {
+                    let needsDumping = motor => abs(duties[motor] - currentDuties[motor]) > 0.2;
+                    if (needsDumping("a") || needsDumping("b")) {
                         logInfo(`dumping motors`, currentDuties, duties);
-                        dumping = new Date().getTime();
+                        duties.a = (duties.a + 2 * currentDuties.a) / 3;
+                        duties.b = (duties.b + 2 * currentDuties.b) / 3;
                     }
-
-                    if (dumping) {
-                        let now = new Date().getTime();
-                        let position = (now - dumping) / 1000;
-                        if (position > 1) {
-                            dumping = undefined;
-                        } else {
-                            duties.a = currentDuties.a + (duties.a - currentDuties.a) * position;
-                            duties.b = currentDuties.b + (duties.b - currentDuties.b) * position;
-                            logInfo(`dumped a:${centRound(duties.a)} b:${centRound(duties.b)}`)
-                        }
-                    }
-
 
                     for (let motor in duties) {
                         await motorDrivers[motor].set(duties[motor]);
