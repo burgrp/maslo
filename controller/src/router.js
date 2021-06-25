@@ -66,34 +66,49 @@ module.exports = ({ moveLengthMm, machine }) => {
             }
 
             let xyFeedMmPerMin;
-            let posXY = {
+            let xyPos = {
                 xMm: machineState.sledPosition.xMm,
                 yMm: machineState.sledPosition.yMm
             };
 
-            async function moveXY(xMm, yMm, feedMmPerMin, rapid) {
+            async function moveXY(xMm, yMm, feedMmPerMin) {
 
                 if (isFinite(feedMmPerMin)) {
                     xyFeedMmPerMin = feedMmPerMin;
                 }
 
-                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : posXY.xMm;
-                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : posXY.yMm;
+                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : xyPos.xMm;
+                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : xyPos.yMm;
 
-                let lengthMm = hypot(xMm - posXY.xMm, yMm - posXY.yMm);
+                let lengthMm = hypot(xMm - xyPos.xMm, yMm - xyPos.yMm);
 
                 let moveCount = ceil(lengthMm / moveLengthMm);
 
                 for (let move = 0; move < moveCount; move++) {
                     await machine.moveXY({
-                        xMm: posXY.xMm + (xMm - posXY.xMm) * move / moveCount,
-                        yMm: posXY.yMm + (yMm - posXY.yMm) * move / moveCount,
-                        speedMmPerMin: rapid ? undefined : xyFeedMmPerMin
+                        xMm: xyPos.xMm + (xMm - xyPos.xMm) * move / moveCount,
+                        yMm: xyPos.yMm + (yMm - xyPos.yMm) * move / moveCount,
+                        speedMmPerMin: xyFeedMmPerMin
                     });
                 }
 
 
-                posXY = { xMm, yMm };
+                xyPos = { xMm, yMm };
+            }
+
+            let zFeedMmPerMin;
+
+            async function moveZ(zMm, feedMmPerMin) {
+
+                if (isFinite(feedMmPerMin)) {
+                    zFeedMmPerMin = feedMmPerMin;
+                }
+
+                await machine.moveZ({
+                    zMm,
+                    speedMmPerMin: zFeedMmPerMin
+                });
+
             }
 
             let handler = {
@@ -113,17 +128,23 @@ module.exports = ({ moveLengthMm, machine }) => {
                  * Rapid Move
                  */
                 async G0({ x, y, z, f }) {
-                    if (isFinite(x) && isFinite(y)) {
-                        await moveXY(x, y, f, true);
+                    let xyMove = isFinite(x) || isFinite(y);
+                    let zMove = isFinite(z);
+                    if (xyMove && zMove) {
+                        throw new Error("XYZ move is not supported yet.");
+                    }
+                    if (xyMove) {
+                        await moveXY(x, y, f);
+                    }
+                    if (zMove) {
+                        await moveZ(z, f);
                     }
                 },
                 /**
                  * Linear Move
                  */
-                async G1({ x, y, z, f }) {
-                    if (isFinite(x) && isFinite(y)) {
-                        await moveXY(x, y, f, false);
-                    }
+                async G1(params) {
+                    await this.G0(params);
                 },
                 /**
                  * Program End

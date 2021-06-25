@@ -19,6 +19,7 @@ module.exports = async ({
     workspace,
     motorsToWorkspaceVerticalMm,
     kinematicsAB,
+    kinematicsZ,
     sledDiameterMm,
 }) => {
 
@@ -32,7 +33,7 @@ module.exports = async ({
         },
         errors: {},
         sledDiameterMm,
-        bitToMaterialAtLoStopMm: 20, // TODO: this is calibration
+        bitToStockAtLoStopMm: 3, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspace,
         motorsToWorkspaceVerticalMm
@@ -47,7 +48,7 @@ module.exports = async ({
     let oldStateJson;
 
     let pow2 = a => a * a;
-    let { sqrt, hypot, abs, round, min, max } = Math;
+    let { sqrt, hypot, abs, round, min, max, sign } = Math;
 
     let centRound = a => round(a * 100) / 100;
 
@@ -141,8 +142,8 @@ module.exports = async ({
 
                     machine.spindle.on = machine.relays.spindle.on;
 
-                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToMaterialAtLoStopMm) {
-                        machine.spindle.depthMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToMaterialAtLoStopMm;
+                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToStockAtLoStopMm) {
+                        machine.spindle.depthMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToStockAtLoStopMm;
                     } else {
                         delete machine.spindle.depthMm;
                     }
@@ -212,7 +213,7 @@ module.exports = async ({
             return machine;
         },
 
-        async moveXY({ xMm, yMm, speedMmPerMin = kinematicsAB.rapidSpeedMmPerMin }) {
+        async moveXY({ xMm, yMm, speedMmPerMin }) {
 
             if (moveInProgressXY) {
                 throw new Error("Another move in progress.");
@@ -262,13 +263,25 @@ module.exports = async ({
 
                     let normalize = max(abs(duties.a), abs(duties.b)) / (speedMmPerMin / kinematicsAB.fullSpeedMmPerMin);
 
-                    duties.a = (duties.a / normalize + machine.motors.a.driver.duty) / 2;
-                    duties.b = (duties.b / normalize + machine.motors.b.driver.duty) / 2;
+                    duties.a = duties.a / normalize;
+                    duties.b = duties.b / normalize;
 
-                    logInfo(`${centRound(xMm)},${centRound(yMm)} at ${centRound(speedMmPerMin)}mm/min dist:${centRound(distanceMm)}mm A:${centRound(duties.a)} B:${centRound(duties.b)}`);
+                    logInfo(`move XY ${centRound(xMm)},${centRound(yMm)} at ${centRound(speedMmPerMin)}mm/min dist:${centRound(distanceMm)}mm A:${centRound(duties.a)} B:${centRound(duties.b)}`);
+
+                    let isReversing = motor => sign(duties[motor]) === -sign(machine.motors[motor].driver.duty);
+
+                    if (isReversing("a") || isReversing("b")) {
+                        logInfo(`motor reversing, inserting delay...`);
+                        await motorDrivers.a.set(0);
+                        await motorDrivers.b.set(0);
+                        await new Promise(resolve => setTimeout(resolve, kinematicsAB.reversingDelayMs));
+                        duties.a = duties.a / 3;
+                        duties.b = duties.b / 3;
+                    }
 
                     for (let motor in duties) {
                         await motorDrivers[motor].set(duties[motor]);
+
                     }
 
                     let lastDistanceMm;
@@ -294,7 +307,7 @@ module.exports = async ({
                         }
 
                         if (stallCounter > kinematicsAB.maxStalls) {
-                            logInfo("motor stall");
+                            logInfo("motor ab stall");
                             break;
                         }
 
@@ -319,6 +332,44 @@ module.exports = async ({
 
         async interruptMove() {
             moveInterruptXY = true;
+        },
+
+        async moveZ({ zMm, speedMmPerMin }) {
+
+            let lastDistanceMm;
+            let stallCounter = 0;
+
+            // while (true) {
+            //     checkInterrupt();
+
+            //     await checkMachineState();
+            //     let distanceMm = zMm - machine.spindle.depthMm;
+
+            //     if (abs(distanceMm) > abs(lastDistanceMm) || abs(distanceMm) <= 0.5) {
+            //         break;
+            //     }
+
+            //     if (distanceMm === lastDistanceMm) {
+            //         stallCounter++
+            //     } else {
+            //         stallCounter = 0;
+            //     }
+
+            //     if (stallCounter > kinematicsAB.maxStalls) {
+            //         logInfo(`motor z stall`);
+            //         break;
+            //     }                
+
+            //     lastDistanceMm = distanceMm;
+
+            //     let duty = sign(distanceMm) * 1;
+
+            //     console.info(`move Z ${centRound(zMm)} at ${centRound(speedMmPerMin)}mm/min dist:${centRound(distanceMm)}mm Z:${centRound(duty)}`);
+
+            //     await motorDrivers.z.set(duty);
+            //     await new Promise(resolve => setTimeout(resolve, kinematicsAB.checkPeriodMs));
+            // }            
+
         },
 
         async setMotorDuty(motor, duty) {
