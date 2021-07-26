@@ -83,7 +83,8 @@
                 "module": "./ui.js",
                 "machine": "-> machine",
                 "router": "-> router",
-                "cuttingSpeedMmPerMin": 200,
+                "manualCuttingSpeedMmPerMin": 200,
+                "manualRapidSpeedMmPerMin": 1000,           
                 "manualMotorControl": {
                     "a": {
                         "min": 0.2,

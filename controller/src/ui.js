@@ -3,7 +3,8 @@ const logError = require("debug")("app:ui:error");
 module.exports = async ({
     machine,
     manualMotorControl,
-    cuttingSpeedMmPerMin,
+    manualCuttingSpeedMmPerMin,
+    manualRapidSpeedMmPerMin,
     router
 }) => {
     let events = {
@@ -67,14 +68,14 @@ module.exports = async ({
             yMm = sled.yMm + d * directionY;
         }
 
-        let cutting = state.spindle.depthMm >= 0;
+        let cutting = state.spindle.on;
 
         try {
             await router.start([{
                 code: cutting ? "G1" : "G0",
                 x: xMm,
                 y: yMm,
-                f: cutting ? cuttingSpeedMmPerMin : undefined
+                f: cutting ? manualCuttingSpeedMmPerMin : manualRapidSpeedMmPerMin
             }]);
         } catch (e) {
             if (!e.moveInterrupted) {
