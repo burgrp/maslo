@@ -235,8 +235,8 @@ wg.pages.home = {
                 e.preventDefault();
             });
 
-            button.on("touchstart", down, { passive: true });
-            button.on("touchend", up, { passive: true });
+            button.on("touchstart", down);
+            button.on("touchend", up);
 
             return button;
         }
