@@ -69,11 +69,15 @@ module.exports = ({ moveLengthMm, machine }) => {
             await loadJob(parseGcodeStream(stream));
         },
 
+        async startJob() {
+            await this.start(job);
+        },
+
         async deleteJob() {
             await loadJob([]);
         },
 
-        async start(code = job) {
+        async start(code) {
 
             let machineState = machine.getState();
 

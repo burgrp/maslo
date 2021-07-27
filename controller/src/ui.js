@@ -101,7 +101,9 @@ module.exports = async ({
         client: __dirname + "/client",
         api: {
             machine: {
-                getState: machine.getState,
+                getState() {
+                    return machine.getState();
+                },
 
                 async manualMoveStart(kind, ...params) {
                     if (kind === "xy") {
@@ -119,7 +121,9 @@ module.exports = async ({
                     }
                 },
 
-                manualSwitch: machine.manualSwitch,
+                async manualSwitch(relay, state) {
+                    await machine.manualSwitch(relay, state);
+                },
 
                 async resetUserOrigin() {
                     let state = machine.getState();
@@ -137,8 +141,15 @@ module.exports = async ({
                 }
             },
             router: {
-                getCode: router.getCode,
-                start: router.start
+                async getCode() {
+                    return await router.getCode();
+                },
+                async startJob() {
+                    await router.startJob();
+                },
+                async deleteJob() {
+                    await router.deleteJob();
+                }
             }
         }
     }
