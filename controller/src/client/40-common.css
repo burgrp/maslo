@@ -203,6 +203,21 @@ button:active {
 
 /*---------------------------------------------------------------*/
 
+.page.home .controls .job .buttons {
+    grid-template-columns: 50% 50%;
+}
+
+.page.home .controls .job .buttons button {
+    width: 8em;
+    height: 3em;
+}
+
+.page.home .controls .job .buttons .delete {
+    color: red;
+}
+
+/*---------------------------------------------------------------*/
+
 .page.home .controls .abchains .buttons {
     grid-template-columns: 50% 50%;
     grid-template-rows: 1em auto auto;

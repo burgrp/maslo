@@ -10,7 +10,7 @@ wg.common = {
         container.append(DIV("page " + name, [
             DIV("navigation", [
                 link("home", "/", "home"),
-                link("jobs", "jobs", "folder-open"),
+                //link("jobs", "jobs", "folder-open"),
                 link("calibration", "calibration", "ruler-combined"),
                 link("settings", "settings", "tools"),
                 DIV("end", [
@@ -290,12 +290,19 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.start() /*await wg.machine.manualSwitch("spindle", true)*/)),
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
                         BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
                         manualMoveButton("up", "caret-up", "z", -1),
                         manualMoveButton("down", "caret-down", "z", 1)
+                    ])
+                ]),
+                DIV("group job", [
+                    DIV("title").text("job"),
+                    DIV("buttons", [
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.startJob())),
+                        BUTTON("delete").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ])
             ])

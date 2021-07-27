@@ -216,7 +216,7 @@ module.exports = async ({
         },
 
         async moveXY({ xMm, yMm, speedMmPerMin }) {
-            
+
             if (moveInProgressXY) {
                 throw new Error("Another move in progress.");
             }
@@ -344,7 +344,9 @@ module.exports = async ({
         },
 
         async interruptMove() {
-            moveInterrupt = true;
+            if (moveInProgressXY || moveInProgressZ) {
+                moveInterrupt = true;
+            }
         },
 
         async moveZ({ zMm }) {
