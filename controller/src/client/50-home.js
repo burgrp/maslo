@@ -53,8 +53,9 @@ wg.pages.home = {
 
         function updateRouterJob(job) {
 
-            $(".page.home .controls .job .buttons").css("display", job.length? "grid": "none");
-            
+            $(".page.home .controls .buttons").css("display", job.length ? "none" : "grid");
+            $(".page.home .controls .job .buttons").css("display", job.length ? "grid" : "none");
+            $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
 
             let previewSvg = $("#previewSvg").empty();
             let pos;
@@ -321,7 +322,7 @@ wg.pages.home = {
                 buttons.css("display", "grid");
             } else {
                 buttons.css("display", "none");
-            }            
+            }
         });
 
         updateMachineState(await wg.machine.getState());
