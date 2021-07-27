@@ -10,11 +10,18 @@ module.exports = async ({
     let events = {
         machine: {
             stateChanged: undefined
+        },
+        router: {
+            jobChanged: undefined
         }
     };
 
     machine.onStateChanged(state => {
         events.machine.stateChanged(state);
+    });
+
+    router.onJobChanged(code => {
+        events.router.jobChanged(code);
     });
 
     let motorAccelerationTimers = {};

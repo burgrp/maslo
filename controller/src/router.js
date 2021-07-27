@@ -9,7 +9,8 @@ let { round, ceil, hypot } = Math;
 
 module.exports = ({ moveLengthMm, machine }) => {
 
-    let loadedCode = [];
+    let job = [];
+    let jobChangedListeners = [];
 
     async function* parseGcodeLines(linesAsyncIter) {
         for await (let line of linesAsyncIter) {
@@ -22,10 +23,6 @@ module.exports = ({ moveLengthMm, machine }) => {
             }
         }
     }
-
-    // async loadGCodeText(text) {
-    //     this.loadGCodeLines(text.split(/\r?\n/));
-    // },
 
     function parseGcodeStream(stream) {
         const lines = readline.createInterface({
@@ -40,24 +37,43 @@ module.exports = ({ moveLengthMm, machine }) => {
         return parseGcodeStream(fs.createReadStream(fileName));
     }
 
-    async function loadGcode(gcodeAsyncIter) {
-        loadedCode = [];
+    async function loadJob(gcodeAsyncIter) {
+        job = [];
         for await (let command of gcodeAsyncIter) {
-            loadedCode.push(command);
+            job.push(command);
+        }
+        for (let listener of jobChangedListeners) {
+            try {
+                listener(job);
+            } catch (error) {
+                logError("Error in job change listener:", error);
+            }
         }
     }
 
     return {
 
+        onJobChanged(listener) {
+            jobChangedListeners.push(listener);
+        },
+
         getCode() {
-            return loadedCode;
+            return job;
         },
 
-        async loadLocalFile(fileName) {
-            await loadGcode(parseLocalFile(fileName));
+        async loadJobFromLocalFile(fileName) {
+            await loadJob(parseLocalFile(fileName));
         },
 
-        async start(code = loadedCode) {
+        async loadJobFromStream(stream) {
+            await loadJob(parseGcodeStream(stream));
+        },
+
+        async deleteJob() {
+            await loadJob([]);
+        },
+
+        async start(code = job) {
 
             let machineState = machine.getState();
 

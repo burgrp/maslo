@@ -51,10 +51,10 @@ wg.pages.home = {
             return $(document.createElementNS('http://www.w3.org/2000/svg', name));
         }
 
-        function updateRouterCode(code) {
+        function updateRouterJob(job) {
             let previewSvg = $("#previewSvg").empty();
             let pos;
-            for (let command of code) {
+            for (let command of job) {
                 if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
 
                     let x = isFinite(command.x) ?
@@ -86,8 +86,6 @@ wg.pages.home = {
 
             let sledX = state.sledPosition && state.sledPosition.xMm;
             let sledY = state.sledPosition && state.sledPosition.yMm;
-
-            console.info("Machine state changed:", state);
 
             $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xMm) * 10) / 10);
             $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.yMm) * 10) / 10);
@@ -300,11 +298,14 @@ wg.pages.home = {
                         manualMoveButton("down", "caret-down", "z", 1)
                     ])
                 ])
-            ]).onMachineStateChanged(updateMachineState),
+            ])
+            .onMachineStateChanged(updateMachineState)
+            .onRouterJobChanged(updateRouterJob)
+            ,
         ]);
 
         updateMachineState(await wg.machine.getState());
-        updateRouterCode(await wg.router.getCode());
+        updateRouterJob(await wg.router.getCode());
     }
 }
 
