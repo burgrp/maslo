@@ -78,7 +78,7 @@ module.exports = async ({
         let cutting = state.spindle.on;
 
         try {
-            await router.start([{
+            await router.run([{
                 code: cutting ? "G1" : "G0",
                 x: xMm,
                 y: yMm,
@@ -106,6 +106,7 @@ module.exports = async ({
                 },
 
                 async manualMoveStart(kind, ...params) {
+                    machine.checkStandbyMode();
                     if (kind === "xy") {
                         await manualMoveStart(...params);
                     } else {
@@ -114,6 +115,7 @@ module.exports = async ({
                 },
 
                 async manualMoveStop(kind) {
+                    machine.checkStandbyMode();
                     if (kind === "xy") {
                         await manualMoveStop();
                     } else {
@@ -122,6 +124,7 @@ module.exports = async ({
                 },
 
                 async manualSwitch(relay, state) {
+                    machine.checkStandbyMode();
                     await machine.switchRelay(relay, state);
                 },
 
@@ -144,10 +147,12 @@ module.exports = async ({
                 async getCode() {
                     return await router.getCode();
                 },
-                async startJob() {
-                    await router.startJob();
+                async runJob() {
+                    machine.checkStandbyMode();
+                    await router.runJob();
                 },
                 async deleteJob() {
+                    machine.checkStandbyMode();
                     await router.deleteJob();
                 }
             }

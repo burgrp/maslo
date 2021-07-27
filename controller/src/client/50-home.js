@@ -53,7 +53,7 @@ wg.pages.home = {
 
         function updateRouterJob(job) {
 
-            $(".page.home .controls .buttons").css("display", job.length ? "none" : "grid");
+            $(".page.home .controls .abchains .buttons").css("display", job.length ? "none" : "grid");
             $(".page.home .controls .job .buttons").css("display", job.length ? "grid" : "none");
             $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
 
@@ -91,6 +91,8 @@ wg.pages.home = {
 
             let sledX = state.sledPosition && state.sledPosition.xMm;
             let sledY = state.sledPosition && state.sledPosition.yMm;
+
+            $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
 
             $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xMm) * 10) / 10);
             $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.yMm) * 10) / 10);
@@ -207,7 +209,7 @@ wg.pages.home = {
 
 
         function manualMoveButton(clazz, icon, kind, ...direction) {
-            let button = BUTTON(clazz, [ICON(icon)]);
+            let button = BUTTON(clazz + " standby", [ICON(icon)]);
             let isDown = false;
 
             function down() {
@@ -267,8 +269,8 @@ wg.pages.home = {
                 DIV("group job", [
                     DIV("title").text("job"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.startJob())),
-                        BUTTON("delete").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
+                        BUTTON("start standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
+                        BUTTON("delete standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ]),
                 DIV("group abchains", [
@@ -302,8 +304,8 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
                     DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
-                        BUTTON("stop").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
+                        BUTTON("start standby").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
+                        BUTTON("stop standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
                         manualMoveButton("up", "caret-up", "z", -1),

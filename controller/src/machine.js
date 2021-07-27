@@ -24,6 +24,7 @@ module.exports = async ({
 }) => {
 
     let machine = {
+        mode: "STANDBY",
         motors: {},
         relays: {},
         spindle: {},
@@ -347,6 +348,7 @@ module.exports = async ({
             if (moveInProgressXY || moveInProgressZ) {
                 moveInterrupt = true;
             }
+            await relayDrivers.spindle.switch(false);
         },
 
         async moveZ({ zMm }) {
@@ -420,6 +422,20 @@ module.exports = async ({
 
         async switchRelay(relay, state) {
             await relayDrivers[relay].switch(state);
+        },
+
+        async setMode(mode) {
+            let prevMode = machine.mode;
+            machine.mode = mode;
+            await checkMachineState();
+            return prevMode;
+        },
+
+        checkStandbyMode() {
+            if (machine.mode !== "STANDBY") {
+                throw new Error("Machine not in standby mode");
+            }
         }
+
     }
 }

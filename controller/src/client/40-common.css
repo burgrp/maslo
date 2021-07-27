@@ -178,6 +178,11 @@ button:active {
     font-weight: bold;
 }
 
+.page.home .controls button.disabled {
+    color: gray !important;
+    background-color: silver;
+}
+
 .page.home .controls button .icon {
     font-size: 5em;
 }
@@ -200,7 +205,6 @@ button:active {
     display: grid;
     justify-items: center;
     align-items: center;
-    display: none;
 }
 
 /*---------------------------------------------------------------*/
