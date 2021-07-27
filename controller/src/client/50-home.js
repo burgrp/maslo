@@ -52,6 +52,10 @@ wg.pages.home = {
         }
 
         function updateRouterJob(job) {
+
+            $(".page.home .controls .job .buttons").css("display", job.length? "grid": "none");
+            
+
             let previewSvg = $("#previewSvg").empty();
             let pos;
             for (let command of job) {
@@ -89,7 +93,7 @@ wg.pages.home = {
 
             $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xMm) * 10) / 10);
             $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.yMm) * 10) / 10);
-            $(".zaxis .position").text(Math.round(state.spindle.zMm * 10)/10);
+            $(".zaxis .position").text(Math.round(state.spindle.zMm * 10) / 10);
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
             $(".scene svg").attr({ viewBox: `-${state.motorsShaftDistanceMm / 2 + 100} -100 ${state.motorsShaftDistanceMm + 200} 1` });
@@ -259,6 +263,13 @@ wg.pages.home = {
             `)]).css({ visibility: "hidden" }),
             DIV("state"),
             DIV("controls", [
+                DIV("group job", [
+                    DIV("title").text("job"),
+                    DIV("buttons", [
+                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.startJob())),
+                        BUTTON("delete").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
+                    ])
+                ]),
                 DIV("group abchains", [
                     DIV("title").text("chains"),
                     DIV("buttons", [
@@ -297,19 +308,21 @@ wg.pages.home = {
                         manualMoveButton("up", "caret-up", "z", -1),
                         manualMoveButton("down", "caret-down", "z", 1)
                     ])
-                ]),
-                DIV("group job", [
-                    DIV("title").text("job"),
-                    DIV("buttons", [
-                        BUTTON("start").text("START").click(() => wg.common.check(async () => await wg.router.startJob())),
-                        BUTTON("delete").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
-                    ])
                 ])
             ])
-            .onMachineStateChanged(updateMachineState)
-            .onRouterJobChanged(updateRouterJob)
+                .onMachineStateChanged(updateMachineState)
+                .onRouterJobChanged(updateRouterJob)
             ,
         ]);
+
+        $(".page.home .controls .group .title").click(ev => {
+            let buttons = $(ev.target).parent().children(".buttons");
+            if (buttons.css("display") === "none") {
+                buttons.css("display", "grid");
+            } else {
+                buttons.css("display", "none");
+            }            
+        });
 
         updateMachineState(await wg.machine.getState());
         updateRouterJob(await wg.router.getCode());

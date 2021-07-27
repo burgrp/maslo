@@ -191,14 +191,16 @@ button:active {
 .page.home .controls .group .title {
     color: rgb(230, 230, 230);
     text-align: center;
-    margin: 0.5em 0;
+    margin: 0.5em 1em;
     font-weight: bold;
+    cursor: pointer;
 }
 
 .page.home .controls .buttons {
     display: grid;
     justify-items: center;
     align-items: center;
+    display: none;
 }
 
 /*---------------------------------------------------------------*/
