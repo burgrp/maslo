@@ -28,7 +28,7 @@ module.exports = async ({
         relays: {},
         spindle: {},
         userOrigin: {
-            xMm: 0,
+            xMm: -workspace.widthMm / 2,
             yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
         },
         errors: {},
@@ -145,9 +145,9 @@ module.exports = async ({
                     machine.spindle.on = machine.relays.spindle.on;
 
                     if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToStockAtLoStopMm) {
-                        machine.spindle.depthMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.motors.z.stops[0].steps) - machine.bitToStockAtLoStopMm;
+                        machine.spindle.zMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.stops[0].steps - machine.motors.z.driver.steps) + machine.bitToStockAtLoStopMm;
                     } else {
-                        delete machine.spindle.depthMm;
+                        delete machine.spindle.zMm;
                     }
 
                     delete machine.errors.machineCheck;
@@ -366,7 +366,7 @@ module.exports = async ({
                         checkInterrupt();
 
                         await checkMachineState();
-                        let distanceMm = zMm - machine.spindle.depthMm;
+                        let distanceMm = machine.spindle.zMm - zMm;
 
                         if (!isFinite(direction)) {
                             direction = sign(distanceMm);

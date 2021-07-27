@@ -45,7 +45,7 @@ module.exports = async ({
     async function manualMoveStart(directionX, directionY) {
         let state = machine.getState();
 
-        if (!isFinite(state.spindle.depthMm)) {
+        if (!isFinite(state.spindle.zMm)) {
             throw new Error("Unknown position of router bit. Please calibrate.");
         }
 
@@ -118,7 +118,7 @@ module.exports = async ({
                     let state = machine.getState();
                     if (state.sledPosition) {
                         if (state.userOrigin.xMm === state.sledPosition.xMm && state.userOrigin.yMm === state.sledPosition.yMm) {
-                            await machine.setUserOrigin(0, state.motorsToWorkspaceVerticalMm + state.workspace.heightMm);
+                            await machine.setUserOrigin(-state.workspace.widthMm / 2, state.motorsToWorkspaceVerticalMm + state.workspace.heightMm);
                         } else {
                             await machine.setUserOrigin(state.sledPosition.xMm, state.sledPosition.yMm);
                         }
