@@ -45,7 +45,8 @@
         "kinematicsZ": {            
             "maxStalls": 10,
             "checkPeriodMs": 10,
-            "accuracyMm": 0.2
+            "accuracyMm": 0.2,
+            "spindleOnBellowMm": 2
         },
         "motors": {
             "a": {

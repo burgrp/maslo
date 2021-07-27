@@ -20,7 +20,7 @@ module.exports = async ({
     motorsToWorkspaceVerticalMm,
     kinematicsAB,
     kinematicsZ,
-    sledDiameterMm,
+    sledDiameterMm
 }) => {
 
     let machine = {
@@ -364,6 +364,8 @@ module.exports = async ({
                     let stallCounter = 0;
                     let direction;
 
+                    await relayDrivers.spindle.switch(zMm < kinematicsZ.spindleOnBellowMm);
+
                     while (true) {
                         checkInterrupt();
 
@@ -414,6 +416,10 @@ module.exports = async ({
 
         async setUserOrigin(xMm, yMm) {
             machine.userOrigin = { xMm, yMm };
+        },
+
+        async switchRelay(relay, state) {
+            await relayDrivers[relay].switch(state);
         }
     }
 }

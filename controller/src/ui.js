@@ -122,7 +122,7 @@ module.exports = async ({
                 },
 
                 async manualSwitch(relay, state) {
-                    await machine.manualSwitch(relay, state);
+                    await machine.switchRelay(relay, state);
                 },
 
                 async resetUserOrigin() {
