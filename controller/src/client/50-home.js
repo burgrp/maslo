@@ -11,7 +11,8 @@ wg.common = {
             DIV("navigation", [
                 link("home", "/", "home"),
                 //link("jobs", "jobs", "folder-open"),
-                link("calibration", "calibration", "ruler-combined"),
+                link("calibxy", "calibxy", "ruler-combined"),
+                link("calibz", "calibz", "sort"),
                 link("settings", "settings", "tools"),
                 DIV("end", [
                     BUTTON("stop", [
@@ -21,13 +22,16 @@ wg.common = {
                 ])
             ]),
             DIV("content", content),
-            DIV("errors")
+            DIV("errors", div => div.click(() => div.empty()))
         ]));
     },
 
     showError(error) {
         console.error("Error:", error);
-        $(".page .errors").append(DIV().text(error.message || error).click(e => $(e.target).fadeOut(() => $(e.target).remove())));
+        let alreadyDisplayed = $(".errors").get().map(ed => $(ed).text()).some(t => t === error);
+        if (!alreadyDisplayed) {
+            $(".page .errors").append(DIV().text(error.message || error));
+        }
     },
 
     async check(asyncAction) {
@@ -296,8 +300,9 @@ wg.pages.home = {
                         manualMoveButton("dir270", "caret-up", "xy", -1, 0),
                         manualMoveButton("dir315", "caret-up", "xy", -1, 1),
                         BUTTON("position", [
-                            DIV("x dimension").text("-"),
-                            DIV("y dimension").text("-")
+                            DIV("x").text("-"),
+                            DIV("y").text("-"),
+                            DIV("dimension")
                         ]).click(() => wg.common.check(async () => await wg.machine.resetUserOrigin()))
                     ])
                 ]),
@@ -332,13 +337,19 @@ wg.pages.home = {
     }
 }
 
-wg.pages.jobs = {
+wg.pages.calibxy = {
     async render(container, pageName) {
-        wg.common.page(container, pageName, []);
+        wg.common.page(container, pageName, [
+            H1().text("Calibration XY"),
+            DIV().text("1. Move sled to center line using A and B buttons."),
+            DIV().text("2. Move sled vertically using V buttons until sled aligns with marked position."),
+            DIV().text("3. Confirm the calibration."),
+            DIV("illustration")
+        ]);
     }
 }
 
-wg.pages.calibration = {
+wg.pages.calibz = {
     async render(container, pageName) {
         wg.common.page(container, pageName, []);
     }

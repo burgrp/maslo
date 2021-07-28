@@ -43,7 +43,7 @@ button:active {
     font-weight: lighter;
     font-size: smaller;
     margin-left: 0.08em;
-    ;
+    color: gray;
 }
 
 @keyframes spin {
@@ -129,6 +129,7 @@ button:active {
     box-shadow: black 0px 5px 15px;
     flex-direction: column;
     font-weight: bold;    
+    cursor: pointer;
 }
 
 .page .errors:empty {
@@ -137,7 +138,6 @@ button:active {
 
 .page .errors>* {
     margin-bottom: 1em;
-    cursor: pointer;
 }
 
 /*---------------------------------------------------------------*/
@@ -369,4 +369,17 @@ button:active {
 .page.home .controls .zaxis .down {
     grid-row: 2;
     grid-column: 3;
+}
+
+/*---------------------------------------------------------------*/
+
+.page.calibxy .content {
+    flex-direction: column;
+}
+
+.page.calibxy .illustration {
+    height: 20em;
+    background-image: url("calibxy.svg");
+    background-repeat: no-repeat;
+    background-size: contain;
 }
