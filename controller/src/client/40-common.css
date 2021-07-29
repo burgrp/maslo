@@ -17,6 +17,14 @@ a, a:visited {
     text-decoration: unset;
 }
 
+button, input {
+    font-size: unset;
+}
+
+input {
+    padding: 0.2em 0.5em;
+}
+
 .debug {
     border: 1px solid red;
     margin: 3px;
@@ -26,6 +34,7 @@ button {
     border-radius: .3em;
     border: unset;
     box-shadow: .1em .1em .5em black;
+    padding: 0.5em 1em;
 }
 
 button:active {

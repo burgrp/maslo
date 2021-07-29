@@ -4,10 +4,60 @@
     flex-direction: column;
 }
 
-.page.calibxy .illustration {
-    height: 20em;
+.page.calibxy .scene {
     background-image: url("calibxy.svg");
     background-repeat: no-repeat;
     background-size: contain;
+    background-position: center;
+    flex-direction: row;
+    min-height: 30em;
+    justify-content: space-between;
+    align-items: center      
 }
 
+.page.calibxy .scene .group {
+    flex-direction: column;
+    background-color: #292929;
+    padding-bottom: 0.3em;
+}
+
+.page.calibxy .group.a {
+    margin-left: 20vw;
+}
+
+.page.calibxy .group.b {
+    margin-right: 20vw;
+}
+
+.page.calibxy .group .title {
+    color: rgb(230, 230, 230);
+    text-align: center;
+    margin: 0.5em 1em;
+    font-weight: bold;
+}
+
+
+.page.calibxy .buttons {
+    justify-items: center;
+    align-items: center;
+}
+
+.page.calibxy .group.distance {
+    align-self:flex-start;
+    margin: 1em;
+    padding: 1em;
+}
+
+.page.calibxy .group.distance .form {
+    flex-direction: row;
+    margin: 1em;
+    align-items: center;
+}
+
+.page.calibxy .group.distance input {
+    width: 3em;
+}
+
+.page.calibxy .group.distance button {
+    margin-left: 1em;
+}

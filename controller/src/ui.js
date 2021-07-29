@@ -141,6 +141,13 @@ module.exports = async ({
 
                 async emergencyStop() {
                     await machine.interruptMove();
+                },
+
+                async setCalibrationXY(workspaceTopToSledTop) {
+                    if (!Number.isFinite(workspaceTopToSledTop)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    console.info(workspaceTopToSledTop);
                 }
             },
             router: {
