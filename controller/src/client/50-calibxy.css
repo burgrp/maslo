@@ -1,0 +1,13 @@
+/*---------------------------------------------------------------*/
+
+.page.calibxy .content {
+    flex-direction: column;
+}
+
+.page.calibxy .illustration {
+    height: 20em;
+    background-image: url("calibxy.svg");
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
