@@ -442,7 +442,7 @@ F 3 "" H 7900 5850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Device:FerriteBead_Small FB1
+L Device:Ferrite_Bead_Small FB1
 U 1 1 601A6B45
 P 8000 5850
 F 0 "FB1" V 7763 5850 50  0000 C CNN
@@ -816,7 +816,7 @@ U 1 1 60FD2699
 P 9000 2250
 F 0 "U2" H 9400 2750 50  0000 C CNN
 F 1 "ZXBM5210-SP" H 9600 2650 50  0000 C CNN
-F 2 "Package_SO:Diodes_SO-8EP" H 9050 2000 50  0001 C CNN
+F 2 "Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm" H 9050 2000 50  0001 C CNN
 F 3 "https://www.diodes.com/assets/Datasheets/ZXBM5210.pdf" H 9000 2250 50  0001 C CNN
 	1    9000 2250
 	1    0    0    -1  

@@ -442,7 +442,7 @@ F 3 "" H 7900 5850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Device:FerriteBead_Small FB1
+L Device:Ferrite_Bead_Small FB1
 U 1 1 601A6B45
 P 8000 5850
 F 0 "FB1" V 7763 5850 50  0000 C CNN
@@ -649,17 +649,6 @@ F 3 "" H 3850 6450 50  0001 C CNN
 $EndComp
 NoConn ~ 4350 2500
 NoConn ~ 4350 2400
-$Comp
-L Driver_Motor:ZXBM5210-S U2
-U 1 1 60F1F3AD
-P 9000 2250
-F 0 "U2" H 9400 2800 50  0000 C CNN
-F 1 "ZXBM5210-S" H 9600 2700 50  0000 C CNN
-F 2 "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" H 9050 2000 50  0001 C CNN
-F 3 "https://www.diodes.com/assets/Datasheets/ZXBM5210.pdf" H 9000 2250 50  0001 C CNN
-	1    9000 2250
-	1    0    0    -1  
-$EndComp
 Text Label 5350 1800 0    50   ~ 0
 ADDR
 Text Label 5350 2000 0    50   ~ 0
@@ -821,4 +810,15 @@ Wire Wire Line
 Connection ~ 9750 2150
 Wire Wire Line
 	9750 2150 9850 2150
+$Comp
+L Driver_Motor:ZXBM5210-SP U2
+U 1 1 60FD2699
+P 9000 2250
+F 0 "U2" H 9400 2750 50  0000 C CNN
+F 1 "ZXBM5210-SP" H 9600 2650 50  0000 C CNN
+F 2 "Package_SO:Diodes_SO-8EP" H 9050 2000 50  0001 C CNN
+F 3 "https://www.diodes.com/assets/Datasheets/ZXBM5210.pdf" H 9000 2250 50  0001 C CNN
+	1    9000 2250
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
