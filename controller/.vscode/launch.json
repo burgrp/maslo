@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Chrome",
+            "request": "launch",
+            "type": "pwa-chrome",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}/src/client",
+            "userDataDir": "${workspaceFolder}/.chrome",
+            "showAsyncStacks": true
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Controller - virtual",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "MACHINE_DRIVER": "virtual",
+                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-app:motor:*"
+            },
+            "program": "${workspaceFolder}/src/start.js",
+            "outputCapture": "std"
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Controller - I2C",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "MACHINE_DRIVER": "i2c",
+                "I2C": "drake,gpioIRQ=5.in.pullUp.irqFallingEdge,gpioReset=4.out.openDrain.pullUp",
+                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*"
+            },
+            "program": "${workspaceFolder}/src/start.js",
+            "outputCapture": "std"
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "calc",
+            "outputCapture": "std",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/../calc.js"
+        }
+    ]
+}
