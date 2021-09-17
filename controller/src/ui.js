@@ -3,18 +3,26 @@ const logError = require("debug")("app:ui:error");
 module.exports = async ({
     machine,
     manualMotorControl,
-    moveSpeedRapidMmPerMin,
-    moveSpeedCuttingMmPerMin,
-    router
+    manualCuttingSpeedMmPerMin,
+    manualRapidSpeedMmPerMin,
+    router,
+    configuration
 }) => {
     let events = {
         machine: {
             stateChanged: undefined
+        },
+        router: {
+            jobChanged: undefined
         }
     };
 
     machine.onStateChanged(state => {
         events.machine.stateChanged(state);
+    });
+
+    router.onJobChanged(code => {
+        events.router.jobChanged(code);
     });
 
     let motorAccelerationTimers = {};
@@ -27,7 +35,7 @@ module.exports = async ({
             await machine.setMotorDuty(motor, duty);
             motorAccelerationTimers[motor] = setInterval(async () => {
                 try {
-                    duty = min(duty + 0.02 * direction, manualMotorControl[motor].max);
+                    duty = direction * min(abs(duty + 0.02 * direction), manualMotorControl[motor].max);
                     await machine.setMotorDuty(motor, duty);
                 } catch (e) {
                     logError("Error in manual motor acceleration timer", e);
@@ -45,21 +53,22 @@ module.exports = async ({
     async function manualMoveStart(directionX, directionY) {
         let state = machine.getState();
 
-        if (!isFinite(state.spindle.depthMm)) {
+        if (!isFinite(state.spindle.zMm)) {
             throw new Error("Unknown position of router bit. Please calibrate.");
         }
 
-        let speedMmPerMin = state.spindle.depthMm < 0 ? moveSpeedRapidMmPerMin : moveSpeedCuttingMmPerMin;
-
-        let sled = state.sledPosition;
+        let sled = { ...state.sledPosition };
         if (!sled) {
             throw new Error("Unknown sled position.");
         }
 
+        sled.xMm = state.workspace.widthMm / 2 + sled.xMm;
+        sled.yMm = state.motorsToWorkspaceVerticalMm + state.workspace.heightMm - sled.yMm;
+
         let safeToEdge = state.sledDiameterMm / 4;
 
-        let xMm = directionX ? directionX * (state.workspace.widthMm - safeToEdge) / 2 : sled.xMm;
-        let yMm = directionY ? (directionY / 2 + 0.5) * (state.workspace.heightMm) + state.motorsToWorkspaceVerticalMm - safeToEdge * directionY : sled.yMm;
+        let xMm = directionX ? (directionX / 2 + 0.5) * state.workspace.widthMm - safeToEdge * directionX : sled.xMm;
+        let yMm = directionY ? (directionY / 2 + 0.5) * state.workspace.heightMm - safeToEdge * directionY : sled.yMm;
 
         if (directionX && directionY) {
             let d = min(xMm * directionX - sled.xMm * directionX, yMm * directionY - sled.yMm * directionY);
@@ -67,20 +76,21 @@ module.exports = async ({
             yMm = sled.yMm + d * directionY;
         }
 
+        let cutting = state.spindle.on;
+
         try {
-            await machine.moveXY({
-                xMm,
-                yMm,
-                speedMmPerMin,
-                firstMove: true
-            });
+            await router.run([{
+                code: cutting ? "G1" : "G0",
+                x: xMm,
+                y: yMm,
+                f: cutting ? manualCuttingSpeedMmPerMin : manualRapidSpeedMmPerMin
+            }]);
         } catch (e) {
             if (!e.moveInterrupted) {
                 throw e;
             }
-        } finally {
-            await machine.stopAB();
         }
+
     }
 
     async function manualMoveStop() {
@@ -92,9 +102,12 @@ module.exports = async ({
         client: __dirname + "/client",
         api: {
             machine: {
-                getState: machine.getState,
+                getState() {
+                    return machine.getState();
+                },
 
                 async manualMoveStart(kind, ...params) {
+                    machine.checkStandbyMode();
                     if (kind === "xy") {
                         await manualMoveStart(...params);
                     } else {
@@ -103,6 +116,7 @@ module.exports = async ({
                 },
 
                 async manualMoveStop(kind) {
+                    machine.checkStandbyMode();
                     if (kind === "xy") {
                         await manualMoveStop();
                     } else {
@@ -110,22 +124,46 @@ module.exports = async ({
                     }
                 },
 
-                manualSwitch: machine.manualSwitch,
+                async manualSwitch(relay, state) {
+                    machine.checkStandbyMode();
+                    await machine.switchRelay(relay, state);
+                },
 
                 async resetUserOrigin() {
                     let state = machine.getState();
                     if (state.sledPosition) {
                         if (state.userOrigin.xMm === state.sledPosition.xMm && state.userOrigin.yMm === state.sledPosition.yMm) {
-                            await machine.setUserOrigin(0, state.motorsToWorkspaceVerticalMm + state.workspace.heightMm);
+                            await machine.setUserOrigin(-state.workspace.widthMm / 2, state.motorsToWorkspaceVerticalMm + state.workspace.heightMm);
                         } else {
                             await machine.setUserOrigin(state.sledPosition.xMm, state.sledPosition.yMm);
                         }
                     }
+                },
+
+                async emergencyStop() {
+                    await machine.interruptMove();
+                },
+
+                async setCalibrationXY(workspaceTopToSledTop) {
+                    if (!Number.isFinite(workspaceTopToSledTop)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    configuration.data.workspaceTopToSledTop = workspaceTopToSledTop;
+                    await configuration.save();
                 }
             },
             router: {
-                getCode: router.getCode,
-                start: router.start
+                async getCode() {
+                    return await router.getCode();
+                },
+                async runJob() {
+                    machine.checkStandbyMode();
+                    await router.runJob();
+                },
+                async deleteJob() {
+                    machine.checkStandbyMode();
+                    await router.deleteJob();
+                }
             }
         }
     }

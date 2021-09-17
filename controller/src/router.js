@@ -9,9 +9,8 @@ let { round, ceil, hypot } = Math;
 
 module.exports = ({ moveLengthMm, machine }) => {
 
-    let code = [];
-
-
+    let job = [];
+    let jobChangedListeners = [];
 
     async function* parseGcodeLines(linesAsyncIter) {
         for await (let line of linesAsyncIter) {
@@ -24,10 +23,6 @@ module.exports = ({ moveLengthMm, machine }) => {
             }
         }
     }
-
-    // async loadGCodeText(text) {
-    //     this.loadGCodeLines(text.split(/\r?\n/));
-    // },
 
     function parseGcodeStream(stream) {
         const lines = readline.createInterface({
@@ -42,56 +37,52 @@ module.exports = ({ moveLengthMm, machine }) => {
         return parseGcodeStream(fs.createReadStream(fileName));
     }
 
-    function sweep(segments) {
-
-        let t0 = new Date().getTime();
-
-        try {
-
-            for (let { sweep, lengthMm, speedMmPerMin } of segments) {
-
-                let moveCount = ceil(lengthMm / moveLengthMm);
-
-                for (let posMm = 0; posMm <= lengthMm; posMm = posMm + lengthMm / moveCount) {
-
-                    let { x: xMm, y: yMm } = sweep(posMm / lengthMm);
-                    logInfo(`segment ${crdStr({ xMm, yMm })} ------------------------------------------------------`);
-                    // await moveXY({ xMm, yMm, speedMmPerMin });
-                }
-
-            }
-
-            let t1 = new Date().getTime();
-
-            let sMm = segments.reduce((acc, segment) => acc + segment.lengthMm, 0);
-            let tSec = (t1 - t0) / 1000;
-
-            logInfo(`run ${centRound(sMm)}mm took ${centRound(tSec)}s => ${round(60 * sMm / tSec)}mm/min`);
-
-        } finally {
-            //await stopAB();
-        }
-
-    }
-
-    async function loadGcode(gcodeAsyncIter) {
-        code = [];
+    async function loadJob(gcodeAsyncIter) {
+        job = [];
         for await (let command of gcodeAsyncIter) {
-            code.push(command);
+            job.push(command);
+        }
+        for (let listener of jobChangedListeners) {
+            try {
+                listener(job);
+            } catch (error) {
+                logError("Error in job change listener:", error);
+            }
         }
     }
 
     return {
 
+        onJobChanged(listener) {
+            jobChangedListeners.push(listener);
+        },
+
         getCode() {
-            return code;
+            return job;
         },
 
-        async loadLocalFile(fileName) {
-            await loadGcode(parseLocalFile(fileName));
+        async loadJobFromLocalFile(fileName) {
+            await loadJob(parseLocalFile(fileName));
         },
 
-        async start() {
+        async loadJobFromStream(stream) {
+            await loadJob(parseGcodeStream(stream));
+        },
+
+        async runJob() {
+            let prevMode = await machine.setMode("JOB");
+            try {
+                await this.run(job);
+            } finally {
+                await machine.setMode(prevMode);
+            }
+        },
+
+        async deleteJob() {
+            await loadJob([]);
+        },
+
+        async run(code) {
 
             let machineState = machine.getState();
 
@@ -100,48 +91,59 @@ module.exports = ({ moveLengthMm, machine }) => {
             }
 
             let xyFeedMmPerMin;
-            let firstMoveXY = true;
-            let posXY = {
+            let xyPos = {
                 xMm: machineState.sledPosition.xMm,
                 yMm: machineState.sledPosition.yMm
             };
 
-            async function moveXY(xMm, yMm, feedMmPerMin, rapid) {
+            let nextStepCheck;
+
+            async function moveXY(xMm, yMm, feedMmPerMin) {
 
                 if (isFinite(feedMmPerMin)) {
                     xyFeedMmPerMin = feedMmPerMin;
                 }
 
-                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : pos.x;
-                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : pos.y;
+                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : xyPos.xMm;
+                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : xyPos.yMm;
 
-                let lengthMm = hypot(xMm - posXY.xMm, yMm - posXY.yMm);
+                let lengthMm = hypot(xMm - xyPos.xMm, yMm - xyPos.yMm);
 
-                if (lengthMm > 1) {
+                let moveCount = ceil(lengthMm / moveLengthMm);
 
-                    let moveCount = ceil(lengthMm / moveLengthMm);
-
-                    for (let move = 0; move < moveCount; move++) {
-                        await machine.moveXY({
-                            xMm: posXY.xMm + (xMm - posXY.xMm) * move / moveCount,
-                            yMm: posXY.yMm + (yMm - posXY.yMm) * move / moveCount,
-                            speedMmPerMin: rapid ? undefined : xyFeedMmPerMin,
-                            firstMove: firstMoveXY
-                        });
-
-                    }
-
-                } else {
+                for (let move = 0; move < moveCount; move++) {
                     await machine.moveXY({
-                        xMm,
-                        yMm,
-                        speedMmPerMin: rapid ? undefined : xyFeedMmPerMin,
-                        firstMove: firstMoveXY
+                        xMm: xyPos.xMm + (xMm - xyPos.xMm) * move / moveCount,
+                        yMm: xyPos.yMm + (yMm - xyPos.yMm) * move / moveCount,
+                        speedMmPerMin: xyFeedMmPerMin
                     });
                 }
 
-                posXY = { xMm, yMm };
-                firstMoveXY = false;
+                xyPos = { xMm, yMm };
+
+                nextStepCheck = async ({ code, x, y }) => {
+                    if (!(
+                        (code === "G0" || code === "G1") &&
+                        (isFinite(x) || isFinite(y))
+                    )) {
+                        await machine.stopAB();
+                    }
+                };
+            }
+
+            let zFeedMmPerMin;
+
+            async function moveZ(zMm, feedMmPerMin) {
+
+                if (isFinite(feedMmPerMin)) {
+                    zFeedMmPerMin = feedMmPerMin;
+                }
+
+                await machine.moveZ({
+                    zMm,
+                    speedMmPerMin: zFeedMmPerMin
+                });
+
             }
 
             let handler = {
@@ -161,17 +163,23 @@ module.exports = ({ moveLengthMm, machine }) => {
                  * Rapid Move
                  */
                 async G0({ x, y, z, f }) {
-                    if (isFinite(x) && isFinite(y)) {
-                        await moveXY(x, y, f, true);
+                    let xyMove = isFinite(x) || isFinite(y);
+                    let zMove = isFinite(z);
+                    if (xyMove && zMove) {
+                        throw new Error("XYZ move is not supported yet.");
+                    }
+                    if (xyMove) {
+                        await moveXY(x, y, f);
+                    }
+                    if (zMove) {
+                        await moveZ(z, f);
                     }
                 },
                 /**
                  * Linear Move
                  */
-                async G1({ x, y, z, f }) {
-                    if (isFinite(x) && isFinite(y)) {
-                        await moveXY(x, y, f, false);
-                    }
+                async G1(params) {
+                    await this.G0(params);
                 },
                 /**
                  * Program End
@@ -183,11 +191,21 @@ module.exports = ({ moveLengthMm, machine }) => {
                 async M30() { }
             };
 
-            for (let command of code) {
-                if (!(handler[command.code] instanceof Function)) {
-                    throw new Error(`Unsupported GCODE ${command.code}`);
+            try {
+                for (let command of code) {
+                    if (!(handler[command.code] instanceof Function)) {
+                        throw new Error(`Unsupported GCODE ${command.code}`);
+                    }
+                    logInfo(command);
+                    if (nextStepCheck) {
+                        await nextStepCheck(command);
+                        nextStepCheck = undefined;
+                    }
+                    await handler[command.code](command);
                 }
-                await handler[command.code](command);
+
+            } finally {
+                await machine.stopAB();
             }
         }
 
