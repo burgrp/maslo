@@ -82,7 +82,7 @@
         "machine": "-> machine"
     },
     "webserver": {
-        "module": "@device.farm/webglue",
+        "module": "@burgrp/webglue",
         "modules": [
             {
                 "module": "./ui.js",

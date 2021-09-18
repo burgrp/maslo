@@ -2,7 +2,7 @@ process.env.DEBUG = process.env.DEBUG || "app:*";
 
 const express = require("express");
 
-require("@device.farm/appglue")({ require, file: __dirname + "/../appglue.json" }).main(async ({
+require("@burgrp/appglue")({ require, file: __dirname + "/../appglue.json" }).main(async ({
     webserver,
     router
 }) => {
