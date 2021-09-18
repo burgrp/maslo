@@ -144,11 +144,11 @@ module.exports = async ({
                     await machine.interruptMove();
                 },
 
-                async setCalibrationXY(workspaceTopToSledTop) {
-                    if (!Number.isFinite(workspaceTopToSledTop)) {
+                async setCalibrationXY(workspaceTopToSledTopMm) {
+                    if (!Number.isFinite(workspaceTopToSledTopMm)) {
                         throw new Error("Please enter a valid number");
                     }
-                    configuration.data.workspaceTopToSledTop = workspaceTopToSledTop;
+                    configuration.data.workspaceTopToSledTopMm = workspaceTopToSledTopMm;
                     await configuration.save();
                 }
             },

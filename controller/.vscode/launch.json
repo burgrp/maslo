@@ -19,7 +19,7 @@
             ],
             "env": {
                 "MACHINE_DRIVER": "virtual",
-                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-app:motor:*"
+                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-Xapp:motor:*"
             },
             "program": "${workspaceFolder}/src/start.js",
             "outputCapture": "std"
