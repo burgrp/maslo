@@ -94,7 +94,8 @@ public:
 
   void checkState() {
 
-    zxbm5210.set(state.duty, state.direction);
+    zxbm5210.set((state.direction && !state.endStop1) || (!state.direction && !state.endStop2) ? state.duty : 0,
+                state.direction);
 
     bool running = state.duty != 0;
     target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
