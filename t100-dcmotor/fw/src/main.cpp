@@ -1,12 +1,10 @@
-const int PIN_LED = 22;
+const int PIN_LED = 24;
 const int PIN_IRQ = 23;
 const int PIN_ADDR = 3;
 const int PIN_SAFEBOOT = 8;
 
-const int PIN_INA = 24;
-const int PIN_INB = 25;
-const int PIN_PWM = 16;
-const int PIN_CS = 2;
+const int PIN_FWD = 16;
+const int PIN_REV = 22;
 const int PIN_HALL_A = 6;
 const int PIN_HALL_B = 7;
 const int EXT_INT_HALL_A = 6;
@@ -17,8 +15,6 @@ const int PIN_SCL = 15;
 const int PIN_STOP1 = 4;
 const int PIN_STOP2 = 5;
 
-const int STOP_TOLERANCE = 2;
-// const int MIN_SPEED = 50;
 const int LO_PRIO_CHECK_MS = 100;
 
 enum Command { NONE = 0, SET = 1 };
@@ -37,8 +33,8 @@ public:
   } rxBuffer;
 
   struct __attribute__((packed)) {
-    unsigned char duty;
-    bool direction : 1;
+    unsigned char duty =  50;
+    bool direction : 1 = 1;
     bool endStop1 : 1;
     bool endStop2 : 1;
     bool reserved : 5;
@@ -46,7 +42,7 @@ public:
     short currentMA;
   } state;
 
-  VNH7070 vnh7070;
+  ZXBM5210 zxbm5210;
   Encoder encoder;
 
   void init(int axis) {
@@ -63,18 +59,9 @@ public:
     while (target::GCLK.STATUS.getSYNCBUSY())
       ;
 
-    // ADC for WNH7070 current sense
-
-    target::PM.APBCMASK.setADC(true);
-
-    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
-                               .setID(target::gclk::CLKCTRL::ID::ADC)
-                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
-                               .setCLKEN(true);
-
     // init VNH7070
 
-    vnh7070.init(PIN_INA, PIN_INB, PIN_PWM, PIN_CS, &target::TC1);
+    zxbm5210.init(PIN_FWD, PIN_REV, &target::TC1);
 
     // init encoder
 
@@ -95,6 +82,8 @@ public:
     target::PORT.PINCFG[PIN_STOP1].setINEN(true).setPULLEN(true);
     target::PORT.PINCFG[PIN_STOP2].setINEN(true).setPULLEN(true);
 
+    checkState();
+
     // start check timer
     start(LO_PRIO_CHECK_MS / 10);
   }
@@ -105,7 +94,7 @@ public:
 
   void checkState() {
 
-    vnh7070.set(state.duty, state.direction);
+    zxbm5210.set(state.duty, state.direction);
 
     bool running = state.duty != 0;
     target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
@@ -115,7 +104,7 @@ public:
   void ecoderChanged(int steps) {
     state.actSteps += steps;
     checkState();
-    //irqSet();
+    // irqSet();
   }
 
   void setSpeed(unsigned int speed) {}
@@ -150,8 +139,6 @@ public:
   void onTimer() {
     state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
     state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
-
-    state.currentMA = vnh7070.getCurrentMA();
 
     checkState();
 
