@@ -105,7 +105,8 @@ public:
 
   void checkState() {
 
-    vnh7070.set(state.duty, state.direction);
+    vnh7070.set((state.direction && !state.endStop1) || (!state.direction && !state.endStop2) ? state.duty : 0,
+                state.direction);
 
     bool running = state.duty != 0;
     target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
@@ -115,7 +116,7 @@ public:
   void ecoderChanged(int steps) {
     state.actSteps += steps;
     checkState();
-    //irqSet();
+    // irqSet();
   }
 
   void setSpeed(unsigned int speed) {}
