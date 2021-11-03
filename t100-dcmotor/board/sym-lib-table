@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name t100-dcmotor-rescue)(type Legacy)(uri ${KIPRJMOD}/t100-dcmotor-rescue.lib)(options "")(descr ""))
-)
