@@ -6,6 +6,7 @@ const int PIN_INA = 24;
 const int PIN_INB = 25;
 const int PIN_PWM = 16;
 const int PIN_CS = 2;
+
 const int PIN_HALL_A = 6;
 const int PIN_HALL_B = 7;
 const int EXT_INT_HALL_A = 6;
