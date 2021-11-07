@@ -228,8 +228,8 @@ wg.pages.home = {
                         BUTTON("stop control standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
-                        wg.common.manualMoveButton("up", "caret-up", "z", -1),
-                        wg.common.manualMoveButton("down", "caret-down", "z", 1)
+                        wg.common.manualMoveButton("up", "caret-up", "z", 1),
+                        wg.common.manualMoveButton("down", "caret-down", "z", -1)
                     ])
                 ])
             ])
