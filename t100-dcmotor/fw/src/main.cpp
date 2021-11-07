@@ -1,5 +1,4 @@
 const int PIN_LED = 22;
-const int PIN_IRQ = 23;
 const int PIN_ADDR = 3;
 const int PIN_SAFEBOOT = 8;
 
@@ -17,9 +16,9 @@ const int PIN_SCL = 15;
 const int PIN_STOP1 = 4;
 const int PIN_STOP2 = 5;
 
-const int STOP_TOLERANCE = 2;
-// const int MIN_SPEED = 50;
 const int LO_PRIO_CHECK_MS = 100;
+const int UNATTENDED_TIMEOUT_MS = 2000;
+const int UNATTENDED_TIMEOUT_COUNT = UNATTENDED_TIMEOUT_MS / LO_PRIO_CHECK_MS;
 
 enum Command { NONE = 0, SET = 1 };
 
@@ -48,6 +47,7 @@ public:
 
   VNH7070 vnh7070;
   Encoder encoder;
+  int unattendedTimeoutCounter;
 
   void init(int axis) {
 
@@ -85,11 +85,6 @@ public:
     Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, PIN_SDA, PIN_SCL,
                 target::port::PMUX::PMUXE::C);
 
-    // IRQ
-
-    target::PORT.OUTCLR.setOUTCLR(1 << PIN_IRQ);
-    target::PORT.DIRCLR.setDIRCLR(1 << PIN_IRQ);
-
     // STOPs
 
     target::PORT.PINCFG[PIN_STOP1].setINEN(true).setPULLEN(true);
@@ -98,10 +93,6 @@ public:
     // start check timer
     start(LO_PRIO_CHECK_MS / 10);
   }
-
-  void irqSet() { target::PORT.DIRSET.setDIRSET(1 << PIN_IRQ); }
-
-  void irqClear() { target::PORT.DIRCLR.setDIRCLR(1 << PIN_IRQ); }
 
   void checkState() {
 
@@ -116,7 +107,6 @@ public:
   void ecoderChanged(int steps) {
     state.actSteps += steps;
     checkState();
-    // irqSet();
   }
 
   void setSpeed(unsigned int speed) {}
@@ -126,8 +116,7 @@ public:
   }
 
   virtual int getTxByte(int index) {
-    irqClear();
-    return ((unsigned char *)&state)[index];
+    return index < sizeof(state) ? ((unsigned char *)&state)[index] : 0;
   }
 
   virtual bool setRxByte(int index, int value) {
@@ -138,6 +127,7 @@ public:
       if (checkCommand(Command::SET, index, value, sizeof(rxBuffer.setSpeed))) {
         state.duty = rxBuffer.setSpeed.duty;
         state.direction = rxBuffer.setSpeed.direction;
+        unattendedTimeoutCounter = 0;
         checkState();
       }
 
@@ -149,6 +139,11 @@ public:
   }
 
   void onTimer() {
+    unattendedTimeoutCounter++;
+    if (unattendedTimeoutCounter > UNATTENDED_TIMEOUT_COUNT) {
+      state.duty = 0;
+    }
+
     state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
     state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
 

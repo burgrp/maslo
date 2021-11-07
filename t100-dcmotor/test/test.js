@@ -16,35 +16,43 @@ async function start() {
         });
         i2c.nop();
 
-        let motors = Object.entries({
-            "a": 0x50,
-            // "b": 0x51,
-            // "z": 0x52
-        }).map(([name, address]) => {
-            let motor = createMotor({ i2c, address });
-            motor.name = name;
-            return motor;
-        });
 
-        for (let motor of motors) {
-            await motor.set(0);
-            let state = await motor.get();
-            console.info(motor.name, state);
-        }
+        let motor = createMotor({i2c, address: 0x52});
+        motor.set(-0.4);
+        await wait(1000);
+        motor.set(-0.5);
+        await wait(1000);
+        motor.set(-0.6);
 
-        for (let motor of motors) {
-            await motor.set(-0.3);
-            let state = await motor.get();
-            console.info(motor.name, state);
-        }
+        // let motors = Object.entries({
+        //     "a": 0x50,
+        //     // "b": 0x51,
+        //     // "z": 0x52
+        // }).map(([name, address]) => {
+        //     let motor = createMotor({ i2c, address });
+        //     motor.name = name;
+        //     return motor;
+        // });
 
-        await wait(3000);
+        // for (let motor of motors) {
+        //     await motor.set(0);
+        //     let state = await motor.get();
+        //     console.info(motor.name, state);
+        // }
 
-        for (let motor of motors) {
-            await motor.set(0);
-            let state = await motor.get();
-            console.info(motor.name, state);
-        }  
+        // for (let motor of motors) {
+        //     await motor.set(-0.3);
+        //     let state = await motor.get();
+        //     console.info(motor.name, state);
+        // }
+
+        // await wait(3000);
+
+        // for (let motor of motors) {
+        //     await motor.set(0);
+        //     let state = await motor.get();
+        //     console.info(motor.name, state);
+        // }  
 
     } finally {
         await i2c.close();
