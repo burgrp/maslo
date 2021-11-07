@@ -173,6 +173,7 @@ void initApplication() {
   device.init(readConfigPin(PIN_ADDR));
 
   // enable interrupts
+  //target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3); 
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::EIC);
 }

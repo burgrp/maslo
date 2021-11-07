@@ -84,7 +84,6 @@ wg.pages.home = {
                 r: state.sledDiameterMm / 2
             });
 
-
             $(".scene .follow").attr({
                 cx: state.followPosition && state.followPosition.xMm,
                 cy: state.followPosition && state.followPosition.yMm,

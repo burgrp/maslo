@@ -5,8 +5,7 @@ module.exports = async ({
     manualMotorControl,
     manualCuttingSpeedMmPerMin,
     manualRapidSpeedMmPerMin,
-    router,
-    configuration
+    router
 }) => {
     let events = {
         machine: {
@@ -148,8 +147,7 @@ module.exports = async ({
                     if (!Number.isFinite(workspaceTopToSledTopMm)) {
                         throw new Error("Please enter a valid number");
                     }
-                    configuration.data.workspaceTopToSledTopMm = workspaceTopToSledTopMm;
-                    await configuration.save();
+                    await machine.setCalibrationXY(workspaceTopToSledTopMm);
                 }
             },
             router: {

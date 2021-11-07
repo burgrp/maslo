@@ -14,13 +14,14 @@ module.exports = async ({
     driver,
     motors: motorConfigs,
     relays: relayConfigs,
-    machineCheckIntervalMs,
     motorsShaftDistanceMm,
-    workspace,
     motorsToWorkspaceVerticalMm,
+    sledDiameterMm,
+    workspace,
+    machineCheckIntervalMs,
     kinematicsAB,
     kinematicsZ,
-    sledDiameterMm
+    configuration
 }) => {
 
     let machine = {
@@ -32,6 +33,9 @@ module.exports = async ({
             xMm: -workspace.widthMm / 2,
             yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
         },
+        ...configuration.data.positionReference ? {
+            positionReference: { ...configuration.data.positionReference }
+        } : {},
         errors: {},
         sledDiameterMm,
         bitToStockAtLoStopMm: 3, // TODO: this is calibration
@@ -109,15 +113,6 @@ module.exports = async ({
                         }
                     }
 
-                    if (!machine.positionReference) {
-                        machine.positionReference = { // TODO: this is calibration, now assume motor is at 0,1500 (0,250 user)
-                            xMm: 0,
-                            yMm: 1500,
-                            aSteps: machine.motors.a.driver.steps,
-                            bSteps: machine.motors.b.driver.steps
-                        };
-                    }
-
                     if (machine.positionReference) {
 
                         // calculate step counter as sled would be at motor A
@@ -146,7 +141,7 @@ module.exports = async ({
                     machine.spindle.on = machine.relays.spindle.on;
 
                     if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToStockAtLoStopMm) {
-                        machine.spindle.zMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.stops[0].steps - machine.motors.z.driver.steps) + machine.bitToStockAtLoStopMm;
+                        machine.spindle.zMm = - absStepsToDistanceMm(motorConfigs.z, machine.motors.z.stops[0].steps - machine.motors.z.driver.steps) + machine.bitToStockAtLoStopMm;
                     } else {
                         delete machine.spindle.zMm;
                     }
@@ -435,6 +430,19 @@ module.exports = async ({
             if (machine.mode !== "STANDBY") {
                 throw new Error("Machine not in standby mode");
             }
+        },
+
+        async setCalibrationXY(workspaceTopToSledTopMm) {
+            machine.positionReference = {
+                xMm: 0,
+                yMm: motorsToWorkspaceVerticalMm + sledDiameterMm / 2 + workspaceTopToSledTopMm,
+                aSteps: machine.motors.a.driver.steps,
+                bSteps: machine.motors.b.driver.steps
+            };
+            configuration.data.positionReference = {
+                ...machine.positionReference
+            };
+            await configuration.save();
         }
 
     }

@@ -31,14 +31,14 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "machineCheckIntervalMs": 100,
-        "motorsShaftDistanceMm": 3500,
         "workspace": {
             "widthMm": 2500,
             "heightMm": 1250
         },
-        "sledDiameterMm": 250,
-        "motorsToWorkspaceVerticalMm": 500,
+        "motorsShaftDistanceMm": 3402,
+        "motorsToWorkspaceVerticalMm": 708,
+        "sledDiameterMm": 400,
+        "configuration": "-> configuration",
         "kinematicsAB": {            
             "fullSpeedMmPerMin": 1000,
             "reversingDelayMs": 1000,
@@ -52,6 +52,7 @@
             "accuracyMm": 0.2,
             "spindleOnBellowMm": 2
         },
+        "machineCheckIntervalMs": 100,
         "motors": {
             "a": {
                 "maxRpm": 7800,
@@ -88,7 +89,6 @@
                 "module": "./ui.js",
                 "machine": "-> machine",
                 "router": "-> router",
-                "configuration": "-> configuration",
                 "manualCuttingSpeedMmPerMin": 200,
                 "manualRapidSpeedMmPerMin": 1000,           
                 "manualMotorControl": {

@@ -20,6 +20,7 @@ wg.pages.calibxy = {
                         BUTTON().text("Save").click(() => {
                             wg.common.check(async () => {
                                 await wg.machine.setCalibrationXY(parseInt($(".distance input").val()))
+                                $(".distance input").val("");
                                 await wg.goto("home");
                             });
                         })
