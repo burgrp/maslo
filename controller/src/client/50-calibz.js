@@ -19,7 +19,7 @@ wg.pages.calibz = {
                         DIV("dimension"),
                         BUTTON().text("Save").click(() => {
                             wg.common.check(async () => {
-                                await wg.machine.setCalibrationXY(parseInt($(".distance input").val()))
+                                await wg.machine.setCalibrationZ(-parseInt($(".distance input").val()))
                                 $(".distance input").val("");
                                 await wg.goto("home");
                             });

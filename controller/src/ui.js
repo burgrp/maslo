@@ -148,6 +148,13 @@ module.exports = async ({
                         throw new Error("Please enter a valid number");
                     }
                     await machine.setCalibrationXY(workspaceTopToSledTopMm);
+                },
+
+                async setCalibrationZ(zMm) {
+                    if (!Number.isFinite(zMm)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    await machine.setCalibrationZ(zMm);
                 }
             },
             router: {

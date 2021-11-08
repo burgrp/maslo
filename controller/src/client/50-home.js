@@ -53,9 +53,9 @@ wg.pages.home = {
 
             $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
 
-            $(".xyaxis .position .x").text(sledX === undefined ? "?" : Math.round((sledX - state.userOrigin.xMm) * 10) / 10);
-            $(".xyaxis .position .y").text(sledY === undefined ? "?" : -Math.round((sledY - state.userOrigin.yMm) * 10) / 10);
-            $(".zaxis .position").text(Math.round(state.spindle.zMm * 10) / 10);
+            $(".xyaxis .position .x").text(isFinite(sledX) ? Math.round((sledX - state.userOrigin.xMm) * 10) / 10: "-");
+            $(".xyaxis .position .y").text(isFinite(sledY) ? -Math.round((sledY - state.userOrigin.yMm) * 10) / 10: "-");
+            $(".zaxis .position").text(isFinite(state.spindle.zMm) ? Math.round(state.spindle.zMm * 10) / 10 : "-");
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
             $(".scene svg").attr({ viewBox: `-${state.motorsShaftDistanceMm / 2 + 100} -100 ${state.motorsShaftDistanceMm + 200} 1` });

@@ -35,7 +35,6 @@ module.exports = async ({
         },
         errors: {},
         sledDiameterMm,
-        bitToStockAtLoStopMm: 3, // TODO: this is calibration
         motorsShaftDistanceMm,
         workspace,
         motorsToWorkspaceVerticalMm
@@ -114,9 +113,7 @@ module.exports = async ({
                         !machine.positionReferenceXY &&
                         configuration.data.lastPosition &&
                         isFinite(configuration.data.lastPosition.xMm) &&
-                        isFinite(configuration.data.lastPosition.yMm) &&
-                        machine.motors.a.driver &&
-                        machine.motors.b.driver
+                        isFinite(configuration.data.lastPosition.yMm)
                     ) {
                         machine.positionReferenceXY = {
                             xMm: configuration.data.lastPosition.xMm,
@@ -125,6 +122,17 @@ module.exports = async ({
                             bSteps: machine.motors.b.driver.steps
                         };
                     }
+
+                    if (!machine.positionReferenceZ &&
+                        configuration.data.lastPosition &&
+                        isFinite(configuration.data.lastPosition.zMm)
+                    ) {
+                        machine.positionReferenceZ = {
+                            zMm: configuration.data.lastPosition.zMm,
+                            zSteps: machine.motors.z.driver.steps,
+                        }
+                    }
+
 
                     if (machine.positionReferenceXY) {
 
@@ -153,8 +161,8 @@ module.exports = async ({
 
                     machine.spindle.on = machine.relays.spindle.on;
 
-                    if (isFinite(machine.motors.z.stops[0].steps) && machine.bitToStockAtLoStopMm) {
-                        machine.spindle.zMm = - absStepsToDistanceMm(motorConfigs.z, machine.motors.z.stops[0].steps - machine.motors.z.driver.steps) + machine.bitToStockAtLoStopMm;
+                    if (machine.positionReferenceZ) {
+                        machine.spindle.zMm = absStepsToDistanceMm(motorConfigs.z, machine.motors.z.driver.steps - machine.positionReferenceZ.zSteps) + machine.positionReferenceZ.zMm;
                     } else {
                         delete machine.spindle.zMm;
                     }
@@ -451,6 +459,13 @@ module.exports = async ({
                 yMm: motorsToWorkspaceVerticalMm + sledDiameterMm / 2 + workspaceTopToSledTopMm,
                 aSteps: machine.motors.a.driver.steps,
                 bSteps: machine.motors.b.driver.steps
+            };
+        },
+
+        async setCalibrationZ(zMm) {
+            machine.positionReferenceZ = {
+                zMm: zMm,
+                zSteps: machine.motors.z.driver.steps
             };
         }
 
