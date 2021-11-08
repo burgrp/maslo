@@ -1,7 +1,5 @@
 process.env.DEBUG = process.env.DEBUG || "app:*";
 
-const express = require("express");
-
 require("@burgrp/appglue")({ require, file: __dirname + "/../appglue.json" }).main(async ({
     webserver,
     router

@@ -107,5 +107,10 @@
                 }        
             }
         ]
+    },
+    "positionSave": {
+        "module": "./position-save.js",
+        "machine": "-> machine",
+        "configuration": "-> configuration"
     }
 }

@@ -33,9 +33,6 @@ module.exports = async ({
             xMm: -workspace.widthMm / 2,
             yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
         },
-        ...configuration.data.positionReference ? {
-            positionReference: { ...configuration.data.positionReference }
-        } : {},
         errors: {},
         sledDiameterMm,
         bitToStockAtLoStopMm: 3, // TODO: this is calibration
@@ -111,6 +108,22 @@ module.exports = async ({
 
                             stop.state = state.driver.stops[stopIndex];
                         }
+                    }
+
+                    if (
+                        !machine.positionReference &&
+                        configuration.data.lastPosition &&
+                        isFinite(configuration.data.lastPosition.xMm) &&
+                        isFinite(configuration.data.lastPosition.yMm) &&
+                        machine.motors.a.driver &&
+                        machine.motors.b.driver
+                    ) {
+                        machine.positionReference = {
+                            xMm: configuration.data.lastPosition.xMm,
+                            yMm: configuration.data.lastPosition.yMm,
+                            aSteps: machine.motors.a.driver.steps,
+                            bSteps: machine.motors.b.driver.steps
+                        };
                     }
 
                     if (machine.positionReference) {
@@ -439,10 +452,6 @@ module.exports = async ({
                 aSteps: machine.motors.a.driver.steps,
                 bSteps: machine.motors.b.driver.steps
             };
-            configuration.data.positionReference = {
-                ...machine.positionReference
-            };
-            await configuration.save();
         }
 
     }
