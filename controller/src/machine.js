@@ -111,14 +111,14 @@ module.exports = async ({
                     }
 
                     if (
-                        !machine.positionReference &&
+                        !machine.positionReferenceXY &&
                         configuration.data.lastPosition &&
                         isFinite(configuration.data.lastPosition.xMm) &&
                         isFinite(configuration.data.lastPosition.yMm) &&
                         machine.motors.a.driver &&
                         machine.motors.b.driver
                     ) {
-                        machine.positionReference = {
+                        machine.positionReferenceXY = {
                             xMm: configuration.data.lastPosition.xMm,
                             yMm: configuration.data.lastPosition.yMm,
                             aSteps: machine.motors.a.driver.steps,
@@ -126,11 +126,11 @@ module.exports = async ({
                         };
                     }
 
-                    if (machine.positionReference) {
+                    if (machine.positionReferenceXY) {
 
                         // calculate step counter as sled would be at motor A
-                        let originASteps = distanceMmToAbsSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.aSteps;
-                        let originBSteps = distanceMmToAbsSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReference.xMm, machine.positionReference.yMm)) - machine.positionReference.bSteps;
+                        let originASteps = distanceMmToAbsSteps(motorConfigs.a, hypot(machine.motorsShaftDistanceMm / 2 + machine.positionReferenceXY.xMm, machine.positionReferenceXY.yMm)) - machine.positionReferenceXY.aSteps;
+                        let originBSteps = distanceMmToAbsSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReferenceXY.xMm, machine.positionReferenceXY.yMm)) - machine.positionReferenceXY.bSteps;
 
                         // chain lengths
                         let a = absStepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
@@ -259,10 +259,10 @@ module.exports = async ({
                         let config = machine.motors[motor].config;
                         let originSteps = distanceMmToAbsSteps(config,
                             hypot(
-                                motorHorizontalPositionMm - machine.positionReference.xMm,
-                                machine.positionReference.yMm
+                                motorHorizontalPositionMm - machine.positionReferenceXY.xMm,
+                                machine.positionReferenceXY.yMm
                             ))
-                            - machine.positionReference[motor + "Steps"];
+                            - machine.positionReferenceXY[motor + "Steps"];
 
                         let currentSteps = machine.motors[motor].driver.steps;
                         let distanceToExtAbsSteps = distanceMmToAbsSteps(config, chainLengthsMm[motor + "Mm"]);
@@ -446,7 +446,7 @@ module.exports = async ({
         },
 
         async setCalibrationXY(workspaceTopToSledTopMm) {
-            machine.positionReference = {
+            machine.positionReferenceXY = {
                 xMm: 0,
                 yMm: motorsToWorkspaceVerticalMm + sledDiameterMm / 2 + workspaceTopToSledTopMm,
                 aSteps: machine.motors.a.driver.steps,
