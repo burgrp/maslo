@@ -9,8 +9,8 @@ wg.pages.calibz = {
             DIV("scene", [
                 DIV("group z", [
                     DIV("title").text("Z"),
-                    wg.common.manualMoveButton("a up", "caret-up", "z", 1),
-                    wg.common.manualMoveButton("a down", "caret-down", "z", -1)
+                    wg.common.manualMoveButton("a up", "caret-up", "z", -1),
+                    wg.common.manualMoveButton("a down", "caret-down", "z", 1)
                 ]),
                 DIV("group distance", [
                     DIV("title").text("distance"),

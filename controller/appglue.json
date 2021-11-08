@@ -8,16 +8,19 @@
         "drivers": {
             "virtual": {
                 "module": "./driver-virtual.js",
-                "stopPositions": {
-                    "z": [
-                        100,
-                        5000
-                    ]
-                },
-                "defaultSteps": {
-                    "a": 1000,
-                    "b": -4000,
-                    "z": 100
+                "motors": {
+                    "a": {
+                        "steps": 1000,
+                        "orientation": 1
+                    },
+                    "b": {
+                        "steps": -4000,
+                        "orientation": -1
+                    },
+                    "z": {
+                        "steps": 100,
+                        "orientation": -1
+                    }
                 }
             },
             "i2c": {

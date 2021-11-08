@@ -1,10 +1,6 @@
 const Debug = require("debug");
 
-module.exports = async ({ stopPositions, defaultSteps }) => {
-
-    function now() {
-        return new Date().getTime();
-    }
+module.exports = async ({ motors }) => {
 
     return {
 
@@ -14,7 +10,7 @@ module.exports = async ({ stopPositions, defaultSteps }) => {
         async createMotor(name, config) {
 
             let state = {
-                steps: defaultSteps[name],
+                steps: motors[name].steps,
                 stops: [false, false],
                 currentMA: 0,
                 duty: 0
@@ -22,26 +18,12 @@ module.exports = async ({ stopPositions, defaultSteps }) => {
 
             let log = Debug(`app:motor:${name}`);
 
-            function checkStops() {
-                for (let stopIndex = 0; stopIndex < state.stops.length; stopIndex++) {
-                    state.stops[stopIndex] =
-                        stopPositions &&
-                        stopPositions[name] &&
-                        isFinite(stopPositions[name][stopIndex]) &&
-                        state.steps * (stopIndex * 2 - 1) >= stopPositions[name][stopIndex] * (stopIndex * 2 - 1) ||
-                        false;
-                }
-            }
-
-            checkStops();
-
             let checkIntervalMs = 10;
             setInterval(() => {
                 let stallDuty = 0.1;
                 if (state.duty > stallDuty || state.duty < -stallDuty) {
-                    state.steps += config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs);
+                    state.steps += config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs) * motors[name].orientation;
                 }
-                checkStops();
             }, checkIntervalMs);
 
             return {

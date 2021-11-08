@@ -141,8 +141,8 @@ module.exports = async ({
                         let originBSteps = distanceMmToAbsSteps(motorConfigs.b, hypot(machine.motorsShaftDistanceMm / 2 - machine.positionReferenceXY.xMm, machine.positionReferenceXY.yMm)) - machine.positionReferenceXY.bSteps;
 
                         // chain lengths
-                        let a = absStepsToDistanceMm(motorConfigs.a, machine.motors.a.driver.steps + originASteps);
-                        let b = absStepsToDistanceMm(motorConfigs.b, machine.motors.b.driver.steps + originBSteps);
+                        let a = absStepsToDistanceMm(motorConfigs.a, originASteps - machine.motors.a.driver.steps);
+                        let b = absStepsToDistanceMm(motorConfigs.b, originBSteps - machine.motors.b.driver.steps);
 
                         // let's have triangle MotorA-MotorB-Sled, then:
                         // a is MotorA-Sled, i.e. chain length a
