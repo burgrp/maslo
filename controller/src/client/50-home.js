@@ -161,7 +161,7 @@ wg.pages.home = {
 
             $(".scene").css({ visibility: "visible" });
 
-            $(".state").text(JSON.stringify(state, null, 2));
+            $(".state .text").text(JSON.stringify(state, null, 2));
 
         }
 
@@ -183,7 +183,9 @@ wg.pages.home = {
                 <g id="previewSvg"/>
             </svg>                      
             `)]).css({ visibility: "hidden" }),
-            DIV("state"),
+            DIV("state", [
+                DIV("text")
+            ]),
             DIV("controls", [
                 DIV("group job", [
                     DIV("title").text("job"),

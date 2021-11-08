@@ -170,3 +170,10 @@ button.control .icon {
     font-size: 5em;
 }
 
+@media only screen and (max-height: 1000px) {
+    button.control {
+        margin: 0.5em;
+        width: 4em;
+        height: 4em;        
+    }
+}

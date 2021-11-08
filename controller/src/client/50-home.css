@@ -10,12 +10,20 @@
 }
 
 .page.home .state {
-    font-family: monospace;
-    white-space: pre;
     position: absolute;
     left: 4em;
     top: 0em;
-    font-size: 7.7pt;
+    bottom: 0px;
+    overflow-x: hidden;    
+}
+
+.page.home .state .text {
+    overflow-x: auto;
+    margin-right: -50px;
+    padding-right: 50px;
+    font-family: monospace;
+    white-space: pre;
+    font-size: 9pt;
     color: #999;
 }
 
@@ -23,7 +31,7 @@
 
 .page.home .controls {
     flex-direction: column;
-    overflow: auto;
+    overflow-x: auto;
     min-width: 20em;
 }
 
