@@ -1,3 +1,45 @@
 .page.calibz .content {
     flex-direction: column;
 }
+
+.page.calibz .scene {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2em;
+    margin-left: 2em;
+}
+
+.page.calibz .scene .group {
+    flex-direction: column;
+    background-color: #292929;
+    padding: 1em;
+    margin-right: 1em;
+
+}
+
+.page.calibz .group .title {
+    color: rgb(230, 230, 230);
+    text-align: center;
+    margin: 0.5em 1em;
+    font-weight: bold;
+}
+
+
+.page.calibz .group.distance {
+    margin: 1em;
+    padding: 1em;
+}
+
+.page.calibz .group.distance .form {
+    flex-direction: row;
+    margin: 1em;
+    align-items: center;
+}
+
+.page.calibz .group.distance input {
+    width: 3em;
+}
+
+.page.calibz .group.distance button {
+    margin-left: 1em;
+}
