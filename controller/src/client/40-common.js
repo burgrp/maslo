@@ -1,5 +1,11 @@
 /*---------------------------------------------------------------*/
 
+function formatLength(mm) {
+    return Number.isFinite(mm)? mm.toFixed(1): "-";
+}
+
+/*---------------------------------------------------------------*/
+
 jQuery.event.special.touchstart = {
     setup: function( _, ns, handle ) {
         this.addEventListener("touchstart", handle, { passive: !ns.includes("noPreventDefault") });
@@ -108,12 +114,6 @@ wg.common = {
 }
 
 /*---------------------------------------------------------------*/
-
-wg.pages.calibz = {
-    async render(container, pageName) {
-        wg.common.page(container, pageName, []);
-    }
-}
 
 wg.pages.settings = {
     async render(container, pageName) {

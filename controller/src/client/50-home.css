@@ -5,6 +5,10 @@
     margin-right: 1em;
 }
 
+.page.home .scene svg g.ucs {
+    transform: scaleY(-1);
+}
+
 .page.home .content {
     position: relative;
 }

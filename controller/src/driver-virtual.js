@@ -30,7 +30,7 @@ module.exports = async ({ motors }) => {
                 name,
 
                 async set(duty) {
-                    log("set", Math.round(duty * 100) / 100);
+                    //log("set", Math.round(duty * 100) / 100);
                     state.duty = duty;
                 },
 
@@ -43,17 +43,17 @@ module.exports = async ({ motors }) => {
         async createRelay(name) {
             let log = Debug(`app:relay:${name}`);
 
-            let state = {
-                on: false
-            };
+            let on = false;
 
             return {
                 name,
-                state,
+                async get() {
+                    return { on };
+                },
 
-                async switch(newOn) {
-                    log(`switch ${newOn ? "on" : "off"}`);
-                    state.on = newOn;
+                async set(newOn) {
+                    on = newOn;
+                    //log(`switch ${on ? "on" : "off"}`);
                 }
             }
         }

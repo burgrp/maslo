@@ -15,7 +15,7 @@
                     },
                     "b": {
                         "steps": -4000,
-                        "orientation": -1
+                        "orientation": 1
                     },
                     "z": {
                         "steps": 100,
@@ -34,28 +34,22 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "workspace": {
-            "widthMm": 2500,
-            "heightMm": 1250
-        },
-        "motorsShaftDistanceMm": 3402,
-        "motorsToWorkspaceVerticalMm": 708,
-        "sledDiameterMm": 400,
         "configuration": "-> configuration",
-        "kinematicsAB": {            
-            "fullSpeedMmPerMin": 1000,
-            "reversingDelayMs": 1000,
-            "maxStalls": 10,
-            "checkPeriodMs": 10,
-            "speedToAccuracyFactor": 0.002
+        "checkIntervalMs": 50,
+        "changeIntervalMs": 500,
+        "geometry": {
+            "beam": {
+                "motorsDistanceMm": 3402,
+                "motorsToWorkspaceMm": 708    
+            },
+            "workspace": {
+                "widthMm": 2500,
+                "heightMm": 1250
+            },
+            "sled": {
+                "diaMm": 400
+            }
         },
-        "kinematicsZ": {            
-            "maxStalls": 10,
-            "checkPeriodMs": 10,
-            "accuracyMm": 0.2,
-            "spindleOnBellowMm": 2
-        },
-        "machineCheckIntervalMs": 100,
         "motors": {
             "a": {
                 "maxRpm": 7800,

@@ -48,29 +48,41 @@ wg.pages.home = {
 
             machineState = state;
 
-            let sledX = state.sledPosition && state.sledPosition.xMm;
-            let sledY = state.sledPosition && state.sledPosition.yMm;
+            let sledX = state.sled.position && state.sled.position.xMm;
+            let sledY = state.sled.position && state.sled.position.yMm;
 
             $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
 
-            $(".xyaxis .position .x").text(isFinite(sledX) ? Math.round((sledX - state.userOrigin.xMm) * 10) / 10: "-");
-            $(".xyaxis .position .y").text(isFinite(sledY) ? -Math.round((sledY - state.userOrigin.yMm) * 10) / 10: "-");
-            $(".zaxis .position").text(isFinite(state.spindle.zMm) ? Math.round(state.spindle.zMm * 10) / 10 : "-");
+            $(".xyaxis .position .x").text(formatLength(sledX - state.userOrigin.xMm));
+            $(".xyaxis .position .y").text(formatLength(sledY - state.userOrigin.yMm));
+            $(".zaxis .position").text(formatLength(state.spindle.zMm));
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
-            $(".scene svg").attr({ viewBox: `-${state.motorsShaftDistanceMm / 2 + 100} -100 ${state.motorsShaftDistanceMm + 200} 1` });
+            $(".scene svg").attr({
+                viewBox: [
+                    -state.beam.motorsDistanceMm / 2 - 100,
+                    -state.beam.motorsToWorkspaceMm - state.workspace.heightMm - 100,
+                    state.beam.motorsDistanceMm + 200,
+                    state.beam.motorsToWorkspaceMm + state.workspace.heightMm + 200
+                ].join(' ')
+            });
+
+            let mX = state.beam.motorsDistanceMm / 2;
+            let mY = state.workspace.heightMm + state.beam.motorsToWorkspaceMm;
 
             $(".scene .motor.a").attr({
-                cx: -state.motorsShaftDistanceMm / 2
+                cx: -mX,
+                cy: mY
             });
 
             $(".scene .motor.b").attr({
-                cx: state.motorsShaftDistanceMm / 2
+                cx: mX,
+                cy: mY
             });
 
             $(".scene .workspace").attr({
                 x: -state.workspace.widthMm / 2,
-                y: state.motorsToWorkspaceVerticalMm,
+                y: 0,
                 width: state.workspace.widthMm,
                 height: state.workspace.heightMm
             });
@@ -81,29 +93,7 @@ wg.pages.home = {
             });
 
             $(".scene .sled.outline").attr({
-                r: state.sledDiameterMm / 2
-            });
-
-            $(".scene .follow").attr({
-                cx: state.followPosition && state.followPosition.xMm,
-                cy: state.followPosition && state.followPosition.yMm,
-                visibility: state.followPosition ? "visible" : "hidden"
-            });
-
-            $(".scene .target.x").attr({
-                x1: state.targetPosition && state.targetPosition.xMm - 50,
-                y1: state.targetPosition && state.targetPosition.yMm - 50,
-                x2: state.targetPosition && state.targetPosition.xMm + 50,
-                y2: state.targetPosition && state.targetPosition.yMm + 50,
-                visibility: state.targetPosition ? "visible" : "hidden"
-            });
-
-            $(".scene .target.y").attr({
-                x1: state.targetPosition && state.targetPosition.xMm - 50,
-                y1: state.targetPosition && state.targetPosition.yMm + 50,
-                x2: state.targetPosition && state.targetPosition.xMm + 50,
-                y2: state.targetPosition && state.targetPosition.yMm - 50,
-                visibility: state.targetPosition ? "visible" : "hidden"
+                r: state.sled.diaMm / 2
             });
 
             $(".scene .userorigin.x").attr({
@@ -121,21 +111,21 @@ wg.pages.home = {
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: state.sledPosition ? "visible" : "hidden"
+                visibility: state.sled.position ? "visible" : "hidden"
             });
 
             $(".scene .chain.a").attr({
                 x1: sledX,
                 y1: sledY,
-                x2: -state.motorsShaftDistanceMm / 2,
-                y2: 0
+                x2: -mX,
+                y2: mY
             });
 
             $(".scene .chain.b").attr({
                 x1: sledX,
                 y1: sledY,
-                x2: state.motorsShaftDistanceMm / 2,
-                y2: 0
+                x2: mX,
+                y2: mY
             });
 
             let dist = Math.sqrt(Math.pow(sledX - lastSledX, 2) + Math.pow(sledY - lastSledY, 2));
@@ -168,8 +158,9 @@ wg.pages.home = {
         wg.common.page(container, pageName, [
             DIV("scene", [$(`
             <svg preserveAspectRatio="xMinYMin" width="100%" xmlns="http://www.w3.org/2000/svg">
-                <circle class="motor a" cy="0" r="50" fill="red"/>
-                <circle class="motor b" cy="0" r="50" fill="red"/>
+                <g class="ucs">
+                <circle class="motor a" r="50" fill="red"/>
+                <circle class="motor b" r="50" fill="red"/>
                 <rect class="workspace" fill="none" stroke="silver" stroke-width="10"/>
                 <circle class="sled center" r="50" fill="red"/>
                 <circle class="sled outline" fill="none" stroke="gray" stroke-width="20"/>
@@ -177,10 +168,8 @@ wg.pages.home = {
                 <line class="chain b" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>
                 <line class="userorigin y" stroke="yellow" stroke-width="10"/>
-                <line class="target x" stroke="white" stroke-width="10"/>
-                <line class="target y" stroke="white" stroke-width="10"/>
-                <circle class="follow" r="60" fill="none" stroke="white" stroke-width="10"/>
                 <g id="previewSvg"/>
+                </g>
             </svg>                      
             `)]).css({ visibility: "hidden" }),
             DIV("state", [

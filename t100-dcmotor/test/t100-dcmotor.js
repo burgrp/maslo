@@ -4,35 +4,25 @@ module.exports = ({ i2c, address, maxRetries = 2 }) => {
 
     let duty = 0;
 
-    async function updateDuty() {
-        let buffer = Buffer.alloc(3);
-        buffer.writeUInt8(COMMAND_SET, 0);
-        buffer.writeUInt8(Math.abs(duty * 0xFF), 1);
-        buffer.writeUInt8(duty < 0 ? 0 : 1, 2);
-
-        for (let attempt = 1; ; attempt++) {
-            try {
-                await i2c.i2cWrite(address, buffer);
-                break;
-            } catch (e) {
-                if (attempt > maxRetries) {
-                    throw e;
-                }
-            }
-        }
-    }
-
-    setInterval(() => {
-        updateDuty().catch(e => {
-            console.error(e);
-        });
-    }, 500);
-
     return {
 
         async set(d) {
             duty = d;
-            await updateDuty();
+            let buffer = Buffer.alloc(3);
+            buffer.writeUInt8(COMMAND_SET, 0);
+            buffer.writeUInt8(Math.abs(duty * 0xFF), 1);
+            buffer.writeUInt8(duty < 0 ? 0 : 1, 2);
+
+            for (let attempt = 1; ; attempt++) {
+                try {
+                    await i2c.i2cWrite(address, buffer);
+                    break;
+                } catch (e) {
+                    if (attempt > maxRetries) {
+                        throw e;
+                    }
+                }
+            }
         },
 
         async get() {
