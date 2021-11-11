@@ -5,7 +5,7 @@ module.exports = async ({ machine, configuration }) => {
     function checkPositionChange() {
         let state = machine.getState();
         if (
-            state.sledPosition && (state.sledPosition.xMm !== xMm || state.sledPosition.yMm !== yMm) ||
+            state.sled.position && (state.sled.position.xMm !== xMm || state.sled.position.yMm !== yMm) ||
             (state.spindle && state.spindle.zMm !== zMm)
         ) {
             if (timeout) {
@@ -15,9 +15,9 @@ module.exports = async ({ machine, configuration }) => {
                 timeout = null;
                 state = machine.getState();
 
-                xMm = state.sledPosition && state.sledPosition.xMm;
-                yMm = state.sledPosition && state.sledPosition.yMm;
-                zMm = state.spindle && state.spindle.zMm;
+                xMm = state.sled.position && state.sled.position.xMm;
+                yMm = state.sled.position && state.sled.position.yMm;
+                zMm = state.spindle.zMm;
 
                 configuration.data.lastPosition = { xMm, yMm, zMm };
                 configuration.save().then(() => {

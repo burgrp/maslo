@@ -140,7 +140,7 @@ wg.pages.home = {
                         y2: sledY,
                         stroke: trackToggle ? "red" : "white",
                         "stroke-width": "10"
-                    }).appendTo(".scene svg");
+                    }).appendTo(".scene svg g.ucs");
 
                     trackToggle = !trackToggle;
                 }
@@ -187,8 +187,8 @@ wg.pages.home = {
                     DIV("title").text("chains"),
                     DIV("buttons", [
                         DIV("a side").text("A"),
-                        wg.common.manualMoveButton("a up", "caret-up", "a", 1),
-                        wg.common.manualMoveButton("a down", "caret-down", "a", -1),
+                        wg.common.manualMoveButton("a up", "caret-up", "a", -1),
+                        wg.common.manualMoveButton("a down", "caret-down", "a", 1),
                         DIV("b side").text("B"),
                         wg.common.manualMoveButton("b up", "caret-up", "b", -1),
                         wg.common.manualMoveButton("b down", "caret-down", "b", 1)
@@ -219,8 +219,8 @@ wg.pages.home = {
                         BUTTON("stop control standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
-                        wg.common.manualMoveButton("up", "caret-up", "z", -1),
-                        wg.common.manualMoveButton("down", "caret-down", "z", 1)
+                        wg.common.manualMoveButton("up", "caret-up", "z", 1),
+                        wg.common.manualMoveButton("down", "caret-down", "z", -1)
                     ])
                 ])
             ])

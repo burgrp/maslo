@@ -26,20 +26,36 @@ module.exports = async ({
 
     let { min, max, abs } = Math;
 
+    let manualMotorPending = {};
+
+    function asyncWait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }    
+
     async function manualMotorStart(motor, direction) {
-        machine.setManualMotorDuty(motor, direction);
+        try {
+            manualMotorPending[motor] = true;
+            let d = 0;
+            while (manualMotorPending[motor]) {
+                d = min(1, d + 0.05);
+                machine.setManualMotorDuty(motor, direction * d);
+                await asyncWait(100);
+            }
+        } finally {
+            machine.setManualMotorDuty(motor, 0);
+        }
     }
 
     async function manualMotorStop(motor) {
-        machine.setManualMotorDuty(motor, 0);
+        delete manualMotorPending[motor];
     }
 
     async function manualMoveStart(directionX, directionY) {
-        // let state = machine.getState();
+        let state = machine.getState();
 
-        // if (!isFinite(state.spindle.zMm)) {
-        //     throw new Error("Unknown position of router bit. Please calibrate.");
-        // }
+        if (!isFinite(state.spindle.zMm)) {
+            throw new Error("Unknown position of router bit. Please calibrate.");
+        }
 
         // let sled = { ...state.sledPosition };
         // if (!sled) {
@@ -127,17 +143,18 @@ module.exports = async ({
                 },
 
                 async setCalibrationXY(workspaceTopToSledTopMm) {
-                    // if (!Number.isFinite(workspaceTopToSledTopMm)) {
-                    //     throw new Error("Please enter a valid number");
-                    // }
-                    // await machine.setCalibrationXY(workspaceTopToSledTopMm);
+                    if (!Number.isFinite(workspaceTopToSledTopMm)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    let state = machine.getState();
+                    machine.setSledReference(0, state.workspace.heightMm - state.sled.diaMm / 2 - workspaceTopToSledTopMm);
                 },
 
                 async setCalibrationZ(zMm) {
-                    // if (!Number.isFinite(zMm)) {
-                    //     throw new Error("Please enter a valid number");
-                    // }
-                    // await machine.setCalibrationZ(zMm);
+                    if (!Number.isFinite(zMm)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    machine.setSpindleReference(zMm);
                 }
             },
             router: {

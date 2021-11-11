@@ -4,7 +4,7 @@ const objectHash = require("object-hash");
 
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev);
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
 }
 
 function absStepsToDistanceMm(motorConfig, steps) {
@@ -24,7 +24,6 @@ module.exports = async ({
     drivers,
     driver: driverConfig,
     checkIntervalMs,
-    changeIntervalMs,
     geometry,
     motors: motorConfigs,
     relays: relayConfigs,
@@ -72,7 +71,9 @@ module.exports = async ({
         };
     }
 
+    let stateHash;
     let stateChangedListeners = [];
+    let stateChangedListenersPending = false;
 
     function userToMachineCS(pos) {
         return {
@@ -102,8 +103,8 @@ module.exports = async ({
                 motors[name].set(m.duty);
                 m.state = await motors[name].get();
                 delete m.error;
-            } catch(e) {
-                console.error(`Motor ${name} error:`, e); 
+            } catch (e) {
+                console.error(`Motor ${name} error:`, e);
                 m.error = e.message || e;
             }
         }
@@ -114,8 +115,8 @@ module.exports = async ({
                 relays[name].set(r.on);
                 r.state = await relays[name].get();
                 delete r.error;
-            } catch(e) {
-                console.error(`Relay ${name} error:`, e); 
+            } catch (e) {
+                console.error(`Relay ${name} error:`, e);
                 m.error = e.message || e;
             }
         }
@@ -146,7 +147,7 @@ module.exports = async ({
                         state.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
                         referenceMCS.yMm
                     )
-                ) + state.sled.reference.aSteps;
+                ) - state.sled.reference.aSteps;
 
                 let referenceBSteps = distanceMmToAbsSteps(
                     motorConfigs.b,
@@ -154,20 +155,66 @@ module.exports = async ({
                         state.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
                         referenceMCS.yMm
                     )
-                ) + state.sled.reference.bSteps;
+                ) - state.sled.reference.bSteps;
 
                 // let's have triangle MotorA-MotorB-Sled, then:
                 // a is MotorA-Sled, i.e. chain length a
                 // b is MotorA-Sled, i.e. chain length b
                 // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                let a = absStepsToDistanceMm(motorConfigs.a, referenceASteps - state.motors.a.state.steps);
-                let b = absStepsToDistanceMm(motorConfigs.b, referenceBSteps - state.motors.b.state.steps);
+                let a = absStepsToDistanceMm(motorConfigs.a, referenceASteps + state.motors.a.state.steps);
+                let b = absStepsToDistanceMm(motorConfigs.b, referenceBSteps + state.motors.b.state.steps);
                 let aa = (pow2(a) - pow2(b) + pow2(state.beam.motorsDistanceMm)) / (2 * state.beam.motorsDistanceMm);
 
                 state.sled.position = machineToUserCS({
                     xMm: aa - state.beam.motorsDistanceMm / 2,
                     yMm: sqrt(pow2(a) - pow2(aa))
                 });
+
+            } else {
+                delete state.sled.position;
+            }
+
+            if (state.motors.z.state) {
+
+                if (
+                    !isFinite(state.spindle.zMm) &&
+                    configuration.data.lastPosition &&
+                    isFinite(configuration.data.lastPosition.zMm)
+                ) {
+                    state.spindle.reference = {
+                        zMm: configuration.data.lastPosition.zMm,
+                        zSteps: state.motors.z.state.steps
+                    }
+                }
+
+                if (state.spindle.reference) {
+                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps); 
+                }
+
+            }
+
+
+            let newHash = objectHash(state);
+            if (newHash !== stateHash) {
+                stateHash = newHash;
+
+                async function notify() {
+                    try {
+                        stateChangedListenersPending = true;
+                        for (listener of stateChangedListeners) {
+                            await listener(state);
+                        }
+                    } finally {
+                        stateChangedListenersPending = false;
+                    }
+                }
+
+                if (!stateChangedListenersPending) {
+                    // fork notify
+                    notify().catch(e => {
+                        console.error("Error in machine change notification listener:", e);
+                    });
+                }
             }
 
         } else {
@@ -193,30 +240,6 @@ module.exports = async ({
         console.error("Unhandled error in machine check loop:", e);
     });
 
-    let stateHash;
-
-    async function machineChangeLoop() {
-        while(true) {
-            try {
-                let newHash = objectHash(state);
-                if (newHash !== stateHash) {
-                    stateHash = newHash;
-                    for (listener of stateChangedListeners) {
-                        await listener(state);
-                    }
-                }
-            } catch(e) {
-                console.error("Error in machine change loop:", e);
-            }
-            await asyncWait(changeIntervalMs);
-        }
-    }
-
-    // fork the change loop
-    machineChangeLoop().catch(e => {
-        console.error("Unhandled error in machine change loop:", e);
-    });
-
     return {
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
@@ -233,6 +256,23 @@ module.exports = async ({
         setManualMotorDuty(motor, duty) {
             checkStandbyMode();
             state.motors[motor].duty = duty;
+        },
+
+        setSledReference(xMm, yMm) {
+            state.sled.reference = {
+                xMm,
+                yMm,
+                aSteps: state.motors.a.state.steps,
+                bSteps: state.motors.b.state.steps
+            };
+        },
+
+        setSpindleReference(zMm) {
+            state.spindle.reference = {
+                zMm: zMm,
+                zSteps: state.motors.z.state.steps
+            };
         }
+
     }
 }
