@@ -89,12 +89,6 @@ module.exports = async ({
         }
     }
 
-    function checkStandbyMode() {
-        if (state.mode !== MODE_STANDBY) {
-            throw new Error("Machine not in standby mode");
-        }
-    }
-
     async function checkMachineState() {
 
         for (let name in motors) {
@@ -188,7 +182,7 @@ module.exports = async ({
                 }
 
                 if (state.spindle.reference) {
-                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps); 
+                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
                 }
 
             }
@@ -249,12 +243,23 @@ module.exports = async ({
             return state;
         },
 
+        setMode(mode) {
+            let prevMode = state.mode;
+            state.mode = mode;
+            return prevMode;
+        },
+
+        checkStandbyMode() {
+            if (state.mode !== MODE_STANDBY) {
+                throw new Error("Machine not in standby mode");
+            }
+        },
+
         setUserOrigin(xMm, yMm) {
             state.userOrigin = { xMm, yMm };
         },
 
-        setManualMotorDuty(motor, duty) {
-            checkStandbyMode();
+        setMotorDuty(motor, duty) {
             state.motors[motor].duty = duty;
         },
 

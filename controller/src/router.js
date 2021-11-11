@@ -51,6 +51,10 @@ module.exports = ({ moveLengthMm, machine }) => {
         }
     }
 
+    async function go(from, to, future) {
+        console.info(from, to, future);
+    }
+
     return {
 
         onJobChanged(listener) {
@@ -84,65 +88,40 @@ module.exports = ({ moveLengthMm, machine }) => {
 
         async run(code) {
 
-            let machineState = machine.getState();
+            let state = machine.getState();
 
-            if (!machineState.sledPosition) {
-                throw new Error("Unknown sled position.");
+            if (!state.sled.position) {
+                throw new Error("Unknown sled position");
             }
 
-            let xyFeedMmPerMin;
-            let xyPos = {
-                xMm: machineState.sledPosition.xMm,
-                yMm: machineState.sledPosition.yMm
-            };
+            if (!isFinite(state.spindle.zMm)) {
+                throw new Error("Unknown spindle position");
+            }
 
-            let nextStepCheck;
+            let queue = [{
+                s: 0,
+                x: state.sled.position.xMm,
+                y: state.sled.position.yMm,
+                z: state.spindle.zMm,
+                f: 0
+            }];
 
-            async function moveXY(xMm, yMm, feedMmPerMin) {
+            async function enqueueMove(params) {
 
-                if (isFinite(feedMmPerMin)) {
-                    xyFeedMmPerMin = feedMmPerMin;
-                }
+                if (params) {
 
-                xMm = isFinite(xMm) ? xMm - machineState.workspace.widthMm / 2 : xyPos.xMm;
-                yMm = isFinite(yMm) ? (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - yMm : xyPos.yMm;
-
-                let lengthMm = hypot(xMm - xyPos.xMm, yMm - xyPos.yMm);
-
-                let moveCount = ceil(lengthMm / moveLengthMm);
-
-                for (let move = 0; move < moveCount; move++) {
-                    await machine.moveXY({
-                        xMm: xyPos.xMm + (xMm - xyPos.xMm) * move / moveCount,
-                        yMm: xyPos.yMm + (yMm - xyPos.yMm) * move / moveCount,
-                        speedMmPerMin: xyFeedMmPerMin
-                    });
-                }
-
-                xyPos = { xMm, yMm };
-
-                nextStepCheck = async ({ code, x, y }) => {
-                    if (!(
-                        (code === "G0" || code === "G1") &&
-                        (isFinite(x) || isFinite(y))
-                    )) {
-                        await machine.stopAB();
+                    let lastParams = queue[queue.length - 1];
+                    let newParams = {};
+                    for (let key in lastParams) {
+                        newParams[key] = isFinite(params[key]) ? params[key] : lastParams[key];
                     }
-                };
-            }
 
-            let zFeedMmPerMin;
-
-            async function moveZ(zMm, feedMmPerMin) {
-
-                if (isFinite(feedMmPerMin)) {
-                    zFeedMmPerMin = feedMmPerMin;
+                    queue.push(newParams);
                 }
 
-                await machine.moveZ({
-                    zMm,
-                    speedMmPerMin: zFeedMmPerMin
-                });
+                if (queue.length > 2 || (!params && queue.length > 1)) {
+                    await go(queue.shift(), queue[0], queue[1]);
+                }
 
             }
 
@@ -162,24 +141,14 @@ module.exports = ({ moveLengthMm, machine }) => {
                 /**
                  * Rapid Move
                  */
-                async G0({ x, y, z, f }) {
-                    let xyMove = isFinite(x) || isFinite(y);
-                    let zMove = isFinite(z);
-                    if (xyMove && zMove) {
-                        throw new Error("XYZ move is not supported yet.");
-                    }
-                    if (xyMove) {
-                        await moveXY(x, y, f);
-                    }
-                    if (zMove) {
-                        await moveZ(z, f);
-                    }
+                async G0(params) {
+                    await enqueueMove(params);
                 },
                 /**
                  * Linear Move
                  */
                 async G1(params) {
-                    await this.G0(params);
+                    await enqueueMove(params);
                 },
                 /**
                  * Program End
@@ -197,15 +166,14 @@ module.exports = ({ moveLengthMm, machine }) => {
                         throw new Error(`Unsupported GCODE ${command.code}`);
                     }
                     logInfo(command);
-                    if (nextStepCheck) {
-                        await nextStepCheck(command);
-                        nextStepCheck = undefined;
-                    }
                     await handler[command.code](command);
                 }
+                await enqueueMove();
 
             } finally {
-                await machine.stopAB();
+                machine.setMotorDuty("a", 0);
+                machine.setMotorDuty("b", 0);
+                machine.setMotorDuty("z", 0);
             }
         }
 

@@ -17,17 +17,16 @@ wg.pages.home = {
             $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
 
             let previewSvg = $("#previewSvg").empty();
-            let pos;
+            let pos = {
+                    x: machineState.sled.position && machineState.sled.position.xMm,
+                    y: machineState.sled.position && machineState.sled.position.yMm
+            }
+            
             for (let command of job) {
                 if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
 
-                    let x = isFinite(command.x) ?
-                        command.x - machineState.workspace.widthMm / 2
-                        : pos.x;
-
-                    let y = isFinite(command.y) ?
-                        (machineState.workspace.heightMm + machineState.motorsToWorkspaceVerticalMm) - command.y
-                        : pos.y;
+                    let x = isFinite(command.x) && command.x || pos.x;
+                    let y = isFinite(command.y) && command.y || pos.y;
 
                     if (pos) {
                         previewSvg.append(svg("line").attr({

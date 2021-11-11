@@ -26,75 +26,65 @@ module.exports = async ({
 
     let { min, max, abs } = Math;
 
-    let manualMotorPending = {};
+    let manualMovePending = {};
 
     function asyncWait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }    
 
     async function manualMotorStart(motor, direction) {
+        
+        machine.checkStandbyMode();
+
+        if (manualMovePending[motor]) {
+            throw new Error(`Another move pending on motor ${motor}`);
+        }
+
         try {
-            manualMotorPending[motor] = true;
-            let d = 0;
-            while (manualMotorPending[motor]) {
-                d = min(1, d + 0.05);
-                machine.setManualMotorDuty(motor, direction * d);
+            manualMovePending[motor] = true;
+            let d = manualMotorControl[motor].min;
+            while (manualMovePending[motor]) {
+                d = min(manualMotorControl[motor].max, d + 0.05);
+                machine.setMotorDuty(motor, direction * d);
                 await asyncWait(100);
             }
         } finally {
-            machine.setManualMotorDuty(motor, 0);
+            machine.setMotorDuty(motor, 0);
         }
     }
 
     async function manualMotorStop(motor) {
-        delete manualMotorPending[motor];
+        delete manualMovePending[motor];
     }
 
     async function manualMoveStart(directionX, directionY) {
+
+
         let state = machine.getState();
 
-        if (!isFinite(state.spindle.zMm)) {
-            throw new Error("Unknown position of router bit. Please calibrate.");
+        if (!state.sled.position) {
+            throw new Error(`Unknown sled position`);
         }
 
-        // let sled = { ...state.sledPosition };
-        // if (!sled) {
-        //     throw new Error("Unknown sled position.");
-        // }
+        let rapidMove = !state.spindle.on && state.spindle.zMm > 0;
 
-        // sled.xMm = state.workspace.widthMm / 2 + sled.xMm;
-        // sled.yMm = state.motorsToWorkspaceVerticalMm + state.workspace.heightMm - sled.yMm;
-
-        // let safeToEdge = state.sledDiameterMm / 4;
-
-        // let xMm = directionX ? (directionX / 2 + 0.5) * state.workspace.widthMm - safeToEdge * directionX : sled.xMm;
-        // let yMm = directionY ? (directionY / 2 + 0.5) * state.workspace.heightMm - safeToEdge * directionY : sled.yMm;
-
-        // if (directionX && directionY) {
-        //     let d = min(xMm * directionX - sled.xMm * directionX, yMm * directionY - sled.yMm * directionY);
-        //     xMm = sled.xMm + d * directionX;
-        //     yMm = sled.yMm + d * directionY;
-        // }
-
-        // let cutting = state.spindle.on;
-
-        // try {
-        //     await router.run([{
-        //         code: cutting ? "G1" : "G0",
-        //         x: xMm,
-        //         y: yMm,
-        //         f: cutting ? manualCuttingSpeedMmPerMin : manualRapidSpeedMmPerMin
-        //     }]);
-        // } catch (e) {
-        //     if (!e.moveInterrupted) {
-        //         throw e;
-        //     }
-        // }
+        try {
+            await router.run([{
+                code: rapidMove ? "G0" : "G1",
+                x: state.sled.position.xMm + 10000 * directionX,
+                y: state.sled.position.yMm + 10000 * directionY,
+                f: rapidMove? manualRapidSpeedMmPerMin: manualCuttingSpeedMmPerMin
+            }]);
+        } catch (e) {
+            if (!e.moveInterrupted) {
+                throw e;
+            }
+        }
 
     }
 
     async function manualMoveStop() {
-        // await machine.interruptMove();
+        machine.interruptCurrentMove();
     }
 
     return {
