@@ -43,6 +43,23 @@ wg.pages.home = {
             }
         }
 
+        let zoom = 1;
+        let pan = {
+                x: 0,
+                y: 0
+        };
+
+        function updateSceneViewBox() {
+            $(".scene svg").attr({
+                viewBox: [
+                    -machineState.beam.motorsDistanceMm / 2 - 100 - pan.x*zoom,
+                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100 - pan.y,
+                    (machineState.beam.motorsDistanceMm + 200) / zoom,
+                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200) / zoom
+                ].join(' ')
+            });
+        }
+
         function updateMachineState(state) {
 
             machineState = state;
@@ -57,14 +74,7 @@ wg.pages.home = {
             $(".zaxis .position").text(formatLength(state.spindle.zMm));
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
-            $(".scene svg").attr({
-                viewBox: [
-                    -state.beam.motorsDistanceMm / 2 - 100,
-                    -state.beam.motorsToWorkspaceMm - state.workspace.heightMm - 100,
-                    state.beam.motorsDistanceMm + 200,
-                    state.beam.motorsToWorkspaceMm + state.workspace.heightMm + 200
-                ].join(' ')
-            });
+            updateSceneViewBox();
 
             let mX = state.beam.motorsDistanceMm / 2;
             let mY = state.workspace.heightMm + state.beam.motorsToWorkspaceMm;
@@ -155,6 +165,9 @@ wg.pages.home = {
         }
 
         wg.common.page(container, pageName, [
+            DIV("state", [
+                DIV("text")
+            ]),
             DIV("scene", [$(`
             <svg preserveAspectRatio="xMinYMin" width="100%" xmlns="http://www.w3.org/2000/svg">
                 <g class="ucs">
@@ -171,9 +184,6 @@ wg.pages.home = {
                 </g>
             </svg>                      
             `)]).css({ visibility: "hidden" }),
-            DIV("state", [
-                DIV("text")
-            ]),
             DIV("controls", [
                 DIV("group job", [
                     DIV("title").text("job"),
@@ -225,8 +235,16 @@ wg.pages.home = {
             ])
                 .onMachineStateChanged(updateMachineState)
                 .onRouterJobChanged(updateRouterJob)
-            ,
         ]);
+
+         $(".page.home .scene svg").on("mousewheel", ev = ev => {
+               pan = {
+                x: ev.originalEvent.x,
+                y: ev.originalEvent.y                
+               }
+               zoom = Math.max(1, zoom + ev.originalEvent.wheelDeltaY / 1000);
+               updateSceneViewBox();
+        });
 
         $(".page.home .controls .group .title").click(ev => {
             let buttons = $(ev.target).parent().children(".buttons");

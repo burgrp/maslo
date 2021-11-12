@@ -18,7 +18,8 @@
     left: 4em;
     top: 0em;
     bottom: 0px;
-    overflow-x: hidden;    
+    overflow-x: hidden;   
+    visibility: hidden; 
 }
 
 .page.home .state .text {
