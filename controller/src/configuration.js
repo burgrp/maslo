@@ -12,6 +12,8 @@ module.exports = async ({configFile}) => {
         }
         data = {};
     }
+    data.lastPosition = {xMm: 0, yMm: 500, zMm: -10};
+
 
     let config = {
         data,

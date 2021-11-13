@@ -148,6 +148,23 @@ wg.pages.home = {
                 lastSledY = sledY;
             }
 
+            $(".scene .target.x").attr({
+                x1: state.target && state.target.xMm - 50,
+                y1: state.target && state.target.yMm - 50,
+                x2: state.target && state.target.xMm + 50,
+                y2: state.target && state.target.yMm + 50,
+                visibility: state.target ? "visible" : "hidden"
+            });
+
+            $(".scene .target.y").attr({
+                x1: state.target && state.target.xMm - 50,
+                y1: state.target && state.target.yMm + 50,
+                x2: state.target && state.target.xMm + 50,
+                y2: state.target && state.target.yMm - 50,
+                visibility: state.target ? "visible" : "hidden"
+            });
+
+
             $(".scene").css({ visibility: "visible" });
 
             $(".state .text").text(JSON.stringify(state, null, 2));
@@ -168,6 +185,8 @@ wg.pages.home = {
                 <circle class="sled outline" fill="none" stroke="gray" stroke-width="20"/>
                 <line class="chain a" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
                 <line class="chain b" stroke="gray" stroke-width="10" stroke-dasharray="10"/>
+                <line class="target x" stroke="white" stroke-width="10"/>
+                <line class="target y" stroke="white" stroke-width="10"/>
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>
                 <line class="userorigin y" stroke="yellow" stroke-width="10"/>
                 <g id="previewSvg"/>

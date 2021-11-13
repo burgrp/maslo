@@ -39,7 +39,7 @@ module.exports = async ({
             ...geometry.workspace
         },
         sled: {
-            ...geometry.sled,
+            ...geometry.sled
         },
         spindle: {
             on: false
@@ -74,6 +74,7 @@ module.exports = async ({
     let stateHash;
     let stateChangedListeners = [];
     let stateChangedListenersPending = false;
+    let waiters = [];
 
     function userToMachineCS(pos) {
         return {
@@ -211,6 +212,10 @@ module.exports = async ({
                 }
             }
 
+            while (waiters.length) {
+                waiters.shift().resolve(state);
+            }
+
         } else {
             delete state.sled.position;
         }
@@ -277,6 +282,24 @@ module.exports = async ({
                 zMm: zMm,
                 zSteps: state.motors.z.state.steps
             };
+        },
+
+        setTarget(target) {
+            state.target = target;
+        },
+
+        getChainLengths(positionUCS) {
+            let positionMCS = userToMachineCS(positionUCS);
+            return {
+                aMm: hypot(state.beam.motorsDistanceMm/2+positionMCS.xMm, positionMCS.yMm),
+                bMm: hypot(state.beam.motorsDistanceMm/2-positionMCS.xMm, positionMCS.yMm)
+            };
+        },
+
+        waitForNextCheck() {
+            return new Promise((resolve, reject) => {
+                waiters.push({resolve, reject});
+            });
         }
 
     }

@@ -5,9 +5,9 @@ const { start } = require("repl");
 //const logError = require("debug")("app:router:error");
 const logInfo = require("debug")("app:router:info");
 
-let { round, ceil, hypot } = Math;
+let { round, ceil, hypot, min, max, abs } = Math;
 
-module.exports = ({ moveLengthMm, machine }) => {
+module.exports = ({ stepLengthMm, machine }) => {
 
     let job = [];
     let jobChangedListeners = [];
@@ -51,8 +51,60 @@ module.exports = ({ moveLengthMm, machine }) => {
         }
     }
 
-    async function go(from, to, future) {
+    function asyncWait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function doMove(from, to, future) {
+
         console.info(from, to, future);
+        let moveDistanceMm = hypot(to.x - from.x, to.y - from.y);
+
+        let stepCount = round(moveDistanceMm / stepLengthMm);
+
+        for (let step = 0; step < stepCount; step++) {
+
+            let positionInMove = (step + 1) / stepCount;
+            let stepTarget = { x: from.x + (to.x - from.x) * positionInMove, y: from.y + (to.y - from.y) * positionInMove };
+            
+            machine.setTarget({ xMm: stepTarget.x, yMm: stepTarget.y });
+            let targetChainLengths = machine.getChainLengths({ xMm: stepTarget.x, yMm: stepTarget.y });
+
+            let lastDistanceMm;
+            while (true) {
+
+                let machineState = machine.getState();
+                let sledChainLengths = machine.getChainLengths(machineState.sled.position);
+
+                let distanceMm = hypot(stepTarget.x - machineState.sled.position.xMm, stepTarget.y - machineState.sled.position.yMm);
+
+                if (lastDistanceMm < distanceMm) {
+                    break;
+                }
+
+                // proportional
+                let duties = {
+                    a: targetChainLengths.aMm - sledChainLengths.aMm,
+                    b: targetChainLengths.bMm - sledChainLengths.bMm
+                };
+
+                // normalize
+                let fact = 1 / max(abs(duties.a), abs(duties.b));
+                duties.a = duties.a * fact;
+                duties.b = duties.b * fact;
+
+                console.info("step", step, duties, distanceMm);
+
+                machine.setMotorDuty("a", duties.a);
+                machine.setMotorDuty("b", duties.b);
+
+                await machine.waitForNextCheck();
+                lastDistanceMm = distanceMm;
+            }
+
+        }
+
+
     }
 
     return {
@@ -120,7 +172,7 @@ module.exports = ({ moveLengthMm, machine }) => {
                 }
 
                 if (queue.length > 2 || (!params && queue.length > 1)) {
-                    await go(queue.shift(), queue[0], queue[1]);
+                    await doMove(queue.shift(), queue[0], queue[1]);
                 }
 
             }
@@ -174,6 +226,7 @@ module.exports = ({ moveLengthMm, machine }) => {
                 machine.setMotorDuty("a", 0);
                 machine.setMotorDuty("b", 0);
                 machine.setMotorDuty("z", 0);
+                machine.setTarget(undefined);
             }
         }
 

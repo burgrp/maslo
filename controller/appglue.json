@@ -75,7 +75,7 @@
     },
     "router": {
         "module": "./router.js",
-        "moveLengthMm": 1,
+        "stepLengthMm": 1,
         "machine": "-> machine"
     },
     "webserver": {
