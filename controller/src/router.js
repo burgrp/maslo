@@ -89,13 +89,8 @@ module.exports = ({ stepLengthMm, machine }) => {
                 let lastError = lastErrors[m];
                 let error = targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
-
-                let p =  error / 50;
-                let d = 0;
-
-                if (isFinite(lastError)) {
-                    d = (error - lastError) / 10;
-                } 
+                let p = error / 50;
+                let d = isFinite(lastError) ? (error - lastError) / 10 : 0;
 
                 let duty = state.motors[m].duty + p + d;
 
@@ -104,12 +99,7 @@ module.exports = ({ stepLengthMm, machine }) => {
                 lastErrors[m] = error;
             }
 
-            // let norm = max(1, max(abs(duties.a), abs(duties.b)));
-
-            // state.motors.a.duty = duties.a / norm;
-            // state.motors.b.duty = duties.b / norm;
-
-            console.info(target, distance, [state.motors.a.duty, state.motors.b.duty]);
+            console.info(`(${target.xMm.toFixed(1)},${target.yMm.toFixed(1)}) A:${state.motors.a.duty.toFixed(3)} ${lastErrors.a < 0 ? "" : "+"}${lastErrors.a.toFixed(3)}, B:${state.motors.b.duty.toFixed(3)} ${lastErrors.b < 0 ? "" : "+"}${lastErrors.b.toFixed(3)}`);
 
             await machine.waitForNextCheck();
             lastDistance = distance;
