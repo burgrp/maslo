@@ -59,10 +59,14 @@ wg.pages.home = {
 
             $(".scene svg").attr({
                 viewBox: [
-                    -machineState.beam.motorsDistanceMm / 2 - 100,
-                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
-                    (machineState.beam.motorsDistanceMm + 200),
-                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
+//                     -machineState.beam.motorsDistanceMm / 2 - 100,
+//                     -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
+//                     (machineState.beam.motorsDistanceMm + 200),
+//                     (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
+                        -50,
+                        -1500,
+                        700,
+                        1500
                 ].join(' ')
             });
 

@@ -66,37 +66,41 @@ module.exports = ({ stepLengthMm, machine }) => {
 
             let positionInMove = (step + 1) / stepCount;
             let stepTarget = { x: from.x + (to.x - from.x) * positionInMove, y: from.y + (to.y - from.y) * positionInMove };
-            
+
             machine.setTarget({ xMm: stepTarget.x, yMm: stepTarget.y });
             let targetChainLengths = machine.getChainLengths({ xMm: stepTarget.x, yMm: stepTarget.y });
+
+            let machineState = machine.getState();
+            let sledChainLengths = machine.getChainLengths(machineState.sled.position);
+
+            let distanceMm = hypot(stepTarget.x - machineState.sled.position.xMm, stepTarget.y - machineState.sled.position.yMm);
+
+            // proportional
+            let duties = {
+                a: targetChainLengths.aMm - sledChainLengths.aMm,
+                b: targetChainLengths.bMm - sledChainLengths.bMm
+            };
+
+            // normalize
+            let fact = Math.min(1,distanceMm/4) / max(abs(duties.a), abs(duties.b));
+            duties.a = duties.a * fact;
+            duties.b = duties.b * fact;
+
+            machine.setMotorDuty("a", duties.a);
+            machine.setMotorDuty("b", duties.b);
 
             let lastDistanceMm;
             while (true) {
 
-                let machineState = machine.getState();
-                let sledChainLengths = machine.getChainLengths(machineState.sled.position);
+                machineState = machine.getState();
 
                 let distanceMm = hypot(stepTarget.x - machineState.sled.position.xMm, stepTarget.y - machineState.sled.position.yMm);
 
-                if (lastDistanceMm < distanceMm) {
-                    break;
-                }
-
-                // proportional
-                let duties = {
-                    a: targetChainLengths.aMm - sledChainLengths.aMm,
-                    b: targetChainLengths.bMm - sledChainLengths.bMm
-                };
-
-                // normalize
-                let fact = 1 / max(abs(duties.a), abs(duties.b));
-                duties.a = duties.a * fact;
-                duties.b = duties.b * fact;
-
                 console.info("step", step, duties, distanceMm);
 
-                machine.setMotorDuty("a", duties.a);
-                machine.setMotorDuty("b", duties.b);
+                if (lastDistanceMm <= distanceMm) {
+                    break;
+                }
 
                 await machine.waitForNextCheck();
                 lastDistanceMm = distanceMm;
