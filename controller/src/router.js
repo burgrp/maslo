@@ -5,7 +5,7 @@ const { start } = require("repl");
 //const logError = require("debug")("app:router:error");
 const logInfo = require("debug")("app:router:info");
 
-let { round, ceil, hypot, min, max, abs } = Math;
+let { round, ceil, hypot, min, max, abs, sign } = Math;
 
 module.exports = ({ stepLengthMm, machine }) => {
 
@@ -55,60 +55,65 @@ module.exports = ({ stepLengthMm, machine }) => {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    let lastErrors = {};
+
     async function doMove(from, to, future) {
 
         console.info(from, to, future);
+
         let moveDistanceMm = hypot(to.x - from.x, to.y - from.y);
+        let moveTimeMs = 60000 * moveDistanceMm / to.f;
 
-        let stepCount = round(moveDistanceMm / stepLengthMm);
+        let t0 = new Date().getTime();
+        while (true) {
 
-        for (let step = 0; step < stepCount; step++) {
-
-            let positionInMove = (step + 1) / stepCount;
-            let stepTarget = { x: from.x + (to.x - from.x) * positionInMove, y: from.y + (to.y - from.y) * positionInMove };
-
-            machine.setTarget({ xMm: stepTarget.x, yMm: stepTarget.y });
-            let targetChainLengths = machine.getChainLengths({ xMm: stepTarget.x, yMm: stepTarget.y });
-
-            let machineState = machine.getState();
-            let sledChainLengths = machine.getChainLengths(machineState.sled.position);
-
-            let distanceMm = hypot(stepTarget.x - machineState.sled.position.xMm, stepTarget.y - machineState.sled.position.yMm);
-
-            // proportional
-            let duties = {
-                a: targetChainLengths.aMm - sledChainLengths.aMm,
-                b: targetChainLengths.bMm - sledChainLengths.bMm
-            };
-
-            // normalize
-            let fact = Math.min(1,distanceMm/4) / max(abs(duties.a), abs(duties.b));
-            duties.a = duties.a * fact;
-            duties.b = duties.b * fact;
-
-            machine.setMotorDuty("a", duties.a);
-            machine.setMotorDuty("b", duties.b);
-
-            let lastDistanceMm;
-            while (true) {
-
-                machineState = machine.getState();
-
-                let distanceMm = hypot(stepTarget.x - machineState.sled.position.xMm, stepTarget.y - machineState.sled.position.yMm);
-
-                console.info("step", step, duties, distanceMm);
-
-                if (lastDistanceMm <= distanceMm) {
-                    break;
-                }
-
-                await machine.waitForNextCheck();
-                lastDistanceMm = distanceMm;
+            let position = (new Date().getTime() - t0) / moveTimeMs;
+            if (position >= 1) {
+                break;
             }
 
+            let target = {
+                xMm: from.x + position * (to.x - from.x),
+                yMm: from.y + position * (to.y - from.y)
+            };
+
+            machine.setTarget(target);
+
+            let state = machine.getState();
+            let distance = hypot(state.sled.position.xMm - to.x, state.sled.position.yMm - to.y);
+
+            let targetChains = machine.getChainLengths(target);
+            let sledChains = machine.getChainLengths(state.sled.position);
+
+            for (let m of ["a", "b"]) {
+                let lastError = lastErrors[m];
+                let error = targetChains[m + "Mm"] - sledChains[m + "Mm"];
+
+
+                let p =  error / 50;
+                let d = 0;
+
+                if (isFinite(lastError)) {
+                    d = (error - lastError) / 10;
+                } 
+
+                let duty = state.motors[m].duty + p + d;
+
+                state.motors[m].error = error;
+                state.motors[m].duty = sign(duty) * min(1, abs(duty));
+                lastErrors[m] = error;
+            }
+
+            // let norm = max(1, max(abs(duties.a), abs(duties.b)));
+
+            // state.motors.a.duty = duties.a / norm;
+            // state.motors.b.duty = duties.b / norm;
+
+            console.info(target, distance, [state.motors.a.duty, state.motors.b.duty]);
+
+            await machine.waitForNextCheck();
+            lastDistance = distance;
         }
-
-
     }
 
     return {
