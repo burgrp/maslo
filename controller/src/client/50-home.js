@@ -43,23 +43,6 @@ wg.pages.home = {
             }
         }
 
-        let zoom = 1;
-        let pan = {
-                x: 0,
-                y: 0
-        };
-
-        function updateSceneViewBox() {
-            $(".scene svg").attr({
-                viewBox: [
-                    -machineState.beam.motorsDistanceMm / 2 - 100,
-                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
-                    (machineState.beam.motorsDistanceMm + 200),
-                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
-                ].join(' ')
-            });
-        }
-
         function updateMachineState(state) {
 
             machineState = state;
@@ -74,7 +57,14 @@ wg.pages.home = {
             $(".zaxis .position").text(formatLength(state.spindle.zMm));
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
-            updateSceneViewBox();
+            $(".scene svg").attr({
+                viewBox: [
+                    -machineState.beam.motorsDistanceMm / 2 - 100,
+                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
+                    (machineState.beam.motorsDistanceMm + 200),
+                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
+                ].join(' ')
+            });
 
             let mX = state.beam.motorsDistanceMm / 2;
             let mY = state.workspace.heightMm + state.beam.motorsToWorkspaceMm;
@@ -236,15 +226,6 @@ wg.pages.home = {
                 .onMachineStateChanged(updateMachineState)
                 .onRouterJobChanged(updateRouterJob)
         ]);
-
-         $(".page.home .scene svg").on("mousewheel", ev = ev => {
-               pan = {
-                x: ev.originalEvent.x,
-                y: ev.originalEvent.y                
-               }
-               zoom = Math.max(1, zoom + ev.originalEvent.wheelDeltaY / 1000);
-               updateSceneViewBox();
-        });
 
         $(".page.home .controls .group .title").click(ev => {
             let buttons = $(ev.target).parent().children(".buttons");
