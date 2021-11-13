@@ -52,10 +52,10 @@ wg.pages.home = {
         function updateSceneViewBox() {
             $(".scene svg").attr({
                 viewBox: [
-                    -machineState.beam.motorsDistanceMm / 2 - 100 - pan.x*zoom,
-                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100 - pan.y,
-                    (machineState.beam.motorsDistanceMm + 200) / zoom,
-                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200) / zoom
+                    -machineState.beam.motorsDistanceMm / 2 - 100,
+                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
+                    (machineState.beam.motorsDistanceMm + 200),
+                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
                 ].join(' ')
             });
         }
