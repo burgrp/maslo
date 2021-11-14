@@ -62,47 +62,52 @@ module.exports = ({ stepLengthMm, machine }) => {
         console.info(from, to, future);
 
         let moveDistanceMm = hypot(to.x - from.x, to.y - from.y);
-        let moveTimeMs = 60000 * moveDistanceMm / to.f;
 
-        let t0 = new Date().getTime();
-        while (true) {
+        if (moveDistanceMm > 0) {
 
-            let position = (new Date().getTime() - t0) / moveTimeMs;
-            if (position >= 1) {
-                break;
+            let moveTimeMs = 60000 * moveDistanceMm / to.f;
+
+            let t0 = new Date().getTime();
+            while (true) {
+
+                let position = (new Date().getTime() - t0) / moveTimeMs;
+                if (position >= 1) {
+                    break;
+                }
+
+                let target = {
+                    xMm: from.x + position * (to.x - from.x),
+                    yMm: from.y + position * (to.y - from.y)
+                };
+
+                machine.setTarget(target);
+
+                let state = machine.getState();
+                let distance = hypot(state.sled.position.xMm - to.x, state.sled.position.yMm - to.y);
+
+                let targetChains = machine.getChainLengths(target);
+                let sledChains = machine.getChainLengths(state.sled.position);
+
+                for (let m of ["a", "b"]) {
+                    let lastError = lastErrors[m];
+                    let error = targetChains[m + "Mm"] - sledChains[m + "Mm"];
+
+                    let p = error / 50;
+                    let d = isFinite(lastError) ? (error - lastError) / 10 : 0;
+
+                    let duty = state.motors[m].duty + p + d;
+
+                    state.motors[m].error = error;
+                    state.motors[m].duty = sign(duty) * min(1, abs(duty));
+                    lastErrors[m] = error;
+                }
+
+                console.info(`(${target.xMm.toFixed(1)},${target.yMm.toFixed(1)}) A:${state.motors.a.duty.toFixed(3)} ${lastErrors.a < 0 ? "" : "+"}${lastErrors.a.toFixed(3)}, B:${state.motors.b.duty.toFixed(3)} ${lastErrors.b < 0 ? "" : "+"}${lastErrors.b.toFixed(3)}`);
+
+                await machine.waitForNextCheck();
+                lastDistance = distance;
             }
 
-            let target = {
-                xMm: from.x + position * (to.x - from.x),
-                yMm: from.y + position * (to.y - from.y)
-            };
-
-            machine.setTarget(target);
-
-            let state = machine.getState();
-            let distance = hypot(state.sled.position.xMm - to.x, state.sled.position.yMm - to.y);
-
-            let targetChains = machine.getChainLengths(target);
-            let sledChains = machine.getChainLengths(state.sled.position);
-
-            for (let m of ["a", "b"]) {
-                let lastError = lastErrors[m];
-                let error = targetChains[m + "Mm"] - sledChains[m + "Mm"];
-
-                let p = error / 50;
-                let d = isFinite(lastError) ? (error - lastError) / 10 : 0;
-
-                let duty = state.motors[m].duty + p + d;
-
-                state.motors[m].error = error;
-                state.motors[m].duty = sign(duty) * min(1, abs(duty));
-                lastErrors[m] = error;
-            }
-
-            console.info(`(${target.xMm.toFixed(1)},${target.yMm.toFixed(1)}) A:${state.motors.a.duty.toFixed(3)} ${lastErrors.a < 0 ? "" : "+"}${lastErrors.a.toFixed(3)}, B:${state.motors.b.duty.toFixed(3)} ${lastErrors.b < 0 ? "" : "+"}${lastErrors.b.toFixed(3)}`);
-
-            await machine.waitForNextCheck();
-            lastDistance = distance;
         }
     }
 
@@ -150,7 +155,6 @@ module.exports = ({ stepLengthMm, machine }) => {
             }
 
             let queue = [{
-                s: 0,
                 x: state.sled.position.xMm,
                 y: state.sled.position.yMm,
                 z: state.spindle.zMm,
