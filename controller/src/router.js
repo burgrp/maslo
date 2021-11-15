@@ -63,6 +63,10 @@ module.exports = ({ stepLengthMm, machine }) => {
 
         let moveDistanceMm = hypot(to.x - from.x, to.y - from.y);
 
+        if (moveDistanceMm === 0) {
+            moveDistanceMm = to.z - from.z;
+        }
+
         if (moveDistanceMm > 0) {
 
             let moveTimeMs = 60000 * moveDistanceMm / to.f;
@@ -75,22 +79,23 @@ module.exports = ({ stepLengthMm, machine }) => {
                     break;
                 }
 
-                let target = {
+                let targetXY = {
                     xMm: from.x + position * (to.x - from.x),
                     yMm: from.y + position * (to.y - from.y)
                 };
 
-                machine.setTarget(target);
+                machine.setTarget(targetXY);
 
                 let state = machine.getState();
-                let distance = hypot(state.sled.position.xMm - to.x, state.sled.position.yMm - to.y);
 
-                let targetChains = machine.getChainLengths(target);
+                let targetChains = machine.getChainLengths(targetXY);
                 let sledChains = machine.getChainLengths(state.sled.position);
 
-                for (let m of ["a", "b"]) {
+                for (let m of ["a", "b", "z"]) {
                     let lastError = lastErrors[m];
-                    let error = targetChains[m + "Mm"] - sledChains[m + "Mm"];
+                    let error = m === "z" ?
+                        to.z - from.z :
+                        targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
                     let p = error / 50;
                     let d = isFinite(lastError) ? (error - lastError) / 10 : 0;
@@ -102,12 +107,10 @@ module.exports = ({ stepLengthMm, machine }) => {
                     lastErrors[m] = error;
                 }
 
-                console.info(`(${target.xMm.toFixed(1)},${target.yMm.toFixed(1)}) A:${state.motors.a.duty.toFixed(3)} ${lastErrors.a < 0 ? "" : "+"}${lastErrors.a.toFixed(3)}, B:${state.motors.b.duty.toFixed(3)} ${lastErrors.b < 0 ? "" : "+"}${lastErrors.b.toFixed(3)}`);
+                console.info(`(${targetXY.xMm.toFixed(1)}, ${targetXY.yMm.toFixed(1)}, ${to.z.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
 
                 await machine.waitForNextCheck();
-                lastDistance = distance;
             }
-
         }
     }
 
