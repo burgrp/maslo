@@ -76,7 +76,9 @@ module.exports = async ({
                 f: rapidMove? manualRapidSpeedMmPerMin: manualCuttingSpeedMmPerMin
             }]);
         } catch (e) {
-            if (!e.moveInterrupted) {
+            if (e.moveInterrupted) {
+                machine.clearMoveInterrupt();
+            } else {
                 throw e;
             }
         }

@@ -213,7 +213,15 @@ module.exports = async ({
             }
 
             while (waiters.length) {
-                waiters.shift().resolve(state);
+                let waiter = waiters.shift();
+                if (state.moveInterrupt) {
+                    let e = new Error("Move interrupted");
+                    e.moveInterrupted = true;
+                    waiter.reject(e);
+                } else {
+                    waiter.resolve(state);
+                }
+
             }
 
         } else {
@@ -291,15 +299,23 @@ module.exports = async ({
         getChainLengths(positionUCS) {
             let positionMCS = userToMachineCS(positionUCS);
             return {
-                aMm: hypot(state.beam.motorsDistanceMm/2+positionMCS.xMm, positionMCS.yMm),
-                bMm: hypot(state.beam.motorsDistanceMm/2-positionMCS.xMm, positionMCS.yMm)
+                aMm: hypot(state.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
+                bMm: hypot(state.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
             };
         },
 
         waitForNextCheck() {
             return new Promise((resolve, reject) => {
-                waiters.push({resolve, reject});
+                waiters.push({ resolve, reject });
             });
+        },
+
+        interruptCurrentMove() {
+            state.moveInterrupt = true;
+        },
+
+        clearMoveInterrupt() {
+            delete state.moveInterrupt;
         }
 
     }
