@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { pid } = require("process");
 const readline = require("readline");
 const { start } = require("repl");
 
@@ -7,7 +8,7 @@ const logInfo = require("debug")("app:router:info");
 
 let { round, ceil, hypot, min, max, abs, sign } = Math;
 
-module.exports = ({ stepLengthMm, machine }) => {
+module.exports = ({ machine, pid }) => {
 
     let job = [];
     let jobChangedListeners = [];
@@ -51,10 +52,6 @@ module.exports = ({ stepLengthMm, machine }) => {
         }
     }
 
-    function asyncWait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     let lastErrors = {};
 
     async function doMove(from, to, future) {
@@ -93,17 +90,17 @@ module.exports = ({ stepLengthMm, machine }) => {
 
                 for (let m of ["a", "b", "z"]) {
                     let lastError = lastErrors[m];
+
                     let error = m === "z" ?
                         to.z - from.z :
                         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
-                    let p = error / 50;
-                    let d = isFinite(lastError) ? (error - lastError) / 10 : 0;
+                    let p = pid[m].kp * error;
+                    let d = pid[m].kd * (isFinite(lastError) ? error - lastError : 0);
 
                     let duty = state.motors[m].duty + p + d;
+                    machine.setMotorDuty(m, sign(duty) * min(1, abs(duty)));
 
-                    state.motors[m].error = error;
-                    state.motors[m].duty = sign(duty) * min(1, abs(duty));
                     lastErrors[m] = error;
                 }
 
@@ -111,6 +108,8 @@ module.exports = ({ stepLengthMm, machine }) => {
 
                 await machine.waitForNextCheck();
             }
+
+            machine.setMotorDuty("z", 0);
         }
     }
 

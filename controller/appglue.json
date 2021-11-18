@@ -75,8 +75,21 @@
     },
     "router": {
         "module": "./router.js",
-        "stepLengthMm": 1,
-        "machine": "-> machine"
+        "machine": "-> machine",
+        "pid" : {
+            "a": {
+                "kp": 0.02,
+                "kd": 0.1
+            },
+            "b": {
+                "kp": 0.02,
+                "kd": 0.1
+            },
+            "z": {
+                "kp": -0.02,
+                "kd": -0.1
+            }
+        }
     },
     "webserver": {
         "module": "@burgrp/webglue",
