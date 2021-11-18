@@ -60,9 +60,9 @@ wg.pages.home = {
             $(".scene svg").attr({
                 viewBox: [
                     -machineState.beam.motorsDistanceMm / 2 - 100,
-                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm - 100,
+                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm / 2 - 100,
                     (machineState.beam.motorsDistanceMm + 200),
-                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm + 200)
+                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm / 2 + 200)
                         // -50,
                         // -1500,
                         // 700,
@@ -71,7 +71,7 @@ wg.pages.home = {
             });
 
             let mX = state.beam.motorsDistanceMm / 2;
-            let mY = state.workspace.heightMm + state.beam.motorsToWorkspaceMm;
+            let mY = state.workspace.heightMm / 2 + state.beam.motorsToWorkspaceMm;
 
             $(".scene .motor.a").attr({
                 cx: -mX,
@@ -85,7 +85,7 @@ wg.pages.home = {
 
             $(".scene .workspace").attr({
                 x: -state.workspace.widthMm / 2,
-                y: 0,
+                y: -state.workspace.heightMm / 2,
                 width: state.workspace.widthMm,
                 height: state.workspace.heightMm
             });
@@ -108,9 +108,9 @@ wg.pages.home = {
 
             $(".scene .userorigin.y").attr({
                 x1: state.userOrigin.xMm,
-                y1: state.userOrigin.yMm - 100,
+                y1: state.userOrigin.yMm + 100,
                 x2: state.userOrigin.xMm,
-                y2: state.userOrigin.yMm + 30
+                y2: state.userOrigin.yMm - 30
             });
 
             $(".scene .chain, .scene .sled").attr({

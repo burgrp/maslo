@@ -79,14 +79,14 @@ module.exports = async ({
     function userToMachineCS(pos) {
         return {
             xMm: pos.xMm,
-            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm - pos.yMm
+            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm / 2 - pos.yMm
         }
     }
 
     function machineToUserCS(pos) {
         return {
             xMm: pos.xMm,
-            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm - pos.yMm
+            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm / 2 - pos.yMm
         }
     }
 

@@ -137,7 +137,7 @@ module.exports = async ({
                         throw new Error("Please enter a valid number");
                     }
                     let state = machine.getState();
-                    machine.setSledReference(0, state.workspace.heightMm - state.sled.diaMm / 2 - workspaceTopToSledTopMm);
+                    machine.setSledReference(0, state.workspace.heightMm / 2 - state.sled.diaMm / 2 - workspaceTopToSledTopMm);
                 },
 
                 async setCalibrationZ(zMm) {

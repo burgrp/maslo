@@ -30,8 +30,8 @@ module.exports = async ({
         relays: {},
         spindle: {},
         userOrigin: {
-            xMm: -workspace.widthMm / 2,
-            yMm: motorsToWorkspaceVerticalMm + workspace.heightMm
+            xMm: 0,
+            yMm: 0
         },
         errors: {},
         sledDiameterMm,
