@@ -58,15 +58,15 @@ module.exports = ({ machine, pid }) => {
 
         console.info(from, to, future);
 
-        let moveDistanceMm = hypot(to.x - from.x, to.y - from.y);
+        let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y);
 
-        if (moveDistanceMm === 0) {
-            moveDistanceMm = to.z - from.z;
+        if (moveDistanceAbsMm === 0) {
+            moveDistanceAbsMm = abs(to.z - from.z);
         }
 
-        if (moveDistanceMm > 0) {
+        if (moveDistanceAbsMm > 0) {
 
-            let moveTimeMs = 60000 * moveDistanceMm / to.f;
+            let moveTimeMs = 60000 * moveDistanceAbsMm / to.f;
 
             let t0 = new Date().getTime();
             while (true) {
@@ -76,23 +76,24 @@ module.exports = ({ machine, pid }) => {
                     break;
                 }
 
-                let targetXY = {
+                let target = {
                     xMm: from.x + position * (to.x - from.x),
-                    yMm: from.y + position * (to.y - from.y)
+                    yMm: from.y + position * (to.y - from.y),
+                    zMm: from.z + position * (to.z - from.z)
                 };
 
-                machine.setTarget(targetXY);
+                machine.setTarget(target);
 
                 let state = machine.getState();
 
-                let targetChains = machine.getChainLengths(targetXY);
+                let targetChains = machine.getChainLengths(target);
                 let sledChains = machine.getChainLengths(state.sled.position);
 
                 for (let m of ["a", "b", "z"]) {
                     let lastError = lastErrors[m];
 
                     let error = m === "z" ?
-                        to.z - from.z :
+                        target.zMm - state.spindle.zMm :
                         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
                     let p = pid[m].kp * error;
@@ -104,7 +105,7 @@ module.exports = ({ machine, pid }) => {
                     lastErrors[m] = error;
                 }
 
-                console.info(`(${targetXY.xMm.toFixed(1)}, ${targetXY.yMm.toFixed(1)}, ${to.z.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
+                console.info(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
 
                 await machine.waitForNextCheck();
             }
