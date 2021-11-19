@@ -100,7 +100,7 @@ module.exports = async ({
                 m.state = await motors[name].get();
                 delete m.error;
             } catch (e) {
-                console.error(`Motor ${name} error:`, e);
+                logError(`Motor ${name} error:`, e);
                 delete m.state;
                 m.error = e.message || e;
             }
@@ -113,7 +113,7 @@ module.exports = async ({
                 r.state = await relays[name].get();
                 delete r.error;
             } catch (e) {
-                console.error(`Relay ${name} error:`, e);
+                logError(`Relay ${name} error:`, e);
                 delete r.state;
                 r.error = e.message || e;
             }
@@ -205,6 +205,8 @@ module.exports = async ({
             state.spindle.on = false;
         }
 
+        state.relays.hoover.on = state.spindle.on && state.spindle.zMm < 0;
+
         let newHash = objectHash(state);
         if (newHash !== stateHash) {
             stateHash = newHash;
@@ -223,7 +225,7 @@ module.exports = async ({
             if (!stateChangedListenersPending) {
                 // fork notify
                 notify().catch(e => {
-                    console.error("Error in machine change notification listener:", e);
+                    logError("Error in machine change notification listener:", e);
                 });
             }
         }
@@ -247,7 +249,7 @@ module.exports = async ({
             try {
                 await checkMachineState();
             } catch (e) {
-                console.error("Error in machine check:", e);
+                logError("Error in machine check:", e);
             }
             await asyncWait(checkIntervalMs);
         }
@@ -257,7 +259,7 @@ module.exports = async ({
 
     // fork the check loop
     machineCheckLoop().catch(e => {
-        console.error("Unhandled error in machine check loop:", e);
+        logError("Unhandled error in machine check loop:", e);
     });
 
     return {

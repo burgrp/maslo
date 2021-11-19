@@ -59,7 +59,7 @@ module.exports = ({ machine, pid }) => {
 
     async function doMove(from, to, future) {
 
-        console.info(from, to, future);
+        logInfo(from, to, future);
 
         let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y);
 
@@ -108,7 +108,7 @@ module.exports = ({ machine, pid }) => {
                     lastErrors[m] = error;
                 }
 
-                console.info(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
+                logInfo(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
 
                 await machine.synchronizeJob();
             }

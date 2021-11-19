@@ -1,3 +1,6 @@
+const logError = require("debug")("app:positionSave:error");
+const logInfo = require("debug")("app:positionSave:info");
+
 module.exports = async ({ machine, configuration }) => {
 
     let xMm, yMm, zMm, timeout;
@@ -21,10 +24,10 @@ module.exports = async ({ machine, configuration }) => {
 
                 configuration.data.lastPosition = { xMm, yMm, zMm };
                 configuration.save().then(() => {
-                    console.info("Position saved", xMm, yMm, zMm);
+                    logInfo("Position saved", xMm, yMm, zMm);
                     checkPositionChange();
                 }).catch(e => {
-                    console.info("Error saving configuration:", e);
+                    logError("Error saving configuration:", e);
                 });
 
 

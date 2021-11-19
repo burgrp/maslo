@@ -70,7 +70,8 @@
             }
         },
         "relays": {
-            "spindle": {}
+            "spindle": {},
+            "hoover": {}
         }
     },
     "router": {
