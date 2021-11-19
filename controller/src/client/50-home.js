@@ -201,8 +201,8 @@ wg.pages.home = {
                 DIV("group job", [
                     DIV("title").text("job"),
                     DIV("buttons", [
-                        BUTTON("start standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
-                        BUTTON("delete standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
+                        BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
+                        BUTTON("delete control standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ]),
                 DIV("group abchains", [

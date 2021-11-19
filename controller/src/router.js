@@ -39,17 +39,20 @@ module.exports = ({ machine, pid }) => {
     }
 
     async function loadJob(gcodeAsyncIter) {
-        job = [];
-        for await (let command of gcodeAsyncIter) {
-            job.push(command);
-        }
-        for (let listener of jobChangedListeners) {
-            try {
-                listener(job);
-            } catch (error) {
-                logError("Error in job change listener:", error);
+        await machine.doJob(async () => {
+
+            job = [];
+            for await (let command of gcodeAsyncIter) {
+                job.push(command);
             }
-        }
+            for (let listener of jobChangedListeners) {
+                try {
+                    listener(job);
+                } catch (error) {
+                    logError("Error in job change listener:", error);
+                }
+            }
+        });
     }
 
     let lastErrors = {};
@@ -93,7 +96,7 @@ module.exports = ({ machine, pid }) => {
                     let lastError = lastErrors[m];
 
                     let error = m === "z" ?
-                        target.zMm - state.spindle.zMm :
+                        state.spindle.zMm - target.zMm:
                         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
                     let p = pid[m].kp * error;
@@ -107,7 +110,7 @@ module.exports = ({ machine, pid }) => {
 
                 console.info(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
 
-                await machine.waitForNextCheck();
+                await machine.synchronizeJob();
             }
 
             machine.setMotorDuty("z", 0);
@@ -133,12 +136,7 @@ module.exports = ({ machine, pid }) => {
         },
 
         async runJob() {
-            let prevMode = await machine.setMode("JOB");
-            try {
-                await this.run(job);
-            } finally {
-                await machine.setMode(prevMode);
-            }
+            await this.run(job);
         },
 
         async deleteJob() {
@@ -147,93 +145,96 @@ module.exports = ({ machine, pid }) => {
 
         async run(code) {
 
-            let state = machine.getState();
+            await machine.doJob(async () => {
 
-            if (!state.sled.position) {
-                throw new Error("Unknown sled position");
-            }
+                let state = machine.getState();
 
-            if (!isFinite(state.spindle.zMm)) {
-                throw new Error("Unknown spindle position");
-            }
+                if (!state.sled.position) {
+                    throw new Error("Unknown sled position");
+                }
 
-            let queue = [{
-                x: state.sled.position.xMm,
-                y: state.sled.position.yMm,
-                z: state.spindle.zMm,
-                f: 0
-            }];
+                if (!isFinite(state.spindle.zMm)) {
+                    throw new Error("Unknown spindle position");
+                }
 
-            async function enqueueMove(params) {
+                let queue = [{
+                    x: state.sled.position.xMm,
+                    y: state.sled.position.yMm,
+                    z: state.spindle.zMm,
+                    f: 0
+                }];
 
-                if (params) {
+                async function enqueueMove(params) {
 
-                    let lastParams = queue[queue.length - 1];
-                    let newParams = {};
-                    for (let key in lastParams) {
-                        newParams[key] = isFinite(params[key]) ? params[key] : lastParams[key];
+                    if (params) {
+
+                        let lastParams = queue[queue.length - 1];
+                        let newParams = {};
+                        for (let key in lastParams) {
+                            newParams[key] = isFinite(params[key]) ? params[key] : lastParams[key];
+                        }
+
+                        queue.push(newParams);
                     }
 
-                    queue.push(newParams);
-                }
-
-                if (queue.length > 2 || (!params && queue.length > 1)) {
-                    await doMove(queue.shift(), queue[0], queue[1]);
-                }
-
-            }
-
-            let handler = {
-                /**
-                 * Use millimeters for length units
-                 */
-                async G21() { },
-                /**
-                 * Absolute position mode
-                 */
-                async G90() { },
-                /**
-                 * Tool Change
-                 */
-                async M6({ t }) { },
-                /**
-                 * Rapid Move
-                 */
-                async G0(params) {
-                    await enqueueMove(params);
-                },
-                /**
-                 * Linear Move
-                 */
-                async G1(params) {
-                    await enqueueMove(params);
-                },
-                /**
-                 * Program End
-                 */
-                async M2() { },
-                /**
-                 * Program End
-                 */
-                async M30() { }
-            };
-
-            try {
-                for (let command of code) {
-                    if (!(handler[command.code] instanceof Function)) {
-                        throw new Error(`Unsupported GCODE ${command.code}`);
+                    if (queue.length > 2 || (!params && queue.length > 1)) {
+                        await doMove(queue.shift(), queue[0], queue[1]);
                     }
-                    logInfo(command);
-                    await handler[command.code](command);
-                }
-                await enqueueMove();
 
-            } finally {
-                machine.setMotorDuty("a", 0);
-                machine.setMotorDuty("b", 0);
-                machine.setMotorDuty("z", 0);
-                machine.setTarget(undefined);
-            }
+                }
+
+                let handler = {
+                    /**
+                     * Use millimeters for length units
+                     */
+                    async G21() { },
+                    /**
+                     * Absolute position mode
+                     */
+                    async G90() { },
+                    /**
+                     * Tool Change
+                     */
+                    async M6({ t }) { },
+                    /**
+                     * Rapid Move
+                     */
+                    async G0(params) {
+                        await enqueueMove(params);
+                    },
+                    /**
+                     * Linear Move
+                     */
+                    async G1(params) {
+                        await enqueueMove(params);
+                    },
+                    /**
+                     * Program End
+                     */
+                    async M2() { },
+                    /**
+                     * Program End
+                     */
+                    async M30() { }
+                };
+
+                try {
+                    for (let command of code) {
+                        if (!(handler[command.code] instanceof Function)) {
+                            throw new Error(`Unsupported GCODE ${command.code}`);
+                        }
+                        logInfo(command);
+                        await handler[command.code](command);
+                    }
+                    await enqueueMove();
+
+                } finally {
+                    machine.setMotorDuty("a", 0);
+                    machine.setMotorDuty("b", 0);
+                    machine.setMotorDuty("z", 0);
+                    machine.setTarget(undefined);
+                }
+            });
         }
 
     };

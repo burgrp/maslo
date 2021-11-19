@@ -19,7 +19,7 @@
                     },
                     "z": {
                         "steps": 100,
-                        "orientation": -1
+                        "orientation": 1
                     }
                 }
             },

@@ -35,8 +35,11 @@
 
 .page.home .controls {
     flex-direction: column;
-    overflow-x: auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
     min-width: 20em;
+    padding-right: 2em;
+    margin-right: -2em;
 }
 
 .page.home .controls .group {

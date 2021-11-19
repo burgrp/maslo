@@ -26,39 +26,25 @@ module.exports = async ({
 
     let { min, max, abs } = Math;
 
-    let manualMovePending = {};
-
-    function asyncWait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }    
-
     async function manualMotorStart(motor, direction) {
-        
-        machine.checkStandbyMode();
 
-        if (manualMovePending[motor]) {
-            throw new Error(`Another move pending on motor ${motor}`);
-        }
+        await machine.doJob(async () => {
 
-        try {
-            manualMovePending[motor] = true;
-            let d = manualMotorControl[motor].min;
-            while (manualMovePending[motor]) {
-                d = min(manualMotorControl[motor].max, d + 0.05);
-                machine.setMotorDuty(motor, direction * d);
-                await asyncWait(100);
+            try {
+                let d = manualMotorControl[motor].min;
+                while (true) {
+                    d = min(manualMotorControl[motor].max, d + 0.05);
+                    machine.setMotorDuty(motor, direction * d);
+                    await machine.synchronizeJob();
+                }
+            } finally {
+                machine.setMotorDuty(motor, 0);
             }
-        } finally {
-            machine.setMotorDuty(motor, 0);
-        }
-    }
 
-    async function manualMotorStop(motor) {
-        delete manualMovePending[motor];
+        });
     }
 
     async function manualMoveStart(directionX, directionY) {
-
 
         let state = machine.getState();
 
@@ -68,25 +54,13 @@ module.exports = async ({
 
         let rapidMove = !state.spindle.on && state.spindle.zMm > 0;
 
-        try {
-            await router.run([{
-                code: rapidMove ? "G0" : "G1",
-                x: state.sled.position.xMm + 10000 * directionX,
-                y: state.sled.position.yMm + 10000 * directionY,
-                f: rapidMove? manualRapidSpeedMmPerMin: manualCuttingSpeedMmPerMin
-            }]);
-        } catch (e) {
-            if (e.moveInterrupted) {
-                machine.clearMoveInterrupt();
-            } else {
-                throw e;
-            }
-        }
+        await router.run([{
+            code: rapidMove ? "G0" : "G1",
+            x: state.sled.position.xMm + 10000 * directionX,
+            y: state.sled.position.yMm + 10000 * directionY,
+            f: rapidMove ? manualRapidSpeedMmPerMin : manualCuttingSpeedMmPerMin
+        }]);
 
-    }
-
-    async function manualMoveStop() {
-        machine.interruptCurrentMove();
     }
 
     return {
@@ -107,16 +81,13 @@ module.exports = async ({
                 },
 
                 async manualMoveStop(kind) {
-                    if (kind === "xy") {
-                        await manualMoveStop();
-                    } else {
-                        await manualMotorStop(kind);
-                    }
+                    machine.interruptCurrentJob();
                 },
 
                 async manualSwitch(relay, state) {
-                    // machine.checkStandbyMode();
-                    // await machine.switchRelay(relay, state);
+                    await machine.doJob(async () => {
+                        machine.setRelayState(relay, state);
+                    });
                 },
 
                 async resetUserOrigin() {
@@ -131,7 +102,7 @@ module.exports = async ({
                 },
 
                 async emergencyStop() {
-                    // await machine.interruptMove();
+                    machine.interruptCurrentJob();
                 },
 
                 async setCalibrationXY(workspaceTopToSledTopMm) {
@@ -154,12 +125,10 @@ module.exports = async ({
                     return await router.getCode();
                 },
                 async runJob() {
-                //     machine.checkStandbyMode();
-                //     await router.runJob();
+                    await router.runJob();
                 },
                 async deleteJob() {
-                //     machine.checkStandbyMode();
-                //     await router.deleteJob();
+                    await router.deleteJob();
                 }
             }
         }

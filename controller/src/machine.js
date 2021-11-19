@@ -19,6 +19,7 @@ let pow2 = a => a * a;
 let { sqrt, hypot, abs, round, min, max, sign } = Math;
 
 const MODE_STANDBY = "STANDBY";
+const MODE_JOB = "JOB";
 
 module.exports = async ({
     drivers,
@@ -31,7 +32,7 @@ module.exports = async ({
 }) => {
 
     let state = {
-        mode: "STANDBY",
+        mode: MODE_STANDBY,
         beam: {
             ...geometry.beam
         },
@@ -93,26 +94,28 @@ module.exports = async ({
     async function checkMachineState() {
 
         for (let name in motors) {
+            const m = state.motors[name];
             try {
-                const m = state.motors[name];
                 motors[name].set(m.duty);
                 m.state = await motors[name].get();
                 delete m.error;
             } catch (e) {
                 console.error(`Motor ${name} error:`, e);
+                delete m.state;
                 m.error = e.message || e;
             }
         }
 
         for (let name in relays) {
+            const r = state.relays[name];
             try {
-                const r = state.relays[name];
                 relays[name].set(r.on);
                 r.state = await relays[name].get();
                 delete r.error;
             } catch (e) {
                 console.error(`Relay ${name} error:`, e);
-                m.error = e.message || e;
+                delete r.state;
+                r.error = e.message || e;
             }
         }
 
@@ -169,65 +172,75 @@ module.exports = async ({
                 delete state.sled.position;
             }
 
-            if (state.motors.z.state) {
-
-                if (
-                    !isFinite(state.spindle.zMm) &&
-                    configuration.data.lastPosition &&
-                    isFinite(configuration.data.lastPosition.zMm)
-                ) {
-                    state.spindle.reference = {
-                        zMm: configuration.data.lastPosition.zMm,
-                        zSteps: state.motors.z.state.steps
-                    }
-                }
-
-                if (state.spindle.reference) {
-                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
-                }
-
-            }
-
-
-            let newHash = objectHash(state);
-            if (newHash !== stateHash) {
-                stateHash = newHash;
-
-                async function notify() {
-                    try {
-                        stateChangedListenersPending = true;
-                        for (listener of stateChangedListeners) {
-                            await listener(state);
-                        }
-                    } finally {
-                        stateChangedListenersPending = false;
-                    }
-                }
-
-                if (!stateChangedListenersPending) {
-                    // fork notify
-                    notify().catch(e => {
-                        console.error("Error in machine change notification listener:", e);
-                    });
-                }
-            }
-
-            while (waiters.length) {
-                let waiter = waiters.shift();
-                if (state.moveInterrupt) {
-                    let e = new Error("Move interrupted");
-                    e.moveInterrupted = true;
-                    waiter.reject(e);
-                } else {
-                    waiter.resolve(state);
-                }
-
-            }
-
         } else {
             delete state.sled.position;
         }
-    }
+
+        if (state.motors.z.state) {
+
+            if (
+                !isFinite(state.spindle.zMm) &&
+                configuration.data.lastPosition &&
+                isFinite(configuration.data.lastPosition.zMm)
+            ) {
+                state.spindle.reference = {
+                    zMm: configuration.data.lastPosition.zMm,
+                    zSteps: state.motors.z.state.steps
+                }
+            }
+
+            if (state.spindle.reference) {
+                state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
+            } else {
+                delete state.spindle.zMm;
+            }
+            
+        } else {
+            delete state.spindle.zMm;
+        }
+
+        if (state.relays.spindle.state) {
+            state.spindle.on = state.relays.spindle.state.on;            
+        } else {
+            state.spindle.on = false;
+        }
+
+        let newHash = objectHash(state);
+        if (newHash !== stateHash) {
+            stateHash = newHash;
+
+            async function notify() {
+                try {
+                    stateChangedListenersPending = true;
+                    for (listener of stateChangedListeners) {
+                        await listener(state);
+                    }
+                } finally {
+                    stateChangedListenersPending = false;
+                }
+            }
+
+            if (!stateChangedListenersPending) {
+                // fork notify
+                notify().catch(e => {
+                    console.error("Error in machine change notification listener:", e);
+                });
+            }
+        }
+
+        while (waiters.length) {
+            let waiter = waiters.shift();
+            if (state.jobInterrupt) {
+                let e = new Error("Move interrupted");
+                e.moveInterrupted = true;
+                waiter.reject(e);
+            } else {
+                waiter.resolve(state);
+            }
+
+        }
+
+}
 
     async function machineCheckLoop() {
         while (true) {
@@ -256,24 +269,16 @@ module.exports = async ({
             return state;
         },
 
-        setMode(mode) {
-            let prevMode = state.mode;
-            state.mode = mode;
-            return prevMode;
-        },
-
-        checkStandbyMode() {
-            if (state.mode !== MODE_STANDBY) {
-                throw new Error("Machine not in standby mode");
-            }
-        },
-
         setUserOrigin(xMm, yMm) {
             state.userOrigin = { xMm, yMm };
         },
 
         setMotorDuty(motor, duty) {
             state.motors[motor].duty = duty;
+        },
+
+        setRelayState(relay, on) {
+            state.relays[relay].on = on;
         },
 
         setSledReference(xMm, yMm) {
@@ -304,19 +309,33 @@ module.exports = async ({
             };
         },
 
-        waitForNextCheck() {
+        synchronizeJob() {
             return new Promise((resolve, reject) => {
                 waiters.push({ resolve, reject });
             });
         },
 
-        interruptCurrentMove() {
-            state.moveInterrupt = true;
+        interruptCurrentJob() {
+            state.jobInterrupt = true;
         },
 
-        clearMoveInterrupt() {
-            delete state.moveInterrupt;
-        }
+        async doJob(action) {
+            
+            if (state.mode !== MODE_STANDBY) {
+                throw new Error("Machine not in standby mode");
+            }
 
+            state.mode = MODE_JOB;
+            try {
+                await action();
+            } catch (e) {
+                if (!e.moveInterrupted) {
+                    throw e;
+                } 
+            } finally {
+                state.mode = MODE_STANDBY;
+                delete state.jobInterrupt;
+            }
+        }
     }
 }

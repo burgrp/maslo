@@ -33,8 +33,12 @@ require("@burgrp/appglue")({ require, file: __dirname + "/../appglue.json" }).ma
     });
 
     setTimeout(async () => {
-        await router.loadJobFromLocalFile("test1.nc");
-        await router.runJob();
+        try {
+            await router.loadJobFromLocalFile("test1.nc");
+            await router.runJob();
+        } catch (e) {
+            console.error(e);
+        }
     }, 1000);
 
 });
