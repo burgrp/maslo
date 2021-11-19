@@ -327,7 +327,7 @@ module.exports = async ({
 
             state.mode = MODE_JOB;
             try {
-                await action();
+                return await action();
             } catch (e) {
                 if (!e.moveInterrupted) {
                     throw e;

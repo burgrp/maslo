@@ -63,6 +63,8 @@ module.exports = async ({
 
     }
 
+    let manualMovePending = false;
+
     return {
         events,
         client: __dirname + "/client",
@@ -73,15 +75,22 @@ module.exports = async ({
                 },
 
                 async manualMoveStart(kind, ...params) {
-                    if (kind === "xy") {
-                        await manualMoveStart(...params);
-                    } else {
-                        await manualMotorStart(kind, ...params);
+                    manualMovePending = true;
+                    try {
+                        if (kind === "xy") {
+                            await manualMoveStart(...params);
+                        } else {
+                            await manualMotorStart(kind, ...params);
+                        }
+                    } finally {
+                        manualMovePending = false;
                     }
                 },
 
                 async manualMoveStop(kind) {
-                    machine.interruptCurrentJob();
+                    if (manualMovePending) {
+                        machine.interruptCurrentJob();
+                    }
                 },
 
                 async manualSwitch(relay, state) {
