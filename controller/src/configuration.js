@@ -14,7 +14,7 @@ module.exports = async ({configFile}) => {
     }
     
     // DEBUG ///////////////////////////////////////////////
-    data.lastPosition = {xMm: -200, yMm: -200, zMm: -10};
+    // data.lastPosition = {xMm: -200, yMm: -200, zMm: -10};
 
 
     let config = {
