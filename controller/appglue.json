@@ -32,7 +32,7 @@
                     },
                     "z": {
                         "address": 82,
-                        "motorPolarity": -1
+                        "motorPolarity": 1
                     }
                 }
             }

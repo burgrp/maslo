@@ -1,11 +1,9 @@
-const int PIN_LED = 22;
+const int PIN_LED = 24;
 const int PIN_ADDR = 3;
 const int PIN_SAFEBOOT = 8;
 
-const int PIN_INA = 24;
-const int PIN_INB = 25;
-const int PIN_PWM = 16;
-const int PIN_CS = 2;
+const int PIN_MOTOR1 = 16;
+const int PIN_MOTOR2 = 22;
 
 const int PIN_HALL_A = 6;
 const int PIN_HALL_B = 7;
@@ -18,6 +16,7 @@ const int PIN_STOP1 = 4;
 const int PIN_STOP2 = 5;
 
 const int LO_PRIO_CHECK_MS = 100;
+
 const int UNATTENDED_TIMEOUT_MS = 2000;
 const int UNATTENDED_TIMEOUT_COUNT = UNATTENDED_TIMEOUT_MS / LO_PRIO_CHECK_MS;
 
@@ -43,10 +42,10 @@ public:
     bool endStop2 : 1;
     bool reserved : 5;
     int actSteps;
-    short currentMA;
+    short currentMA = 0xFFFF;
   } state;
 
-  VNH7070 vnh7070;
+  TB67H451FNG motor;
   Encoder encoder;
   int unattendedTimeoutCounter;
 
@@ -73,9 +72,9 @@ public:
                                .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
                                .setCLKEN(true);
 
-    // init VNH7070
+    // init motor driver
 
-    vnh7070.init(PIN_INA, PIN_INB, PIN_PWM, PIN_CS, &target::TC1);
+    motor.init(PIN_MOTOR1, PIN_MOTOR2, &target::TC1);
 
     // init encoder
 
@@ -97,7 +96,7 @@ public:
 
   void checkState() {
 
-    vnh7070.set((state.direction && !state.endStop1) || (!state.direction && !state.endStop2) ? state.duty : 0,
+    motor.set((state.direction && !state.endStop1) || (!state.direction && !state.endStop2) ? state.duty : 0,
                 state.direction);
 
     bool running = state.duty != 0;
@@ -148,8 +147,6 @@ public:
     state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
     state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
 
-    state.currentMA = vnh7070.getCurrentMA();
-
     checkState();
 
     start(LO_PRIO_CHECK_MS / 10);
@@ -173,7 +170,7 @@ void initApplication() {
   device.init(readConfigPin(PIN_ADDR));
 
   // enable interrupts
-  //target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3); 
+  target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3); 
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::EIC);
 }
