@@ -96,7 +96,7 @@ module.exports = async ({
         for (let name in motors) {
             const m = state.motors[name];
             try {
-                motors[name].set(m.duty);
+                await motors[name].set(m.duty);
                 m.state = await motors[name].get();
                 delete m.error;
             } catch (e) {
@@ -109,7 +109,7 @@ module.exports = async ({
         for (let name in relays) {
             const r = state.relays[name];
             try {
-                relays[name].set(r.on);
+                await relays[name].set(r.on);
                 r.state = await relays[name].get();
                 delete r.error;
             } catch (e) {

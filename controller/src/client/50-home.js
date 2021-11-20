@@ -18,10 +18,10 @@ wg.pages.home = {
 
             let previewSvg = $("#previewSvg").empty();
             let pos = {
-                    x: machineState.sled.position && machineState.sled.position.xMm,
-                    y: machineState.sled.position && machineState.sled.position.yMm
+                x: machineState.sled.position && machineState.sled.position.xMm,
+                y: machineState.sled.position && machineState.sled.position.yMm
             }
-            
+
             for (let command of job) {
                 if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
 
@@ -55,6 +55,9 @@ wg.pages.home = {
             $(".xyaxis .position .x").text(formatLength(sledX - state.userOrigin.xMm));
             $(".xyaxis .position .y").text(formatLength(sledY - state.userOrigin.yMm));
             $(".zaxis .position").text(formatLength(state.spindle.zMm));
+            $(".zaxis .position")
+                .toggleClass("moving", state.motors.z.state && Math.abs(state.motors.z.state.duty) > 0.1)
+                .toggleClass("out", state.spindle.zMm < 0);
             $(".zaxis .spindle").toggleClass("on", state.spindle.on);
 
             $(".scene svg").attr({
@@ -63,10 +66,10 @@ wg.pages.home = {
                     -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm / 2 - 100,
                     (machineState.beam.motorsDistanceMm + 200),
                     (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm / 2 + 200)
-                        // -50,
-                        // -1500,
-                        // 700,
-                        // 1500
+                    // -50,
+                    // -1500,
+                    // 700,
+                    // 1500
                 ].join(' ')
             });
 
@@ -167,7 +170,6 @@ wg.pages.home = {
                 y2: state.target && state.target.yMm - 50,
                 visibility: state.target ? "visible" : "hidden"
             });
-
 
             $(".scene").css({ visibility: "visible" });
 

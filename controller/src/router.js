@@ -199,7 +199,7 @@ module.exports = ({ machine, pid }) => {
                     /**
                      * Rapid Move
                      */
-                    async G0(params) {
+                    async G0(params) {  
                         await enqueueMove(params);
                     },
                     /**

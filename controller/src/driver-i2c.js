@@ -2,7 +2,7 @@ const Debug = require("debug");
 const I2C = require("@burgrp/i2c");
 const createMotor = require("../../t100-dcmotor/test/t100-dcmotor.js");
 
-module.exports = async ({ bus, motorAddresses }) => {
+module.exports = async ({ bus, motors }) => {
 
     let i2c;
 
@@ -16,25 +16,27 @@ module.exports = async ({ bus, motorAddresses }) => {
         },
 
         createMotor(name) {
-            return createMotor({ i2c, address: motorAddresses[name] });
+            return createMotor({ i2c, ...motors[name] });
         },
 
         async createRelay(name) {
+
             let log = Debug(`app:relay:${name}`);
 
-            let state = {
-                on: false
-            };
+            let on = false;
 
             return {
                 name,
-                state,
+                async get() {
+                    return { on };
+                },
 
-                async switch(newOn) {
-                    log(`switch ${newOn ? "on" : "off"}`);
-                    state.on = newOn;
+                async set(newOn) {
+                    on = newOn;
+                    //log(`switch ${on ? "on" : "off"}`);
                 }
             }
+
         }
 
 

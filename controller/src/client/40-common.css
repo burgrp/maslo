@@ -64,6 +64,12 @@ button:active {
     }
 }
 
+@keyframes blink {
+    50% {
+        background-color: rgba(0, 0, 0, 0);
+    }
+}
+
 /*---------------------------------------------------------------*/
 
 .page {
@@ -163,7 +169,6 @@ button.control {
 
 button.control.disabled {
     color: gray !important;
-    background-color: silver;
 }
 
 button.control .icon {

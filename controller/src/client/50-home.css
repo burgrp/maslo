@@ -217,6 +217,20 @@
 .page.home .controls .zaxis .position {
     grid-row: 2;
     grid-column: 2;
+    color: white;
+    padding: 0.5em;
+    border-bottom: 1px solid silver;
+}
+
+.page.home .controls .zaxis .position.moving {
+    background-color: red;
+    animation: blink 1s infinite;
+}
+
+.page.home .controls .zaxis .position.out {
+    border-top: 1px solid silver;
+    border-bottom: unset;
+    font-weight: bold;
 }
 
 .page.home .controls .zaxis .up {

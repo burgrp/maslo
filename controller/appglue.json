@@ -10,26 +10,30 @@
                 "module": "./driver-virtual.js",
                 "motors": {
                     "a": {
-                        "steps": 1000,
-                        "orientation": 1
+                        "steps": 1000
                     },
                     "b": {
-                        "steps": -4000,
-                        "orientation": 1
+                        "steps": -4000
                     },
                     "z": {
-                        "steps": 100,
-                        "orientation": 1
+                        "steps": 100
                     }
                 }
             },
             "i2c": {
                 "module": "./driver-i2c.js",
                 "bus": "-> $.I2C",
-                "motorAddresses": {
-                    "a": 80,
-                    "b": 81,
-                    "z": 82
+                "motors": {
+                    "a": {
+                        "address": 80
+                    },
+                    "b": {
+                        "address": 81
+                    },
+                    "z": {
+                        "address": 82,
+                        "motorPolarity": -1
+                    }
                 }
             }
         },

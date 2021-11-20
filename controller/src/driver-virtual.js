@@ -22,7 +22,10 @@ module.exports = async ({ motors }) => {
             setInterval(() => {
                 let stallDuty = 0.1;
                 if (state.duty > stallDuty || state.duty < -stallDuty) {
-                    state.steps += config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs) * motors[name].orientation;
+                    state.steps += 
+                    config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs) * 
+                    (motors[name].motorPolarity || 1) * 
+                    (motors[name].encoderPolarity || 1);
                 }
             }, checkIntervalMs);
 
