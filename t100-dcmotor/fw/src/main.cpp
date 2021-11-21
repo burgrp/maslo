@@ -106,7 +106,10 @@ public:
       start(LO_PRIO_CHECK_MS / 10);
     }
 
-    void init(Device *that) { this->that = that; }
+    void init(Device *that) {
+      this->that = that;
+      start(LO_PRIO_CHECK_MS / 10);
+    }
   } timer;
 
   struct __attribute__((packed)) {
@@ -145,24 +148,14 @@ public:
                                .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
                                .setCLKEN(true);
 
-    // init motor driver
-
-    motor.init(PIN_MOTOR1, PIN_MOTOR2, &target::TC1);
-
-    // init encoder
-
-    encoder.init(this);
-
-    // I2C
-
-    slave.init(this, axis);
-
     // STOPs
 
     target::PORT.PINCFG[PIN_STOP1].setINEN(true).setPULLEN(true);
     target::PORT.PINCFG[PIN_STOP2].setINEN(true).setPULLEN(true);
 
-    // start check timer
+    motor.init(PIN_MOTOR1, PIN_MOTOR2, &target::TC1);
+    encoder.init(this);
+    slave.init(this, axis);
     timer.init(this);
   }
 
