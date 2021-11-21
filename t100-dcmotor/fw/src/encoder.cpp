@@ -1,22 +1,14 @@
-class EncoderCallback {
-public:
-  virtual void ecoderChanged(int steps) = 0;
-};
-
 class Encoder {
   int pinA;
   int pinB;
   int extInA;
 
-  EncoderCallback *callback;
-
 public:
-  void init(int pinA, int pinB, int extInA, EncoderCallback *callback) {
+  void init(int pinA, int pinB, int extInA) {
 
     this->pinA = pinA;
     this->pinB = pinB;
     this->extInA = extInA;
-    this->callback = callback;
 
     target::PORT.OUTSET.setOUTSET(1 << pinA | 1 << pinB);
     target::PORT.PINCFG[pinA].setINEN(true).setPULLEN(true).setPMUXEN(true);
@@ -44,10 +36,12 @@ public:
     target::EIC.INTENSET.setEXTINT(extInA, true);
   }
 
+  virtual void changed(int steps) = 0;
+
   void interruptHandlerEIC() {
     if (target::EIC.INTFLAG.getEXTINT(extInA)) {
       target::EIC.INTFLAG.setEXTINT(extInA, true);
-      callback->ecoderChanged((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
+      changed((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
     }
   }
 };

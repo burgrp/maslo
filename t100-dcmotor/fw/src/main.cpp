@@ -22,18 +22,92 @@ const int UNATTENDED_TIMEOUT_COUNT = UNATTENDED_TIMEOUT_MS / LO_PRIO_CHECK_MS;
 
 enum Command { NONE = 0, SET = 1 };
 
-class Device : public atsamd::i2c::Slave, EncoderCallback, genericTimer::Timer {
+class Device {
 public:
-  struct __attribute__((packed)) {
-    unsigned char command = Command::NONE;
-    union {
-      struct __attribute__((packed)) {
-        unsigned char duty;
-        bool direction : 1;
-        bool reserved : 7;
-      } setSpeed;
-    };
-  } rxBuffer;
+  class : public atsamd::i2c::Slave {
+  public:
+    struct __attribute__((packed)) {
+      unsigned char command = Command::NONE;
+      union {
+        struct __attribute__((packed)) {
+          unsigned char duty;
+          bool direction : 1;
+          bool reserved : 7;
+        } setSpeed;
+      };
+    } rxBuffer;
+
+    Device *that;
+
+    void init(Device *that, int axis) {
+      this->that = that;
+      Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, PIN_SDA,
+                  PIN_SCL, target::port::PMUX::PMUXE::C);
+    }
+
+    virtual int getTxByte(int index) {
+      return index < sizeof(that->state) ? ((unsigned char *)&that->state)[index] : 0;
+    }
+
+    bool commandIs(Command command, int index, int value, int paramsSize) {
+      return rxBuffer.command == command && index == paramsSize;
+    }
+
+    virtual bool setRxByte(int index, int value) {
+
+      if (index < sizeof(rxBuffer)) {
+        ((unsigned char *)&rxBuffer)[index] = value;
+
+        if (commandIs(Command::SET, index, value, sizeof(rxBuffer.setSpeed))) {
+          that->state.duty = rxBuffer.setSpeed.duty;
+          that->state.direction = rxBuffer.setSpeed.direction;
+          that->unattendedTimeoutCounter = 0;
+          that->checkState();
+        }
+
+        return true;
+
+      } else {
+        return false;
+      }
+    }
+
+  } slave;
+
+  class : public Encoder {
+  public:
+    Device *that;
+
+    void changed(int steps) {
+      that->state.actSteps += steps;
+      that->checkState();
+    }
+
+    void init(Device *that) {
+      this->that = that;
+      Encoder::init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A);
+    }
+  } encoder;
+
+  class : public genericTimer::Timer {
+  public:
+    Device *that;
+    void onTimer() {
+      that->unattendedTimeoutCounter++;
+      if (that->unattendedTimeoutCounter > UNATTENDED_TIMEOUT_COUNT) {
+        that->state.duty = 0;
+      }
+
+      that->state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
+      that->state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
+
+      that->checkState();
+
+      start(LO_PRIO_CHECK_MS / 10);
+    }
+
+    void init(Device *that) { this->that = that; }
+  } timer;
 
   struct __attribute__((packed)) {
     unsigned char duty;
@@ -46,12 +120,11 @@ public:
   } state;
 
   TB67H451FNG motor;
-  Encoder encoder;
   int unattendedTimeoutCounter;
 
   void init(int axis) {
 
-    // TC1 for VNH7070 PWM
+    // TC1 for motor PWM
 
     target::PM.APBCMASK.setTC(1, true);
 
@@ -78,12 +151,11 @@ public:
 
     // init encoder
 
-    encoder.init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A, this);
+    encoder.init(this);
 
     // I2C
 
-    Slave::init(0x50 + axis, 0, atsamd::i2c::AddressMode::MASK, 0, target::gclk::CLKCTRL::GEN::GCLK0, PIN_SDA, PIN_SCL,
-                target::port::PMUX::PMUXE::C);
+    slave.init(this, axis);
 
     // STOPs
 
@@ -91,71 +163,25 @@ public:
     target::PORT.PINCFG[PIN_STOP2].setINEN(true).setPULLEN(true);
 
     // start check timer
-    start(LO_PRIO_CHECK_MS / 10);
+    timer.init(this);
   }
 
   void checkState() {
 
     motor.set((state.direction && !state.endStop1) || (!state.direction && !state.endStop2) ? state.duty : 0,
-                state.direction);
+              state.direction);
 
     bool running = state.duty != 0;
     target::PORT.OUTCLR.setOUTCLR(!running << PIN_LED);
     target::PORT.OUTSET.setOUTSET(running << PIN_LED);
   }
 
-  void ecoderChanged(int steps) {
-    state.actSteps += steps;
-    checkState();
-  }
-
   void setSpeed(unsigned int speed) {}
-
-  bool checkCommand(Command command, int index, int value, int paramsSize) {
-    return rxBuffer.command == command && index == paramsSize;
-  }
-
-  virtual int getTxByte(int index) {
-    return index < sizeof(state) ? ((unsigned char *)&state)[index] : 0;
-  }
-
-  virtual bool setRxByte(int index, int value) {
-
-    if (index < sizeof(rxBuffer)) {
-      ((unsigned char *)&rxBuffer)[index] = value;
-
-      if (checkCommand(Command::SET, index, value, sizeof(rxBuffer.setSpeed))) {
-        state.duty = rxBuffer.setSpeed.duty;
-        state.direction = rxBuffer.setSpeed.direction;
-        unattendedTimeoutCounter = 0;
-        checkState();
-      }
-
-      return true;
-
-    } else {
-      return false;
-    }
-  }
-
-  void onTimer() {
-    unattendedTimeoutCounter++;
-    if (unattendedTimeoutCounter > UNATTENDED_TIMEOUT_COUNT) {
-      state.duty = 0;
-    }
-
-    state.endStop1 = target::PORT.IN.getIN() >> PIN_STOP1 & 1;
-    state.endStop2 = target::PORT.IN.getIN() >> PIN_STOP2 & 1;
-
-    checkState();
-
-    start(LO_PRIO_CHECK_MS / 10);
-  }
 };
 
 Device device;
 
-void interruptHandlerSERCOM0() { device.interruptHandlerSERCOM(); }
+void interruptHandlerSERCOM0() { device.slave.interruptHandlerSERCOM(); }
 void interruptHandlerEIC() { device.encoder.interruptHandlerEIC(); }
 
 void initApplication() {
@@ -170,7 +196,7 @@ void initApplication() {
   device.init(readConfigPin(PIN_ADDR));
 
   // enable interrupts
-  target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3); 
+  target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3);
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::SERCOM0);
   target::NVIC.ISER.setSETENA(1 << target::interrupts::External::EIC);
 }
