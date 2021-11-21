@@ -40,8 +40,8 @@ public:
 
   void interruptHandlerEIC() {
     if (target::EIC.INTFLAG.getEXTINT(extInA)) {
-      target::EIC.INTFLAG.setEXTINT(extInA, true);
       changed((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
+      target::EIC.INTFLAG.setEXTINT(extInA, true);
     }
   }
 };

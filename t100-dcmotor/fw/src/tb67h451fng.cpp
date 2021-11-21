@@ -32,7 +32,6 @@ public:
   void set(unsigned char duty, bool direction) {
 
     pwm.set(duty);
-
     target::PORT.PINCFG[pinMotor1].setPMUXEN(duty && direction);
     target::PORT.PINCFG[pinMotor2].setPMUXEN(duty && !direction);
   }
