@@ -26,19 +26,29 @@ module.exports = async ({
 
     let { min, max, abs } = Math;
 
-    async function manualMotorStart(motor, direction) {
+    async function manualMotorStart(motors, direction) {
+
+        motors = motors.split("");
 
         await machine.doJob(async () => {
 
             try {
-                let d = manualMotorControl[motor].min;
+                let d = {};
+                for (let motor of motors) {
+                    d[motor] = manualMotorControl[motor].min;
+                }
+                
                 while (true) {
-                    d = min(manualMotorControl[motor].max, d + 0.05);
-                    machine.setMotorDuty(motor, direction * d);
+                    for (let motor of motors) {
+                        d[motor] = min(manualMotorControl[motor].max, d[motor] + 0.05);
+                        machine.setMotorDuty(motor, direction * d[motor]);
+                    }
                     await machine.synchronizeJob();
                 }
             } finally {
-                machine.setMotorDuty(motor, 0);
+                for (let motor of motors) {
+                    machine.setMotorDuty(motor, 0);
+                }
             }
 
         });

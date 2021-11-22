@@ -83,7 +83,7 @@
 /*---------------------------------------------------------------*/
 
 .page.home .controls .abchains .buttons {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: 33% auto 33%;
     grid-template-rows: 1em auto auto;
 }
 
@@ -95,8 +95,12 @@
     grid-column: 1;
 }
 
-.page.home .controls .abchains .b {
+.page.home .controls .abchains .ab {
     grid-column: 2;
+}
+
+.page.home .controls .abchains .b {
+    grid-column: 3;
 }
 
 .page.home .controls .abchains .up {

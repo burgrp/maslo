@@ -213,6 +213,9 @@ wg.pages.home = {
                         DIV("a side").text("A"),
                         wg.common.manualMoveButton("a up", "caret-up", "a", -1),
                         wg.common.manualMoveButton("a down", "caret-down", "a", 1),
+                        DIV("ab side").text("A+B"),
+                        wg.common.manualMoveButton("ab up", "caret-up", "ab", -1),
+                        wg.common.manualMoveButton("ab down", "caret-down", "ab", 1),
                         DIV("b side").text("B"),
                         wg.common.manualMoveButton("b up", "caret-up", "b", -1),
                         wg.common.manualMoveButton("b down", "caret-down", "b", 1)
