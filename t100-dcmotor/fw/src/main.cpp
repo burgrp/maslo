@@ -187,7 +187,7 @@ void initApplication() {
   target::SYSCTRL.OSC8M.setPRESC(target::sysctrl::OSC8M::PRESC::_1);
   genericTimer::clkHz = 8E6;
 
-  device.init(readConfigPin(PIN_ADDR));
+  device.init(atsamd::configPin::readConfigPin(PIN_ADDR));
 
   // enable interrupts
   target::NVIC.IPR[target::interrupts::External::SERCOM0 >> 2].setPRI(target::interrupts::External::SERCOM0 & 0x03, 3);
