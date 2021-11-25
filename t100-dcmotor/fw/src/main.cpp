@@ -75,7 +75,7 @@ public:
 
   } slave;
 
-  class : public Encoder {
+  class : public atsamd::encoder::Encoder {
   public:
     Device *that;
 
