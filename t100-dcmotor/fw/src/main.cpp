@@ -8,6 +8,7 @@ const int PIN_MOTOR2 = 22;
 const int PIN_HALL_A = 6;
 const int PIN_HALL_B = 7;
 const int EXT_INT_HALL_A = 6;
+const int EXT_INT_HALL_B = 7;
 
 const int PIN_SDA = 14;
 const int PIN_SCL = 15;
@@ -85,7 +86,7 @@ public:
 
     void init(Device *that) {
       this->that = that;
-      Encoder::init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A);
+      Encoder::init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A, EXT_INT_HALL_B);
     }
   } encoder;
 

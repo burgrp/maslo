@@ -2,13 +2,16 @@ class Encoder {
   int pinA;
   int pinB;
   int extInA;
+  int extInB;
+  bool cancelNoise;
 
 public:
-  void init(int pinA, int pinB, int extInA) {
+  void init(int pinA, int pinB, int extInA, int extInB) {
 
     this->pinA = pinA;
     this->pinB = pinB;
     this->extInA = extInA;
+    this->extInB = extInB;
 
     target::PORT.OUTSET.setOUTSET(1 << pinA | 1 << pinB);
     target::PORT.PINCFG[pinA].setINEN(true).setPULLEN(true).setPMUXEN(true);
@@ -32,16 +35,29 @@ public:
     while (target::EIC.STATUS)
       ;
 
-    target::EIC.CONFIG.setSENSE(extInA, target::eic::CONFIG::SENSE::RISE);
+    target::EIC.CONFIG.setSENSE(extInA, target::eic::CONFIG::SENSE::BOTH);
+    target::EIC.CONFIG.setSENSE(extInB, target::eic::CONFIG::SENSE::BOTH);
     target::EIC.INTENSET.setEXTINT(extInA, true);
+    target::EIC.INTENSET.setEXTINT(extInB, true);
   }
 
   virtual void changed(int steps) = 0;
 
   void interruptHandlerEIC() {
     if (target::EIC.INTFLAG.getEXTINT(extInA)) {
-      changed((target::PORT.IN.getIN() >> pinB) & 1 ? -1 : 1);
+      if (!cancelNoise) {
+        int in = target::PORT.IN.getIN();
+        int a = (in >> pinA) & 1;
+        int b = (in >> pinB) & 1;
+        changed(a == b ? 1 : -1);        
+      }
+      cancelNoise = true;
       target::EIC.INTFLAG.setEXTINT(extInA, true);
+    }
+
+    if (target::EIC.INTFLAG.getEXTINT(extInB)) {
+      cancelNoise = false;
+      target::EIC.INTFLAG.setEXTINT(extInB, true);
     }
   }
 };

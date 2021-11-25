@@ -17,12 +17,22 @@ async function start() {
         i2c.nop();
 
 
-        let motor = createMotor({i2c, address: 0x52});
-        motor.set(-0.4);
-        await wait(1000);
-        motor.set(-0.5);
-        await wait(1000);
-        motor.set(-0.6);
+        let motor = createMotor({i2c, address: 0x50});
+        // motor.set(-0.4);
+        // await wait(1000);
+        // motor.set(-0.5);
+        // await wait(1000);
+        // motor.set(-0.6);
+
+        let prevSteps;
+        //while (true) {
+        for (let c = 0; c < 20; c++) {
+            let state = await motor.get();
+            console.info(state, prevSteps, state.steps, state.steps - prevSteps);
+            prevSteps = state.steps;
+            await motor.set(-0.7);
+            await wait(100);
+        }
 
         // let motors = Object.entries({
         //     "a": 0x50,
