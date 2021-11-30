@@ -337,6 +337,7 @@ module.exports = async ({
             } finally {
                 state.mode = MODE_STANDBY;
                 delete state.jobInterrupt;
+                delete state.target;
             }
         }
     }

@@ -61,11 +61,7 @@ module.exports = ({ machine, pid }) => {
 
         logInfo(from, to, future);
 
-        let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y);
-
-        if (moveDistanceAbsMm === 0) {
-            moveDistanceAbsMm = abs(to.z - from.z);
-        }
+        let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y, to.z - from.z);
 
         if (moveDistanceAbsMm > 0) {
 
@@ -87,33 +83,33 @@ module.exports = ({ machine, pid }) => {
 
                 machine.setTarget(target);
 
-                let state = machine.getState();
+                // let state = machine.getState();
 
-                let targetChains = machine.getChainLengths(target);
-                let sledChains = machine.getChainLengths(state.sled.position);
+                // let targetChains = machine.getChainLengths(target);
+                // let sledChains = machine.getChainLengths(state.sled.position);
 
-                for (let m of ["a", "b", "z"]) {
-                    let lastError = lastErrors[m];
+                // for (let m of ["a", "b", "z"]) {
+                //     let lastError = lastErrors[m];
 
-                    let error = m === "z" ?
-                        state.spindle.zMm - target.zMm:
-                        targetChains[m + "Mm"] - sledChains[m + "Mm"];
+                //     let error = m === "z" ?
+                //         state.spindle.zMm - target.zMm:
+                //         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
-                    let p = pid[m].kp * error;
-                    let d = pid[m].kd * (isFinite(lastError) ? error - lastError : 0);
+                //     let p = pid[m].kp * error;
+                //     let d = pid[m].kd * (isFinite(lastError) ? error - lastError : 0);
 
-                    let duty = state.motors[m].duty + p + d;
-                    machine.setMotorDuty(m, sign(duty) * min(1, abs(duty)));
+                //     let duty = state.motors[m].duty + p + d;
+                //     machine.setMotorDuty(m, sign(duty) * min(1, abs(duty)));
 
-                    lastErrors[m] = error;
-                }
+                //     lastErrors[m] = error;
+                // }
 
-                logInfo(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
+                // logInfo(`(${target.xMm.toFixed(1)}, ${target.yMm.toFixed(1)}, ${target.zMm.toFixed(1)}) ` + ["a", "b", "z"].map(m => `${m.toUpperCase()}:${state.motors[m].duty.toFixed(3)} ${lastErrors[m] < 0 ? "" : "+"}${lastErrors[m].toFixed(3)}`).join(" "));
 
                 await machine.synchronizeJob();
             }
 
-            machine.setMotorDuty("z", 0);
+            //machine.setMotorDuty("z", 0);
         }
     }
 
@@ -199,7 +195,7 @@ module.exports = ({ machine, pid }) => {
                     /**
                      * Rapid Move
                      */
-                    async G0(params) {  
+                    async G0(params) {
                         await enqueueMove(params);
                     },
                     /**
@@ -218,22 +214,15 @@ module.exports = ({ machine, pid }) => {
                     async M30() { }
                 };
 
-                try {
-                    for (let command of code) {
-                        if (!(handler[command.code] instanceof Function)) {
-                            throw new Error(`Unsupported GCODE ${command.code}`);
-                        }
-                        logInfo(command);
-                        await handler[command.code](command);
+                for (let command of code) {
+                    if (!(handler[command.code] instanceof Function)) {
+                        throw new Error(`Unsupported GCODE ${command.code}`);
                     }
-                    await enqueueMove();
-
-                } finally {
-                    machine.setMotorDuty("a", 0);
-                    machine.setMotorDuty("b", 0);
-                    machine.setMotorDuty("z", 0);
-                    machine.setTarget(undefined);
+                    logInfo(command);
+                    await handler[command.code](command);
                 }
+                await enqueueMove();
+
             });
         }
 

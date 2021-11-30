@@ -140,15 +140,6 @@ public:
     while (target::GCLK.STATUS.getSYNCBUSY())
       ;
 
-    // ADC for WNH7070 current sense
-
-    target::PM.APBCMASK.setADC(true);
-
-    target::GCLK.CLKCTRL = target::GCLK.CLKCTRL.bare()
-                               .setID(target::gclk::CLKCTRL::ID::ADC)
-                               .setGEN(target::gclk::CLKCTRL::GEN::GCLK0)
-                               .setCLKEN(true);
-
     // STOPs
 
     target::PORT.PINCFG[PIN_STOP1].setINEN(true).setPULLEN(true);
