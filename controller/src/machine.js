@@ -11,10 +11,6 @@ function absStepsToDistanceMm(motorConfig, steps) {
     return steps * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
 }
 
-function asyncWait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 let pow2 = a => a * a;
 let { sqrt, hypot, abs, round, min, max, sign } = Math;
 
@@ -194,13 +190,13 @@ module.exports = async ({
             } else {
                 delete state.spindle.zMm;
             }
-            
+
         } else {
             delete state.spindle.zMm;
         }
 
         if (state.relays.spindle.state) {
-            state.spindle.on = state.relays.spindle.state.on;            
+            state.spindle.on = state.relays.spindle.state.on;
         } else {
             state.spindle.on = false;
         }
@@ -242,16 +238,17 @@ module.exports = async ({
 
         }
 
-}
+    }
 
     async function machineCheckLoop() {
         while (true) {
+            let wait = new Promise(resolve => setTimeout(resolve, checkIntervalMs));
             try {
                 await checkMachineState();
             } catch (e) {
                 logError("Error in machine check:", e);
             }
-            await asyncWait(checkIntervalMs);
+            await wait;
         }
     }
 
@@ -322,7 +319,7 @@ module.exports = async ({
         },
 
         async doJob(action) {
-            
+
             if (state.mode !== MODE_STANDBY) {
                 throw new Error("Machine not in standby mode");
             }
@@ -333,7 +330,7 @@ module.exports = async ({
             } catch (e) {
                 if (!e.moveInterrupted) {
                     throw e;
-                } 
+                }
             } finally {
                 state.mode = MODE_STANDBY;
                 delete state.jobInterrupt;
