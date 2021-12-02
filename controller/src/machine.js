@@ -46,7 +46,8 @@ module.exports = async ({
             yMm: 0
         },
         motors: {},
-        relays: {}
+        relays: {},
+        errors: {}
     }
 
     let driverInstance = drivers[driverConfig];
@@ -93,13 +94,12 @@ module.exports = async ({
             for (let name in motors) {
                 const m = state.motors[name];
                 try {
-                    await motors[name].set(m.duty);
                     m.state = await motors[name].get();
-                    delete m.error;
+                    delete state.errors[`motor.${name}.get`];
                 } catch (e) {
-                    logError(`Motor ${name} error:`, e);
+                    logError(`Motor ${name} error on get:`, e);
                     delete m.state;
-                    m.error = e.message || e;
+                    state.errors[`motor.${name}.get`] = e.message || e;
                 }
             }
         }
@@ -108,13 +108,12 @@ module.exports = async ({
             for (let name in relays) {
                 const r = state.relays[name];
                 try {
-                    await relays[name].set(r.on);
                     r.state = await relays[name].get();
-                    delete r.error;
+                    delete state.errors[`relay.${name}.get`];
                 } catch (e) {
-                    logError(`Relay ${name} error:`, e);
+                    logError(`Relay ${name} error on get:`, e);
                     delete r.state;
-                    r.error = e.message || e;
+                    state.errors[`relay.${name}.get`] = e.message || e;
                 }
             }
         }
@@ -200,7 +199,7 @@ module.exports = async ({
         }
 
         function checkHooverRelay() {
-            state.relays.hoover.on = state.relays.spindle.state && state.relays.spindle.state.on && state.spindle.zMm < 0;
+            state.relays.hoover.on = state.relays.spindle.state && state.relays.spindle.state.on && state.spindle.zMm < 0 || false;
         }
 
         function checkJobSynchronizers() {
@@ -242,6 +241,32 @@ module.exports = async ({
             }
         }
 
+        async function setMotorDuties() {
+            for (let name in motors) {
+                const m = state.motors[name];
+                try {
+                    await motors[name].set(m.duty);
+                    delete state.errors[`motor.${name}.set`];
+                } catch (e) {
+                    logError(`Motor ${name} error on set:`, e);
+                    state.errors[`motor.${name}.set`] = e.message || e;
+                }
+            }
+        }     
+
+        async function setRelayStates() {
+            for (let name in relays) {
+                const r = state.relays[name];
+                try {
+                    await relays[name].set(r.on);
+                    delete state.errors[`relay.${name}.set`];
+                } catch (e) {
+                    logError(`Relay ${name} error on set:`, e);
+                    state.errors[`relay.${name}.set`] = e.message || e;
+                }
+            }
+        }
+
         await checkMotorStates();
         await checkRelayStates();
         await checkSledPosition();
@@ -249,6 +274,8 @@ module.exports = async ({
         await checkHooverRelay();
         await checkMachineListeners();
         await checkJobSynchronizers();
+        await setMotorDuties();
+        await setRelayStates();
     }
 
     async function machineCheckLoop() {
@@ -256,8 +283,10 @@ module.exports = async ({
             let wait = new Promise(resolve => setTimeout(resolve, checkIntervalMs));
             try {
                 await checkMachineState();
+                delete state.errors.check;
             } catch (e) {
                 logError("Error in machine check:", e);
+                state.errors.check = e.message || e;
             }
             await wait;
         }
