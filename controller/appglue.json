@@ -60,19 +60,25 @@
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
-                "mmPerRev": 60
+                "mmPerRev": 60,
+                "kp": 0.005,
+                "kd": 0.1
             },
             "b": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
-                "mmPerRev": 60
+                "mmPerRev": 60,
+                "kp": 0.005,
+                "kd": 0.1
             },
             "z": {
                 "maxRpm": 9900,
                 "encoderPpr": 11,
                 "gearRatio": 90,
-                "mmPerRev": 1
+                "mmPerRev": 1,
+                "kp": -0.05,
+                "kd": -0.5
             }
         },
         "relays": {
@@ -82,21 +88,7 @@
     },
     "router": {
         "module": "./router.js",
-        "machine": "-> machine",
-        "pid" : {
-            "a": {
-                "kp": 0.005,
-                "kd": 0.1
-            },
-            "b": {
-                "kp": 0.005,
-                "kd": 0.1
-            },
-            "z": {
-                "kp": -0.05,
-                "kd": -0.5
-            }
-        }
+        "machine": "-> machine"
     },
     "webserver": {
         "module": "@burgrp/webglue",

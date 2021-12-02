@@ -88,6 +88,14 @@ module.exports = async ({
         }
     }
 
+    function getChainLengths(positionUCS) {
+        let positionMCS = userToMachineCS(positionUCS);
+        return {
+            aMm: hypot(state.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
+            bMm: hypot(state.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
+        };
+    }
+
     async function checkMachineState() {
 
         async function checkMotorStates() {
@@ -198,6 +206,34 @@ module.exports = async ({
             }
         }
 
+        async function checkTarget() {
+
+            if (state.sled.position && isFinite(state.spindle.zMm) && state.target) {
+
+                let targetChains = getChainLengths(state.target);
+                let sledChains = getChainLengths(state.sled.position);
+
+                for (let m of ["a", "b", "z"]) {
+                    let lastOffset = state.motors[m].offset;
+
+                    let offset = m === "z" ?
+                        state.spindle.zMm - state.target.zMm:
+                        targetChains[m + "Mm"] - sledChains[m + "Mm"];
+
+                    let p = motorConfigs[m].kp * offset;
+                    let d = motorConfigs[m].kd * (isFinite(lastOffset) ? offset - lastOffset : 0);
+
+                    let duty = state.motors[m].state.duty + p + d;
+                    state.motors[m].duty = sign(duty) * min(1, abs(duty));                    
+                    state.motors[m].offset = offset;
+                }
+            } else {
+                for (let m of ["a", "b", "z"]) {
+                    delete state.motors[m].offset;
+                }
+            }
+        }
+
         function checkHooverRelay() {
             state.relays.hoover.on = state.relays.spindle.state && state.relays.spindle.state.on && state.spindle.zMm < 0 || false;
         }
@@ -271,6 +307,7 @@ module.exports = async ({
         await checkRelayStates();
         await checkSledPosition();
         await checkSpindlePosition();
+        await checkTarget();
         await checkHooverRelay();
         await checkMachineListeners();
         await checkJobSynchronizers();
@@ -336,14 +373,6 @@ module.exports = async ({
 
         setTarget(target) {
             state.target = target;
-        },
-
-        getChainLengths(positionUCS) {
-            let positionMCS = userToMachineCS(positionUCS);
-            return {
-                aMm: hypot(state.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
-                bMm: hypot(state.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
-            };
         },
 
         synchronizeJob() {
