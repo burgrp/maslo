@@ -89,155 +89,175 @@ module.exports = async ({
 
     async function checkMachineState() {
 
-        for (let name in motors) {
-            const m = state.motors[name];
-            try {
-                await motors[name].set(m.duty);
-                m.state = await motors[name].get();
-                delete m.error;
-            } catch (e) {
-                logError(`Motor ${name} error:`, e);
-                delete m.state;
-                m.error = e.message || e;
-            }
-        }
-
-        for (let name in relays) {
-            const r = state.relays[name];
-            try {
-                await relays[name].set(r.on);
-                r.state = await relays[name].get();
-                delete r.error;
-            } catch (e) {
-                logError(`Relay ${name} error:`, e);
-                delete r.state;
-                r.error = e.message || e;
-            }
-        }
-
-        if (state.motors.a.state && state.motors.b.state) {
-
-            if (
-                !state.sled.position &&
-                configuration.data.lastPosition &&
-                isFinite(configuration.data.lastPosition.xMm) &&
-                isFinite(configuration.data.lastPosition.yMm)
-            ) {
-                state.sled.reference = {
-                    xMm: configuration.data.lastPosition.xMm,
-                    yMm: configuration.data.lastPosition.yMm,
-                    aSteps: state.motors.a.state.steps,
-                    bSteps: state.motors.b.state.steps
+        async function checkMotorStates() {
+            for (let name in motors) {
+                const m = state.motors[name];
+                try {
+                    await motors[name].set(m.duty);
+                    m.state = await motors[name].get();
+                    delete m.error;
+                } catch (e) {
+                    logError(`Motor ${name} error:`, e);
+                    delete m.state;
+                    m.error = e.message || e;
                 }
             }
+        }
 
-            if (state.sled.reference) {
+        async function checkRelayStates() {
+            for (let name in relays) {
+                const r = state.relays[name];
+                try {
+                    await relays[name].set(r.on);
+                    r.state = await relays[name].get();
+                    delete r.error;
+                } catch (e) {
+                    logError(`Relay ${name} error:`, e);
+                    delete r.state;
+                    r.error = e.message || e;
+                }
+            }
+        }
 
-                let referenceMCS = userToMachineCS(state.sled.reference);
+        function checkSledPosition() {
+            if (state.motors.a.state && state.motors.b.state) {
 
-                let referenceASteps = distanceMmToAbsSteps(
-                    motorConfigs.a,
-                    hypot(
-                        state.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - state.sled.reference.aSteps;
+                if (!state.sled.position &&
+                    configuration.data.lastPosition &&
+                    isFinite(configuration.data.lastPosition.xMm) &&
+                    isFinite(configuration.data.lastPosition.yMm)) {
+                    state.sled.reference = {
+                        xMm: configuration.data.lastPosition.xMm,
+                        yMm: configuration.data.lastPosition.yMm,
+                        aSteps: state.motors.a.state.steps,
+                        bSteps: state.motors.b.state.steps
+                    };
+                }
 
-                let referenceBSteps = distanceMmToAbsSteps(
-                    motorConfigs.b,
-                    hypot(
-                        state.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - state.sled.reference.bSteps;
+                if (state.sled.reference) {
 
-                // let's have triangle MotorA-MotorB-Sled, then:
-                // a is MotorA-Sled, i.e. chain length a
-                // b is MotorA-Sled, i.e. chain length b
-                // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                let a = absStepsToDistanceMm(motorConfigs.a, referenceASteps + state.motors.a.state.steps);
-                let b = absStepsToDistanceMm(motorConfigs.b, referenceBSteps + state.motors.b.state.steps);
-                let aa = (pow2(a) - pow2(b) + pow2(state.beam.motorsDistanceMm)) / (2 * state.beam.motorsDistanceMm);
+                    let referenceMCS = userToMachineCS(state.sled.reference);
 
-                state.sled.position = machineToUserCS({
-                    xMm: aa - state.beam.motorsDistanceMm / 2,
-                    yMm: sqrt(pow2(a) - pow2(aa))
-                });
+                    let referenceASteps = distanceMmToAbsSteps(
+                        motorConfigs.a,
+                        hypot(
+                            state.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
+                            referenceMCS.yMm
+                        )
+                    ) - state.sled.reference.aSteps;
+
+                    let referenceBSteps = distanceMmToAbsSteps(
+                        motorConfigs.b,
+                        hypot(
+                            state.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
+                            referenceMCS.yMm
+                        )
+                    ) - state.sled.reference.bSteps;
+
+                    // let's have triangle MotorA-MotorB-Sled, then:
+                    // a is MotorA-Sled, i.e. chain length a
+                    // b is MotorA-Sled, i.e. chain length b
+                    // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+                    let a = absStepsToDistanceMm(motorConfigs.a, referenceASteps + state.motors.a.state.steps);
+                    let b = absStepsToDistanceMm(motorConfigs.b, referenceBSteps + state.motors.b.state.steps);
+                    let aa = (pow2(a) - pow2(b) + pow2(state.beam.motorsDistanceMm)) / (2 * state.beam.motorsDistanceMm);
+
+                    state.sled.position = machineToUserCS({
+                        xMm: aa - state.beam.motorsDistanceMm / 2,
+                        yMm: sqrt(pow2(a) - pow2(aa))
+                    });
+
+                } else {
+                    delete state.sled.position;
+                }
 
             } else {
                 delete state.sled.position;
             }
-
-        } else {
-            delete state.sled.position;
         }
 
-        if (state.motors.z.state) {
+        function checkSpindlePosition() {
+            if (state.motors.z.state) {
 
-            if (
-                !isFinite(state.spindle.zMm) &&
-                configuration.data.lastPosition &&
-                isFinite(configuration.data.lastPosition.zMm)
-            ) {
-                state.spindle.reference = {
-                    zMm: configuration.data.lastPosition.zMm,
-                    zSteps: state.motors.z.state.steps
+                if (!isFinite(state.spindle.zMm) &&
+                    configuration.data.lastPosition &&
+                    isFinite(configuration.data.lastPosition.zMm)) {
+                    state.spindle.reference = {
+                        zMm: configuration.data.lastPosition.zMm,
+                        zSteps: state.motors.z.state.steps
+                    };
                 }
-            }
 
-            if (state.spindle.reference) {
-                state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
+                if (state.spindle.reference) {
+                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
+                } else {
+                    delete state.spindle.zMm;
+                }
+
             } else {
                 delete state.spindle.zMm;
             }
-
-        } else {
-            delete state.spindle.zMm;
         }
 
-        if (state.relays.spindle.state) {
-            state.spindle.on = state.relays.spindle.state.on;
-        } else {
-            state.spindle.on = false;
+        function checkSpindleRelay() {
+            if (state.relays.spindle.state) {
+                state.spindle.on = state.relays.spindle.state.on;
+            } else {
+                state.spindle.on = false;
+            }
         }
 
-        state.relays.hoover.on = state.spindle.on && state.spindle.zMm < 0;
+        function checkHooverRelay() {
+            state.relays.hoover.on = state.spindle.on && state.spindle.zMm < 0;
+        }
 
-        let newHash = objectHash(state);
-        if (newHash !== stateHash) {
-            stateHash = newHash;
+        function checkJobSynchronizers() {
+            while (waiters.length) {
+                let waiter = waiters.shift();
+                if (state.jobInterrupt) {
+                    let e = new Error("Move interrupted");
+                    e.moveInterrupted = true;
+                    waiter.reject(e);
+                } else {
+                    waiter.resolve(state);
+                }
 
-            async function notify() {
-                try {
-                    stateChangedListenersPending = true;
-                    for (listener of stateChangedListeners) {
-                        await listener(state);
+            }
+        }
+
+        function checkMachineListeners() {
+            let newHash = objectHash(state);
+            if (newHash !== stateHash) {
+                stateHash = newHash;
+
+                async function notify() {
+                    try {
+                        stateChangedListenersPending = true;
+                        for (listener of stateChangedListeners) {
+                            await listener(state);
+                        }
+                    } finally {
+                        stateChangedListenersPending = false;
                     }
-                } finally {
-                    stateChangedListenersPending = false;
+                }
+
+                if (!stateChangedListenersPending) {
+                    // fork notify
+                    notify().catch(e => {
+                        logError("Error in machine change notification listener:", e);
+                    });
                 }
             }
-
-            if (!stateChangedListenersPending) {
-                // fork notify
-                notify().catch(e => {
-                    logError("Error in machine change notification listener:", e);
-                });
-            }
         }
 
-        while (waiters.length) {
-            let waiter = waiters.shift();
-            if (state.jobInterrupt) {
-                let e = new Error("Move interrupted");
-                e.moveInterrupted = true;
-                waiter.reject(e);
-            } else {
-                waiter.resolve(state);
-            }
-
-        }
-
+        await checkMotorStates();
+        await checkRelayStates();
+        await checkSledPosition();
+        await checkSpindlePosition();
+        await checkSpindleRelay();
+        await checkHooverRelay();
+        await checkMachineListeners();
+        await checkJobSynchronizers();
     }
 
     async function machineCheckLoop() {
@@ -251,8 +271,6 @@ module.exports = async ({
             await wait;
         }
     }
-
-    await checkMachineState();
 
     // fork the check loop
     machineCheckLoop().catch(e => {
