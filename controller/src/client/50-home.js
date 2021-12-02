@@ -58,7 +58,7 @@ wg.pages.home = {
             $(".zaxis .position")
                 .toggleClass("moving", state.motors.z.state && Math.abs(state.motors.z.state.duty) > 0.1)
                 .toggleClass("out", state.spindle.zMm < 0);
-            $(".zaxis .spindle").toggleClass("on", state.spindle.on);
+            $(".zaxis .spindle").toggleClass("on", state.relays.spindle.state && state.relays.spindle.state.on);
 
             $(".scene svg").attr({
                 viewBox: [

@@ -62,7 +62,7 @@ module.exports = async ({
             throw new Error(`Unknown sled position`);
         }
 
-        let rapidMove = !state.spindle.on && state.spindle.zMm > 0;
+        let rapidMove = state.relays.spindle.state && !state.relays.spindle.state.on && state.spindle.zMm > 0;
 
         await router.run([{
             code: rapidMove ? "G0" : "G1",

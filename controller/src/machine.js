@@ -199,16 +199,8 @@ module.exports = async ({
             }
         }
 
-        function checkSpindleRelay() {
-            if (state.relays.spindle.state) {
-                state.spindle.on = state.relays.spindle.state.on;
-            } else {
-                state.spindle.on = false;
-            }
-        }
-
         function checkHooverRelay() {
-            state.relays.hoover.on = state.spindle.on && state.spindle.zMm < 0;
+            state.relays.hoover.on = state.relays.spindle.state && state.relays.spindle.state.on && state.spindle.zMm < 0;
         }
 
         function checkJobSynchronizers() {
@@ -254,7 +246,6 @@ module.exports = async ({
         await checkRelayStates();
         await checkSledPosition();
         await checkSpindlePosition();
-        await checkSpindleRelay();
         await checkHooverRelay();
         await checkMachineListeners();
         await checkJobSynchronizers();
