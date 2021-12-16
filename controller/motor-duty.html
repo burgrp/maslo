@@ -1,0 +1,41 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="https://jsxgraph.org/distrib/jsxgraph.css" />
+</head>
+
+<body>
+    <script type="text/javascript" src="https://jsxgraph.org/distrib/jsxgraphcore.js"></script>
+    <div id="box" class="jxgbox" style="width:600px; height:600px;"></div>
+
+    <script>
+        var board = JXG.JSXGraph.initBoard('box', {
+            boundingbox: [-2, 2, 2, -2],
+            axis: true
+        });
+
+        let {sign, abs, min, max} = Math;
+
+        board.create('functiongraph', [
+            (offset) => {
+                // if (Math.abs(offset) < 0.1) {
+                //     return 0;
+                // }
+//                 let duty = Math.sign(offset) * ((1-1/Math.abs(offset))/5 + 5);
+//                 if (Math.sign(duty) !== Math.sign(offset)) {
+//                     duty = 0;
+//                 }
+                let duty = abs(offset) < 0.1? 0: sign(offset) * abs(offset * (1-0.6) +sign(offset) * 0.6);
+                return duty;
+            }
+        ], {
+            strokewidth: 2,
+            color: "red",
+            a: 0,
+            b: 0
+        });
+
+    </script>
+</body>
+
+</html>

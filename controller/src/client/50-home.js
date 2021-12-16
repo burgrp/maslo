@@ -134,6 +134,21 @@ wg.pages.home = {
                 y2: mY
             });
 
+            for (let motor of [{ name: "a", "side": -1 }, { name: "b", "side": 1 }]) {
+                $(`.scene .duty-bar.${motor.name}`).attr({
+                    x1: motor.side * state.beam.motorsDistanceMm / 2,
+                    y1: 0,
+                    x2: motor.side * state.beam.motorsDistanceMm / 2,
+                    y2: state.workspace.heightMm / 2 * (state.motors[motor.name].duty || 0)
+                });
+                $(`.scene .error-bar.${motor.name}`).attr({
+                    x1: motor.side * (state.beam.motorsDistanceMm / 2 - 100),
+                    y1: 0,
+                    x2: motor.side * (state.beam.motorsDistanceMm / 2 - 100),
+                    y2: state.workspace.heightMm / 2 * (state.motors[motor.name].offset || 0)
+                });
+            }
+
             let dist = Math.sqrt(Math.pow(sledX - lastSledX, 2) + Math.pow(sledY - lastSledY, 2));
             if (dist > 10 || !isFinite(dist)) {
 
@@ -195,6 +210,10 @@ wg.pages.home = {
                 <line class="target y" stroke="white" stroke-width="10"/>
                 <line class="userorigin x" stroke="yellow" stroke-width="10"/>
                 <line class="userorigin y" stroke="yellow" stroke-width="10"/>
+                <line class="duty-bar a" stroke="yellow" stroke-width="50"/>
+                <line class="duty-bar b" stroke="yellow" stroke-width="50"/>
+                <line class="error-bar a" stroke="red" stroke-width="50"/>
+                <line class="error-bar b" stroke="red" stroke-width="50"/>
                 <g id="previewSvg"/>
                 </g>
             </svg>                      

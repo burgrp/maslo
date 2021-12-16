@@ -74,6 +74,9 @@ module.exports = async ({
     let stateChangedListenersPending = false;
     let waiters = [];
 
+    let checkTargetPrevMs;
+    let checkTargetIntOffset = 0;
+
     function userToMachineCS(pos) {
         return {
             xMm: pos.xMm,
@@ -208,23 +211,73 @@ module.exports = async ({
 
         async function checkTarget() {
 
-            if (state.sled.position && isFinite(state.spindle.zMm) && state.target) {
+            let nowMs = new Date().getTime();
+            let tMs = nowMs - checkTargetPrevMs;
+            checkTargetPrevMs = nowMs;
+
+            if (isFinite(tMs) && state.sled.position && isFinite(state.spindle.zMm) && state.target) {
 
                 let targetChains = getChainLengths(state.target);
                 let sledChains = getChainLengths(state.sled.position);
 
                 for (let m of ["a", "b", "z"]) {
-                    let lastOffset = state.motors[m].offset;
+                    let lastOffset = state.motors[m].offset || 0;
 
                     let offset = m === "z" ?
-                        state.spindle.zMm - state.target.zMm:
+                        state.spindle.zMm - state.target.zMm :
                         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
-                    let p = motorConfigs[m].kp * offset;
-                    let d = motorConfigs[m].kd * (isFinite(lastOffset) ? offset - lastOffset : 0);
+                    let { kp, ki, kd } = motorConfigs[m];
+                    // kp = 0.05;
+                    // ki = 0.000005;
+                    // kd = 0;
 
-                    let duty = state.motors[m].state.duty + p + d;
-                    state.motors[m].duty = sign(duty) * min(1, abs(duty));                    
+                    kp = 0.1;
+                    ki = 0.0;
+                    kd = 0;
+
+                    let p = kp * offset;
+
+                    checkTargetIntOffset += offset / tMs;
+                    let i = ki * checkTargetIntOffset;
+
+                    let d = kd * (offset - lastOffset) / tMs;
+
+                    console.info(m, p, i, d);
+                    // offset = p + i + d;
+                    //state.motors[m].state.duty + 
+
+
+                    //offset = offset / 5;
+                    
+                    let duty = p + i + d;
+
+                    if (duty && sign(state.motors[m].state.duty) === -sign(duty)) {
+                        state.motors[m].blank = new Date().getTime() + 1000;
+                    }
+
+                    if (state.motors[m].blank) {
+                        if (new Date().getTime() > state.motors[m].blank) {
+                            delete state.motors[m].blank;
+                        }                        
+                        duty = 0;
+                    } else if (abs(state.motors[m].state.duty) < 0.3) {
+                        duty = sign(duty) * 0.7;
+                    }
+
+                    //duty = abs(duty) < 0.1? 0: sign(duty) * abs(duty * (1-0.6) +sign(duty) * 0.6);
+
+                    //duty += 0.6 * (duty - state.motors[m].state.duty);
+
+                    // let duty = Math.sign(offset) * (2-1/Math.abs(offset))/2;
+                    // if (Math.sign(duty) !== Math.sign(offset)) {
+                    //     duty = 0;
+                    // }
+
+
+                    //console.info(m, offset.toFixed(3), duty.toFixed(3));
+
+                    state.motors[m].duty = sign(duty) * min(1, abs(duty));
                     state.motors[m].offset = offset;
                 }
             } else {
@@ -288,7 +341,7 @@ module.exports = async ({
                     state.errors[`motor.${name}.set`] = e.message || e;
                 }
             }
-        }     
+        }
 
         async function setRelayStates() {
             for (let name in relays) {

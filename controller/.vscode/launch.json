@@ -1,6 +1,13 @@
 {
     "version": "0.2.0",
     "configurations": [
+    {
+        "name": "Motor Duty Graph",
+        "request": "launch",
+        "type": "pwa-chrome",
+        "url": "file://${workspaceFolder}/motor-duty.html",
+        "webRoot": "${workspaceFolder}"
+    },
         {
             "name": "Chrome",
             "request": "launch",

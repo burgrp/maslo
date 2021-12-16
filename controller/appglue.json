@@ -61,24 +61,27 @@
                 "encoderPpr": 17,
                 "gearRatio": 280,
                 "mmPerRev": 60,
-                "kp": 0.005,
-                "kd": 0.1
+                "kp": 0.0005,
+                "ki": 0,
+                "kd": 1
             },
             "b": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
                 "mmPerRev": 60,
-                "kp": 0.005,
-                "kd": 0.1
+                "kp": 0.0005,
+                "ki": 0,
+                "kd": 1
             },
             "z": {
                 "maxRpm": 9900,
                 "encoderPpr": 11,
                 "gearRatio": 90,
                 "mmPerRev": 1,
-                "kp": -0.05,
-                "kd": -0.5
+                "kp": -0.005,
+                "ki": 0,
+                "kd": 0
             }
         },
         "relays": {
