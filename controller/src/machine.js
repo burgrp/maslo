@@ -74,9 +74,6 @@ module.exports = async ({
     let stateChangedListenersPending = false;
     let waiters = [];
 
-    let checkTargetPrevMs;
-    let checkTargetIntOffset = 0;
-
     function userToMachineCS(pos) {
         return {
             xMm: pos.xMm,
@@ -211,74 +208,60 @@ module.exports = async ({
 
         async function checkTarget() {
 
-            let nowMs = new Date().getTime();
-            let tMs = nowMs - checkTargetPrevMs;
-            checkTargetPrevMs = nowMs;
-
-            if (isFinite(tMs) && state.sled.position && isFinite(state.spindle.zMm) && state.target) {
+            if (state.sled.position && isFinite(state.spindle.zMm) && state.target) {
 
                 let targetChains = getChainLengths(state.target);
                 let sledChains = getChainLengths(state.sled.position);
 
                 for (let m of ["a", "b", "z"]) {
-                    let lastOffset = state.motors[m].offset || 0;
 
                     let offset = m === "z" ?
                         state.spindle.zMm - state.target.zMm :
                         targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
-                    let { kp, ki, kd } = motorConfigs[m];
-                    // kp = 0.05;
-                    // ki = 0.000005;
-                    // kd = 0;
+                    let motor = state.motors[m];
 
-                    kp = 0.1;
-                    ki = 0.0;
-                    kd = 0;
+                    if (motor.blank) {
 
-                    let p = kp * offset;
+                        if (new Date().getTime() > motor.blank) {
+                            delete motor.blank;
+                        }
 
-                    checkTargetIntOffset += offset / tMs;
-                    let i = ki * checkTargetIntOffset;
+                        motor.duty = 0;
 
-                    let d = kd * (offset - lastOffset) / tMs;
+                    } else {
 
-                    console.info(m, p, i, d);
-                    // offset = p + i + d;
-                    //state.motors[m].state.duty + 
+                        let duty = offset * motorConfigs[m].offsetToDuty;
+                        duty = sign(duty) * min(abs(duty), 1);
 
+                        if (duty && sign(duty) === -sign(motor.duty)) {
 
-                    //offset = offset / 5;
-                    
-                    let duty = p + i + d;
+                            motor.blank = new Date().getTime() + 1000;
+                            motor.duty = 0;
 
-                    if (duty && sign(state.motors[m].state.duty) === -sign(duty)) {
-                        state.motors[m].blank = new Date().getTime() + 1000;
+                        } else {
+
+                            let safeDuty = 0.7;
+                            let maxDutyBlankMs = 100;
+
+                            if (abs(duty) < 0.01) {
+                                motor.duty = 0;
+                            } else {
+                                if (abs(duty) < safeDuty) {
+                                    motor.blank = new Date().getTime() - maxDutyBlankMs * (abs(duty) - safeDuty) / safeDuty;
+                                    motor.duty = sign(duty) * safeDuty;
+                                } else {
+                                    motor.duty = abs(motor.duty) < safeDuty ? sign(duty) * safeDuty : duty;
+                                }
+                            }
+
+                        }
+
                     }
 
-                    if (state.motors[m].blank) {
-                        if (new Date().getTime() > state.motors[m].blank) {
-                            delete state.motors[m].blank;
-                        }                        
-                        duty = 0;
-                    } else if (abs(state.motors[m].state.duty) < 0.3) {
-                        duty = sign(duty) * 0.7;
-                    }
-
-                    //duty = abs(duty) < 0.1? 0: sign(duty) * abs(duty * (1-0.6) +sign(duty) * 0.6);
-
-                    //duty += 0.6 * (duty - state.motors[m].state.duty);
-
-                    // let duty = Math.sign(offset) * (2-1/Math.abs(offset))/2;
-                    // if (Math.sign(duty) !== Math.sign(offset)) {
-                    //     duty = 0;
-                    // }
 
 
-                    //console.info(m, offset.toFixed(3), duty.toFixed(3));
-
-                    state.motors[m].duty = sign(duty) * min(1, abs(duty));
-                    state.motors[m].offset = offset;
+                    motor.offset = offset;
                 }
             } else {
                 for (let m of ["a", "b", "z"]) {
