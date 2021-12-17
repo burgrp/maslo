@@ -79,13 +79,14 @@ public:
   public:
     Device *that;
 
-    void changed(int steps) {
-      that->state.actSteps += steps;
+    void changed(int position) {
+      that->state.actSteps = position;
       that->checkState();
     }
 
     void init(Device *that) {
       this->that = that;
+      that->state.actSteps = position;
       Encoder::init(PIN_HALL_A, PIN_HALL_B, EXT_INT_HALL_A, EXT_INT_HALL_B);
     }
   } encoder;
