@@ -61,14 +61,14 @@
         "motors": {
             "a": {
                 "maxRpm": 7800,
-                "encoderPpr": 17,
+                "encoderPpr": "-> 17*4",
                 "gearRatio": 280,
                 "mmPerRev": 60,
                 "offsetToDuty": 0.3
             },
             "b": {
                 "maxRpm": 7800,
-                "encoderPpr": 17,
+                "encoderPpr": "-> 17*4",
                 "gearRatio": 280,
                 "mmPerRev": 60,
                 "offsetToDuty": 0.3
