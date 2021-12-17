@@ -18,14 +18,32 @@
 
         board.create('functiongraph', [
             (offset) => {
-                // if (Math.abs(offset) < 0.1) {
-                //     return 0;
-                // }
-//                 let duty = Math.sign(offset) * ((1-1/Math.abs(offset))/5 + 5);
-//                 if (Math.sign(duty) !== Math.sign(offset)) {
-//                     duty = 0;
-//                 }
-                let duty = abs(offset) < 0.1? 0: sign(offset) * abs(offset * (1-0.6) +sign(offset) * 0.6);
+
+                let m = "a";
+                let motorConfigs = {
+                    a: {
+                        offsetToDuty: 0.2
+                    }
+                }
+                let motor = {
+                    duty: 1
+                }
+
+                let {min, max, pow, abs} = Math;
+                        
+                //////////////////////////////////////////////
+                                    
+                    let duty = offset * motorConfigs[m].offsetToDuty;
+
+                    duty = sign(duty) * min(abs(duty), 1);
+
+                    duty = sign(duty) * pow(abs(duty), 1 / 4);
+
+                    //duty = (motor.duty + duty) / 2;
+
+                //////////////////////////////////////////////
+
+
                 return duty;
             }
         ], {

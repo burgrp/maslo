@@ -12,7 +12,7 @@ function absStepsToDistanceMm(motorConfig, steps) {
 }
 
 let pow2 = a => a * a;
-let { sqrt, hypot, abs, round, min, max, sign } = Math;
+let { sqrt, pow, hypot, abs, round, min, max, sign } = Math;
 
 const MODE_STANDBY = "STANDBY";
 const MODE_JOB = "JOB";
@@ -221,46 +221,23 @@ module.exports = async ({
 
                     let motor = state.motors[m];
 
-                    if (motor.blank) {
+                    let duty = 0;
 
-                        if (new Date().getTime() > motor.blank) {
-                            delete motor.blank;
-                        }
+                    if (abs(offset) > 0.3) {
 
-                        motor.duty = 0;
+                        duty = (offset - (motor.offset || 0) / 2) * motorConfigs[m].offsetToDuty;
 
-                    } else {
-
-                        let duty = offset * motorConfigs[m].offsetToDuty;
                         duty = sign(duty) * min(abs(duty), 1);
+                        duty = sign(duty) * pow(abs(duty), 1 / 4);
 
-                        if (duty && sign(duty) === -sign(motor.duty)) {
+                        //duty = (motor.duty + duty) / 2;
 
-                            motor.blank = new Date().getTime() + 1000;
-                            motor.duty = 0;
-
-                        } else {
-
-                            let safeDuty = 0.7;
-                            let maxDutyBlankMs = 100;
-
-                            if (abs(duty) < 0.01) {
-                                motor.duty = 0;
-                            } else {
-                                if (abs(duty) < safeDuty) {
-                                    motor.blank = new Date().getTime() - maxDutyBlankMs * (abs(duty) - safeDuty) / safeDuty;
-                                    motor.duty = sign(duty) * safeDuty;
-                                } else {
-                                    motor.duty = abs(motor.duty) < safeDuty ? sign(duty) * safeDuty : duty;
-                                }
-                            }
-
+                        if (abs(duty - motor.duty) > 0.4 && sign(duty) === -sign(motor.duty)) {
+                            duty = 0;
                         }
-
                     }
 
-
-
+                    motor.duty = duty || 0;
                     motor.offset = offset;
                 }
             } else {

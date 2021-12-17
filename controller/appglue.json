@@ -61,21 +61,21 @@
                 "encoderPpr": 17,
                 "gearRatio": 280,
                 "mmPerRev": 60,
-                "offsetToDuty": 0.2
+                "offsetToDuty": 0.3
             },
             "b": {
                 "maxRpm": 7800,
                 "encoderPpr": 17,
                 "gearRatio": 280,
                 "mmPerRev": 60,
-                "offsetToDuty": 0.2
+                "offsetToDuty": 0.3
             },
             "z": {
                 "maxRpm": 9900,
                 "encoderPpr": 11,
                 "gearRatio": 90,
                 "mmPerRev": 2,
-                "offsetToDuty": -0.2
+                "offsetToDuty": -0.5
             }
         },
         "relays": {
