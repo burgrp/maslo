@@ -26,15 +26,18 @@
                 "motors": {
                     "a": {
                         "address": 81,
-                        "motorPolarity": 1
+                        "motorPolarity": 1,
+                        "encoderPolarity": -1
                     },
                     "b": {
                         "address": 82,
-                        "motorPolarity": 1
+                        "motorPolarity": 1,
+                        "encoderPolarity": -1
                     },
                     "z": {
                         "address": 80,
-                        "motorPolarity": -1
+                        "motorPolarity": -1,
+                        "encoderPolarity": -1
                     }
                 }
             }
