@@ -31,13 +31,13 @@
                     },
                     "b": {
                         "address": 82,
-                        "motorPolarity": 1,
-                        "encoderPolarity": -1
+                        "motorPolarity": -1,
+                        "encoderPolarity": 1
                     },
                     "z": {
                         "address": 80,
-                        "motorPolarity": -1,
-                        "encoderPolarity": -1
+                        "motorPolarity": 1,
+                        "encoderPolarity": 1
                     }
                 }
             }
@@ -75,7 +75,7 @@
             },
             "z": {
                 "maxRpm": 9900,
-                "encoderPpr": 11,
+                "encoderPpr": "-> 11*4",
                 "gearRatio": 90,
                 "mmPerRev": 2,
                 "offsetToDuty": -0.5
@@ -101,16 +101,16 @@
                 "manualRapidSpeedMmPerMin": 1000,           
                 "manualMotorControl": {
                     "a": {
-                        "min": 0.2,
+                        "min": 0.6,
                         "max": 1
                     },
                     "b": {
-                        "min": 0.2,
+                        "min": 0.6,
                         "max": 1
                     },
                     "z": {
-                        "min": 0.3,
-                        "max": 1
+                        "min": 0.6,
+                        "max": 0.9
                     }
                 }        
             }
