@@ -1309,7 +1309,7 @@
     (uuid 00000000-0000-0000-0000-00006003c3f7)
     (property "Reference" "J2" (id 0) (at 62.4332 66.5226 0))
     (property "Value" "UART" (id 1) (at 62.4332 68.834 0))
-    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" (id 2) (at 59.69 73.66 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Horizontal" (id 2) (at 59.69 73.66 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 59.69 73.66 0)
@@ -1742,7 +1742,7 @@
       (reference "J1") (unit 1) (value "USB_B_Micro") (footprint "Drake:conn_usb_B_micro_smd-2")
     )
     (path "/00000000-0000-0000-0000-00006003c3f7"
-      (reference "J2") (unit 1) (value "UART") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical")
+      (reference "J2") (unit 1) (value "UART") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Horizontal")
     )
     (path "/3b9b9fa8-cf1b-4f18-9ce3-8ccbde61c237"
       (reference "J3") (unit 1) (value "Raspberry_Pi_Zero_2_W") (footprint "Drake:Raspberry-Pi-Zero-2-W-horizontal-4-holes")
