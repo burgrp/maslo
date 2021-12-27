@@ -1500,7 +1500,7 @@
   (gr_text "GND" (at 118.738001 153.5) (layer "F.SilkS") (tstamp 6a38d341-00c9-4df1-a4ad-e1b294f75f76)
     (effects (font (size 1 1) (thickness 0.15)))
   )
-  (gr_text "T100-PSU v1.0" (at 120 56) (layer "F.SilkS") (tstamp 71bdd676-7630-4bd7-8d47-6d709d646bb7)
+  (gr_text "T100-PSU v2.0" (at 120 56) (layer "F.SilkS") (tstamp 71bdd676-7630-4bd7-8d47-6d709d646bb7)
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (gr_text "GND" (at 117.58 67) (layer "F.SilkS") (tstamp 7cf3f5c5-4ff1-4fda-af23-2b566835e2e4)
