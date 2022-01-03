@@ -8,9 +8,15 @@ module.exports = async ({
     router,
     config
 }) => {
+
+    let machineState = machine.state;
+
     let events = {
         machine: {
             stateChanged: undefined
+        },
+        config: {
+            dataChanged: undefined
         },
         router: {
             jobChanged: undefined
@@ -23,6 +29,10 @@ module.exports = async ({
 
     router.onJobChanged(code => {
         events.router.jobChanged(code);
+    });
+
+    config.onDataChanged(data => {
+        events.config.dataChanged(data);
     });
 
     let { min, max, abs } = Math;
@@ -55,20 +65,18 @@ module.exports = async ({
         });
     }
 
-    async function manualMoveStart(directionX, directionY) {
+    async function manualMoveStart(directionX, directionY) {        
 
-        let state = machine.getState();
-
-        if (!isFinite(state.sled.xMm) || !isFinite(state.sled.yMm)) {
+        if (!isFinite(machineState.sled.xMm) || !isFinite(machineState.sled.yMm)) {
             throw new Error(`Unknown sled position`);
         }
 
-        let rapidMove = state.relays.spindle.state && !state.relays.spindle.state.on && state.spindle.zMm > 0;
+        let rapidMove = machineState.relays.spindle.state && !machineState.relays.spindle.state.on && machineState.spindle.zMm > 0;
 
         await router.run([{
             code: rapidMove ? "G0" : "G1",
-            x: state.sled.xMm + 10000 * directionX,
-            y: state.sled.yMm + 10000 * directionY,
+            x: machineState.sled.xMm + 10000 * directionX,
+            y: machineState.sled.yMm + 10000 * directionY,
             f: rapidMove ? manualRapidSpeedMmPerMin : manualCuttingSpeedMmPerMin
         }]);
 
@@ -82,17 +90,17 @@ module.exports = async ({
         api: {
             config: {
                 get() {
-                    return config;
+                    return config.data;
                 },
 
                 merge(data) {
                     delete data.lastPosition;
-                    Object.assign(config, data);
+                    Object.assign(config.data, data);
                 }
             },
             machine: {
                 getState() {
-                    return machine.getState();
+                    return machineState;
                 },
 
                 async manualMoveStart(kind, ...params) {
@@ -121,12 +129,11 @@ module.exports = async ({
                 },
 
                 async resetUserOrigin() {
-                    let state = machine.getState();
-                    if (isFinite(state.sled.xMm) && isFinite(state.sled.yMm)) {
-                        if (state.userOrigin.xMm === state.sled.xMm && state.userOrigin.yMm === state.sled.yMm) {
+                    if (isFinite(machineState.sled.xMm) && isFinite(machineState.sled.yMm)) {
+                        if (machineState.userOrigin.xMm === machineState.sled.xMm && machineState.userOrigin.yMm === machineState.sled.yMm) {
                             machine.setUserOrigin(0, 0);
                         } else {
-                            machine.setUserOrigin(state.sled.xMm, state.sled.yMm);
+                            machine.setUserOrigin(machineState.sled.xMm, machineState.sled.yMm);
                         }
                     }
                 },
@@ -139,8 +146,7 @@ module.exports = async ({
                     if (!Number.isFinite(workspaceTopToSledTopMm)) {
                         throw new Error("Please enter a valid number");
                     }
-                    let state = machine.getState();
-                    machine.setSledReference(0, config.workspace.heightMm / 2 - config.sled.diaMm / 2 - workspaceTopToSledTopMm);
+                    machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - workspaceTopToSledTopMm);
                 },
 
                 async setCalibrationZ(zMm) {

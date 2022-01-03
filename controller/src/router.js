@@ -13,6 +13,8 @@ module.exports = ({ machine }) => {
     let job = [];
     let jobChangedListeners = [];
 
+    let machineState = machine.state;
+
     async function* parseGcodeLines(linesAsyncIter) {
         for await (let line of linesAsyncIter) {
             line = line.replace(/;.*/, "").trim();
@@ -122,20 +124,18 @@ module.exports = ({ machine }) => {
 
                 try {
 
-                    let state = machine.getState();
-
-                    if (!isFinite(state.sled.xMm) || !isFinite(state.sled.yMm)) {
+                    if (!isFinite(machineState.sled.xMm) || !isFinite(machineState.sled.yMm)) {
                         throw new Error("Unknown sled position");
                     }
 
-                    if (!isFinite(state.spindle.zMm)) {
+                    if (!isFinite(machineState.spindle.zMm)) {
                         throw new Error("Unknown spindle position");
                     }
 
                     let queue = [{
-                        x: state.sled.xMm,
-                        y: state.sled.yMm,
-                        z: state.spindle.zMm,
+                        x: machineState.sled.xMm,
+                        y: machineState.sled.yMm,
+                        z: machineState.spindle.zMm,
                         f: 0
                     }];
 

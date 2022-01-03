@@ -80,7 +80,7 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "config": "-> config"
+        "config": "-> config.data"
     },
     "router": {
         "module": "./router.js",

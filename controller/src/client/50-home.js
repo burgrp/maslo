@@ -4,50 +4,15 @@ wg.pages.home = {
         let lastSledX, lastSledY;
         let trackToggle = false;
 
-        let machineState;
-
+        let state = await wg.machine.getState();
         let config = await wg.config.get();
+        let job = await wg.router.getCode();
 
         function svg(name) {
             return $(document.createElementNS('http://www.w3.org/2000/svg', name));
         }
 
-        function updateRouterJob(job) {
-
-            $(".page.home .controls .abchains .buttons").css("display", job.length ? "none" : "grid");
-            $(".page.home .controls .job .buttons").css("display", job.length ? "grid" : "none");
-            $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
-
-            let previewSvg = $("#previewSvg").empty();
-            let pos = {
-                x: machineState.sled.xMm,
-                y: machineState.sled.yMm
-            }
-
-            for (let command of job) {
-                if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
-
-                    let x = isFinite(command.x) && command.x || pos.x;
-                    let y = isFinite(command.y) && command.y || pos.y;
-
-                    if (pos) {
-                        previewSvg.append(svg("line").attr({
-                            x1: pos.x,
-                            y1: pos.y,
-                            x2: x,
-                            y2: y,
-                            stroke: command.code === "G0" ? "gray" : "silver",
-                            "stroke-width": 5
-                        }));
-                    }
-                    pos = { x, y };
-                }
-            }
-        }
-
-        function updateMachineState(state) {
-
-            machineState = state;
+        function updateScene() {
 
             let sledX = state.sled.xMm;
             let sledY = state.sled.yMm;
@@ -190,6 +155,41 @@ wg.pages.home = {
 
         }
 
+        function updateRouterJob() {
+
+            updateScene();
+
+            $(".page.home .controls .abchains .buttons").css("display", job.length ? "none" : "grid");
+            $(".page.home .controls .job .buttons").css("display", job.length ? "grid" : "none");
+            $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
+
+            let previewSvg = $("#previewSvg").empty();
+            let pos = {
+                x: state.sled.xMm,
+                y: state.sled.yMm
+            }
+
+            for (let command of job) {
+                if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
+
+                    let x = isFinite(command.x) && command.x || pos.x;
+                    let y = isFinite(command.y) && command.y || pos.y;
+
+                    if (pos) {
+                        previewSvg.append(svg("line").attr({
+                            x1: pos.x,
+                            y1: pos.y,
+                            x2: x,
+                            y2: y,
+                            stroke: command.code === "G0" ? "gray" : "silver",
+                            "stroke-width": 5
+                        }));
+                    }
+                    pos = { x, y };
+                }
+            }
+        }
+
         wg.common.page(container, pageName, [
             DIV("state", [
                 DIV("text")
@@ -268,8 +268,18 @@ wg.pages.home = {
                     ])
                 ])
             ])
-                .onMachineStateChanged(updateMachineState)
-                .onRouterJobChanged(updateRouterJob)
+                .onMachineStateChanged(s => {
+                    state = s;
+                    updateScene();
+                })
+                .onConfigDataChanged(c => {
+                    config = c;
+                    updateScene();
+                })
+                .onRouterJobChanged(j => {
+                    job = j;
+                    updateRouterJob();
+                })
         ]);
 
         $(".page.home .controls .group .title").click(ev => {
@@ -281,7 +291,6 @@ wg.pages.home = {
             }
         });
 
-        updateMachineState(await wg.machine.getState());
-        updateRouterJob(await wg.router.getCode());
+        updateRouterJob();
     }
 }

@@ -352,12 +352,11 @@ module.exports = async ({
     });
 
     return {
+
+        state,
+
         onStateChanged(listener) {
             stateChangedListeners.push(listener);
-        },
-
-        getState() {
-            return state;
         },
 
         setUserOrigin(xMm, yMm) {
