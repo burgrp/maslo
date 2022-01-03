@@ -1,4 +1,5 @@
 const Debug = require("debug");
+const logError = require("debug")("app:i2c:error");
 const I2C = require("@burgrp/i2c");
 const createMotor = require("../../t100-dcmotor/test/t100-dcmotor.js");
 
@@ -10,13 +11,17 @@ module.exports = async ({ bus, motors }) => {
 
         async open() {
             i2c = await I2C(bus);
-            i2c.setReset(false);
-            i2c.setReset(true);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            try {
+                await i2c.setReset(false);
+                await i2c.setReset(true);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch(e) {
+                logError("Could not reset devices on I2C bus:", e);
+            }
         },
 
-        createMotor(name) {
-            return createMotor({ i2c, ...motors[name] });
+        createMotor(name, config) {
+            return createMotor({ i2c, ...config.i2c });
         },
 
         async createRelay(name) {

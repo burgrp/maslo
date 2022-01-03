@@ -1,6 +1,6 @@
 const Debug = require("debug");
 
-module.exports = async ({ motors }) => {
+module.exports = async () => {
 
     return {
 
@@ -10,7 +10,7 @@ module.exports = async ({ motors }) => {
         async createMotor(name, config) {
 
             let state = {
-                steps: motors[name].steps,
+                steps: config.virtual && config.virtual.steps || 0,
                 stops: [false, false],
                 currentMA: 0,
                 duty: 0
@@ -24,8 +24,8 @@ module.exports = async ({ motors }) => {
                 if (state.duty > stallDuty || state.duty < -stallDuty) {
                     state.steps += 
                     config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs) * 
-                    (motors[name].motorPolarity || 1) * 
-                    (motors[name].encoderPolarity || 1);
+                    (config.virtual && config.virtual.motorPolarity || 1) * 
+                    (config.virtual && config.virtual.encoderPolarity || 1);
                 }
             }, checkIntervalMs);
 

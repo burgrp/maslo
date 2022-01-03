@@ -1,39 +1,45 @@
 {
-    "configuration": {
-        "module": "./configuration.js",
-        "configFile": "-> $.CONFIG_FILE || './config.json'",
+    "config": {
+        "module": "./config.js",
+        "file": "-> $.CONFIG_FILE || './config.json'",
         "defaults": {
             "lastPosition": {},
             "motors": {
                 "a": {
-                    "address": 81,
-                    "motorPolarity": 1,
-                    "encoderPolarity": -1,
+                    "i2c": {
+                        "address": 81,
+                        "motorPolarity": 1,
+                        "encoderPolarity": -1
+                    },
                     "maxRpm": 7800,
                     "encoderPpr": "-> 17*4",
                     "gearRatio": 280,
                     "mmPerRev": 60,
-                    "offsetToDuty": 0.3    
+                    "offsetToDuty": 0.3
                 },
                 "b": {
-                    "address": 82,
-                    "motorPolarity": -1,
-                    "encoderPolarity": 1,
+                    "i2c": {
+                        "address": 82,
+                        "motorPolarity": -1,
+                        "encoderPolarity": 1
+                    },
                     "maxRpm": 7800,
                     "encoderPpr": "-> 17*4",
                     "gearRatio": 280,
                     "mmPerRev": 60,
-                    "offsetToDuty": 0.3    
+                    "offsetToDuty": 0.3
                 },
                 "z": {
-                    "address": 80,
-                    "motorPolarity": 1,
-                    "encoderPolarity": 1,
+                    "i2c": {
+                        "address": 80,
+                        "motorPolarity": 1,
+                        "encoderPolarity": 1
+                    },
                     "maxRpm": 9900,
                     "encoderPpr": "-> 11*4",
                     "gearRatio": 90,
                     "mmPerRev": 2,
-                    "offsetToDuty": -0.5    
+                    "offsetToDuty": -0.5
                 }
             }
         }
@@ -42,43 +48,15 @@
         "module": "./machine.js",
         "drivers": {
             "virtual": {
-                "module": "./driver-virtual.js",
-                "motors": {
-                    "a": {
-                        "steps": 1000
-                    },
-                    "b": {
-                        "steps": -4000
-                    },
-                    "z": {
-                        "steps": 100
-                    }
-                }
+                "module": "./driver-virtual.js"
             },
             "i2c": {
                 "module": "./driver-i2c.js",
-                "bus": "-> $.I2C",
-                "motors": {
-                    "a": {
-                        "address": 81,
-                        "motorPolarity": 1,
-                        "encoderPolarity": -1
-                    },
-                    "b": {
-                        "address": 82,
-                        "motorPolarity": -1,
-                        "encoderPolarity": 1
-                    },
-                    "z": {
-                        "address": 80,
-                        "motorPolarity": 1,
-                        "encoderPolarity": 1
-                    }
-                }
+                "bus": "-> $.I2C"
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "configuration": "-> configuration",
+        "config": "-> config",
         "checkIntervalMs": 50,
         "geometry": {
             "beam": {
@@ -91,29 +69,6 @@
             },
             "sled": {
                 "diaMm": 400
-            }
-        },
-        "motors": {
-            "a": {
-                "maxRpm": 7800,
-                "encoderPpr": "-> 17*4",
-                "gearRatio": 280,
-                "mmPerRev": 60,
-                "offsetToDuty": 0.3
-            },
-            "b": {
-                "maxRpm": 7800,
-                "encoderPpr": "-> 17*4",
-                "gearRatio": 280,
-                "mmPerRev": 60,
-                "offsetToDuty": 0.3
-            },
-            "z": {
-                "maxRpm": 9900,
-                "encoderPpr": "-> 11*4",
-                "gearRatio": 90,
-                "mmPerRev": 2,
-                "offsetToDuty": -0.5
             }
         },
         "relays": {
@@ -132,7 +87,7 @@
                 "module": "./ui.js",
                 "machine": "-> machine",
                 "router": "-> router",
-                "configuration": "-> configuration",
+                "config": "-> config",
                 "manualCuttingSpeedMmPerMin": 200,
                 "manualRapidSpeedMmPerMin": 1000,
                 "manualMotorControl": {

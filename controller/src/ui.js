@@ -6,7 +6,7 @@ module.exports = async ({
     manualCuttingSpeedMmPerMin,
     manualRapidSpeedMmPerMin,
     router,
-    configuration
+    config
 }) => {
     let events = {
         machine: {
@@ -38,7 +38,7 @@ module.exports = async ({
                 for (let motor of motors) {
                     d[motor] = manualMotorControl[motor].min;
                 }
-                
+
                 while (true) {
                     for (let motor of motors) {
                         d[motor] = min(manualMotorControl[motor].max, d[motor] + 0.05);
@@ -82,12 +82,12 @@ module.exports = async ({
         api: {
             config: {
                 get() {
-                    return configuration.data;
+                    return config;
                 },
 
                 merge(data) {
-                    delete data.lastPosition;                    
-                    Object.assign(configuration.data, data);                    
+                    delete data.lastPosition;
+                    Object.assign(config, data);
                 }
             },
             machine: {

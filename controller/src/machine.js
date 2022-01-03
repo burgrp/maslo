@@ -22,9 +22,8 @@ module.exports = async ({
     driver: driverConfig,
     checkIntervalMs,
     geometry,
-    motors: motorConfigs,
     relays: relayConfigs,
-    configuration
+    config
 }) => {
 
     let state = {
@@ -54,8 +53,8 @@ module.exports = async ({
     await driverInstance.open();
 
     let motors = {};
-    for (let name in motorConfigs) {
-        motors[name] = await driverInstance.createMotor(name, motorConfigs[name]);
+    for (let name in config.motors) {
+        motors[name] = await driverInstance.createMotor(name, config.motors[name]);
         state.motors[name] = {
             duty: 0
         };
@@ -130,11 +129,11 @@ module.exports = async ({
             if (state.motors.a.state && state.motors.b.state) {
 
                 if (!state.sled.position &&
-                    isFinite(configuration.data.lastPosition.xMm) &&
-                    isFinite(configuration.data.lastPosition.yMm)) {
+                    isFinite(config.lastPosition.xMm) &&
+                    isFinite(config.lastPosition.yMm)) {
                     state.sled.reference = {
-                        xMm: configuration.data.lastPosition.xMm,
-                        yMm: configuration.data.lastPosition.yMm,
+                        xMm: config.lastPosition.xMm,
+                        yMm: config.lastPosition.yMm,
                         aSteps: state.motors.a.state.steps,
                         bSteps: state.motors.b.state.steps
                     };
@@ -145,7 +144,7 @@ module.exports = async ({
                     let referenceMCS = userToMachineCS(state.sled.reference);
 
                     let referenceASteps = distanceMmToAbsSteps(
-                        motorConfigs.a,
+                        config.motors.a,
                         hypot(
                             state.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
                             referenceMCS.yMm
@@ -153,7 +152,7 @@ module.exports = async ({
                     ) - state.sled.reference.aSteps;
 
                     let referenceBSteps = distanceMmToAbsSteps(
-                        motorConfigs.b,
+                        config.motors.b,
                         hypot(
                             state.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
                             referenceMCS.yMm
@@ -164,8 +163,8 @@ module.exports = async ({
                     // a is MotorA-Sled, i.e. chain length a
                     // b is MotorA-Sled, i.e. chain length b
                     // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                    let a = absStepsToDistanceMm(motorConfigs.a, referenceASteps + state.motors.a.state.steps);
-                    let b = absStepsToDistanceMm(motorConfigs.b, referenceBSteps + state.motors.b.state.steps);
+                    let a = absStepsToDistanceMm(config.motors.a, referenceASteps + state.motors.a.state.steps);
+                    let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + state.motors.b.state.steps);
                     let aa = (pow2(a) - pow2(b) + pow2(state.beam.motorsDistanceMm)) / (2 * state.beam.motorsDistanceMm);
 
                     state.sled.position = machineToUserCS({
@@ -180,23 +179,23 @@ module.exports = async ({
             } else {
                 delete state.sled.position;
             }
-            configuration.data.lastPosition.xMm = state.sled.position && Math.round(state.sled.position.xMm * 1000) / 1000;
-            configuration.data.lastPosition.yMm = state.sled.position && Math.round(state.sled.position.yMm * 1000) / 1000;
+            config.lastPosition.xMm = state.sled.position && Math.round(state.sled.position.xMm * 1000) / 1000;
+            config.lastPosition.yMm = state.sled.position && Math.round(state.sled.position.yMm * 1000) / 1000;
         }
 
         function checkSpindlePosition() {
             if (state.motors.z.state) {
 
                 if (!isFinite(state.spindle.zMm) &&
-                    isFinite(configuration.data.lastPosition.zMm)) {
+                    isFinite(config.lastPosition.zMm)) {
                     state.spindle.reference = {
-                        zMm: configuration.data.lastPosition.zMm,
+                        zMm: config.lastPosition.zMm,
                         zSteps: state.motors.z.state.steps
                     };
                 }
 
                 if (state.spindle.reference) {
-                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(motorConfigs.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
+                    state.spindle.zMm = state.spindle.reference.zMm + absStepsToDistanceMm(config.motors.z, state.motors.z.state.steps - state.spindle.reference.zSteps);
                 } else {
                     delete state.spindle.zMm;
                 }
@@ -204,7 +203,7 @@ module.exports = async ({
             } else {
                 delete state.spindle.zMm;
             }
-            configuration.data.lastPosition.zMm = Math.round(state.spindle.zMm * 1000) / 1000;
+            config.lastPosition.zMm = Math.round(state.spindle.zMm * 1000) / 1000;
         }
 
         async function checkTarget() {
@@ -226,7 +225,7 @@ module.exports = async ({
 
                     if (abs(offset) > 0.3) {
 
-                        duty = (offset - (motor.offset || 0) / 2) * motorConfigs[m].offsetToDuty;
+                        duty = (offset - (motor.offset || 0) / 2) * config.motors[m].offsetToDuty;
 
                         duty = sign(duty) * min(abs(duty), 1);
                         duty = sign(duty) * pow(abs(duty), 1 / 4);
