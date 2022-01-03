@@ -44,6 +44,7 @@ wg.common = {
                 //link("jobs", "jobs", "folder-open"),
                 link("calibxy", "calibxy", "ruler-combined"),
                 link("calibz", "calibz", "sort"),
+                link("calibstretch", "calibstretch", "expand-alt"),
                 link("settings", "settings", "tools"),
                 DIV("end", [
                     BUTTON("stop", [
