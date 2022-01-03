@@ -130,7 +130,6 @@ module.exports = async ({
             if (state.motors.a.state && state.motors.b.state) {
 
                 if (!state.sled.position &&
-                    configuration.data.lastPosition &&
                     isFinite(configuration.data.lastPosition.xMm) &&
                     isFinite(configuration.data.lastPosition.yMm)) {
                     state.sled.reference = {
@@ -181,13 +180,14 @@ module.exports = async ({
             } else {
                 delete state.sled.position;
             }
+            configuration.data.lastPosition.xMm = state.sled.position && Math.round(state.sled.position.xMm * 1000) / 1000;
+            configuration.data.lastPosition.yMm = state.sled.position && Math.round(state.sled.position.yMm * 1000) / 1000;
         }
 
         function checkSpindlePosition() {
             if (state.motors.z.state) {
 
                 if (!isFinite(state.spindle.zMm) &&
-                    configuration.data.lastPosition &&
                     isFinite(configuration.data.lastPosition.zMm)) {
                     state.spindle.reference = {
                         zMm: configuration.data.lastPosition.zMm,
@@ -204,6 +204,7 @@ module.exports = async ({
             } else {
                 delete state.spindle.zMm;
             }
+            configuration.data.lastPosition.zMm = Math.round(state.spindle.zMm * 1000) / 1000;
         }
 
         async function checkTarget() {

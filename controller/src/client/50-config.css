@@ -1,0 +1,17 @@
+.page.config .content {
+    flex-direction: column;
+}
+
+.page.config .header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.page.config .header .title {
+    flex-grow: 1;
+}
+
+.page.config .editor {
+    flex-grow: 1;
+    font-family: monospace;
+}

@@ -5,7 +5,8 @@ module.exports = async ({
     manualMotorControl,
     manualCuttingSpeedMmPerMin,
     manualRapidSpeedMmPerMin,
-    router
+    router,
+    configuration
 }) => {
     let events = {
         machine: {
@@ -79,6 +80,16 @@ module.exports = async ({
         events,
         client: __dirname + "/client",
         api: {
+            config: {
+                get() {
+                    return configuration.data;
+                },
+
+                merge(data) {
+                    delete data.lastPosition;                    
+                    Object.assign(configuration.data, data);                    
+                }
+            },
             machine: {
                 getState() {
                     return machine.getState();
