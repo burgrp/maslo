@@ -22,7 +22,6 @@ module.exports = async ({
     driver: driverConfig,
     checkIntervalMs,
     geometry,
-    relays: relayConfigs,
     config
 }) => {
 
@@ -61,8 +60,8 @@ module.exports = async ({
     }
 
     let relays = {};
-    for (let name in relayConfigs) {
-        relays[name] = await driverInstance.createRelay(name, relayConfigs[name]);
+    for (let name in config.relays) {
+        relays[name] = await driverInstance.createRelay(name, config.relays[name]);
         state.relays[name] = {
             on: false
         };

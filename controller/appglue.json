@@ -41,6 +41,18 @@
                     "mmPerRev": 2,
                     "offsetToDuty": -0.5
                 }
+            },
+            "relays": {
+                "spindle": {
+                    "i2c": {
+                        "address": 96
+                    }
+                },
+                "hoover": {
+                    "i2c": {
+                        "address": 97
+                    }
+                }
             }
         }
     },
@@ -70,10 +82,6 @@
             "sled": {
                 "diaMm": 400
             }
-        },
-        "relays": {
-            "spindle": {},
-            "hoover": {}
         }
     },
     "router": {
