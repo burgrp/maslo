@@ -17,8 +17,8 @@
    inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
    sodipodi:docname="favicon.svg"
    inkscape:export-filename="/home/paul/git/maslo/controller/src/client/favicon.png"
-   inkscape:export-xdpi="8.1280003"
-   inkscape:export-ydpi="8.1280003">
+   inkscape:export-xdpi="9.134901"
+   inkscape:export-ydpi="9.134901">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -89,22 +89,25 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-20.616666,-70.550026)">
-    <circle
-       style="fill:#1a1a1a;fill-opacity:1;stroke:#808080;stroke-width:5.75587368;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
-       id="path4551"
-       cx="70.616669"
-       cy="120.55003"
-       r="41.610775" />
-    <path
-       style="fill:#cc0000;fill-opacity:1;stroke:none;stroke-width:0.3133803;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
-       id="path3740-8"
-       sodipodi:type="arc"
-       sodipodi:cx="70.616669"
-       sodipodi:cy="120.55003"
-       sodipodi:rx="17.770203"
-       sodipodi:ry="17.770203"
-       sodipodi:start="1.7453293e-05"
-       sodipodi:end="0"
-       d="m 88.386871,120.55034 a 17.770203,17.770203 0 0 1 -17.770435,17.7699 17.770203,17.770203 0 0 1 -17.76997,-17.77036 17.770203,17.770203 0 0 1 17.77028,-17.77005 17.770203,17.770203 0 0 1 17.770125,17.7702 H 70.616669 Z" />
+    <g
+       id="g4587">
+      <circle
+         r="41.610775"
+         cy="120.55003"
+         cx="70.616669"
+         id="path4551"
+         style="fill:#1a1a1a;fill-opacity:1;stroke:#808080;stroke-width:5.75587368;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      <path
+         d="m 88.386871,120.55034 a 17.770203,17.770203 0 0 1 -17.770435,17.7699 17.770203,17.770203 0 0 1 -17.76997,-17.77036 17.770203,17.770203 0 0 1 17.77028,-17.77005 17.770203,17.770203 0 0 1 17.770125,17.7702 H 70.616669 Z"
+         sodipodi:end="0"
+         sodipodi:start="1.7453293e-05"
+         sodipodi:ry="17.770203"
+         sodipodi:rx="17.770203"
+         sodipodi:cy="120.55003"
+         sodipodi:cx="70.616669"
+         sodipodi:type="arc"
+         id="path3740-8"
+         style="fill:#cc0000;fill-opacity:1;stroke:none;stroke-width:0.3133803;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+    </g>
   </g>
 </svg>

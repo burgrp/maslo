@@ -2,9 +2,6 @@ const logError = require("debug")("app:ui:error");
 
 module.exports = async ({
     machine,
-    manualMotorControl,
-    manualCuttingSpeedMmPerMin,
-    manualRapidSpeedMmPerMin,
     router,
     config
 }) => {
@@ -24,7 +21,9 @@ module.exports = async ({
     };
 
     machine.onStateChanged(state => {
-        events.machine.stateChanged(state);
+        if (events.machine.stateChanged) {
+            events.machine.stateChanged(state);
+        }
     });
 
     router.onJobChanged(code => {
@@ -46,12 +45,12 @@ module.exports = async ({
             try {
                 let d = {};
                 for (let motor of motors) {
-                    d[motor] = manualMotorControl[motor].min;
+                    d[motor] = config.data.manual.motorDuty[motor].min;
                 }
 
                 while (true) {
                     for (let motor of motors) {
-                        d[motor] = min(manualMotorControl[motor].max, d[motor] + 0.05);
+                        d[motor] = min(config.data.manual.motorDuty[motor].max, d[motor] + 0.05);
                         machine.setMotorDuty(motor, direction * d[motor]);
                     }
                     await machine.synchronizeJob();
@@ -65,7 +64,7 @@ module.exports = async ({
         });
     }
 
-    async function manualMoveStart(directionX, directionY) {        
+    async function manualMoveStart(directionX, directionY) {
 
         if (!isFinite(machineState.sled.xMm) || !isFinite(machineState.sled.yMm)) {
             throw new Error(`Unknown sled position`);
@@ -77,7 +76,7 @@ module.exports = async ({
             code: rapidMove ? "G0" : "G1",
             x: machineState.sled.xMm + 10000 * directionX,
             y: machineState.sled.yMm + 10000 * directionY,
-            f: rapidMove ? manualRapidSpeedMmPerMin : manualCuttingSpeedMmPerMin
+            f: rapidMove ? config.data.manual.rapidSpeedMmPerMin : config.data.manual.cuttingSpeedMmPerMin
         }]);
 
     }

@@ -65,6 +65,24 @@
             },
             "sled": {
                 "diaMm": 400
+            },
+            "manual": {
+                "cuttingSpeedMmPerMin": 200,
+                "rapidSpeedMmPerMin": 1000,
+                "motorDuty": {
+                    "a": {
+                        "min": 0.6,
+                        "max": 1
+                    },
+                    "b": {
+                        "min": 0.6,
+                        "max": 1
+                    },
+                    "z": {
+                        "min": 0.6,
+                        "max": 0.9
+                    }
+                }
             }
         }
     },
@@ -93,23 +111,7 @@
                 "module": "./ui.js",
                 "machine": "-> machine",
                 "router": "-> router",
-                "config": "-> config",
-                "manualCuttingSpeedMmPerMin": 200,
-                "manualRapidSpeedMmPerMin": 1000,
-                "manualMotorControl": {
-                    "a": {
-                        "min": 0.6,
-                        "max": 1
-                    },
-                    "b": {
-                        "min": 0.6,
-                        "max": 1
-                    },
-                    "z": {
-                        "min": 0.6,
-                        "max": 0.9
-                    }
-                }
+                "config": "-> config"
             }
         ]
     }

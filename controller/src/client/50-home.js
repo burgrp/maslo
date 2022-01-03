@@ -159,8 +159,8 @@ wg.pages.home = {
 
             updateScene();
 
-            $(".page.home .controls .abchains .buttons").css("display", job.length ? "none" : "grid");
-            $(".page.home .controls .job .buttons").css("display", job.length ? "grid" : "none");
+            $(".page.home .controls .abchains .collapsable").css("display", job.length ? "none" : "grid");
+            $(".page.home .controls .job .collapsable").css("display", job.length ? "grid" : "none");
             $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
 
             let previewSvg = $("#previewSvg").empty();
@@ -219,14 +219,14 @@ wg.pages.home = {
             DIV("controls", [
                 DIV("group job", [
                     DIV("title").text("job"),
-                    DIV("buttons", [
+                    DIV("buttons collapsable", [
                         BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
                         BUTTON("delete control standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ]),
                 DIV("group abchains", [
                     DIV("title").text("chains"),
-                    DIV("buttons", [
+                    DIV("buttons collapsable", [
                         DIV("a side").text("A"),
                         wg.common.manualMoveButton("a up", "caret-up", "a", -1),
                         wg.common.manualMoveButton("a down", "caret-down", "a", 1),
@@ -238,9 +238,23 @@ wg.pages.home = {
                         wg.common.manualMoveButton("b down", "caret-down", "b", 1)
                     ])
                 ]),
+                DIV("group calibration", [
+                    DIV("title").text("calibration"),
+                    DIV("controls collapsable", [
+                        DIV("value", [
+                            NUMBER(),
+                            DIV().text("mm")
+                        ]),                        
+                        DIV("save", [
+                            BUTTON().text("Top"),
+                            BUTTON().text("Bottom"),
+                            BUTTON().text("Tool")                            
+                        ])
+                    ])
+                ]),
                 DIV("group xyaxis", [
                     DIV("title").text("X,Y axis"),
-                    DIV("buttons", [
+                    DIV("buttons collapsable", [
                         wg.common.manualMoveButton("dir0", "caret-up", "xy", 0, 1),
                         wg.common.manualMoveButton("dir45", "caret-up", "xy", 1, 1),
                         wg.common.manualMoveButton("dir90", "caret-up", "xy", 1, 0),
@@ -258,7 +272,7 @@ wg.pages.home = {
                 ]),
                 DIV("group zaxis", [
                     DIV("title").text("Z axis"),
-                    DIV("buttons", [
+                    DIV("buttons collapsable", [
                         BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
                         BUTTON("stop control standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
@@ -282,8 +296,14 @@ wg.pages.home = {
                 })
         ]);
 
+
+        let calibrated = isFinite(state.sled.xMm) && isFinite(state.sled.yMm) && isFinite(state.spindle.zMm);
+        $(".page.home .controls .abchains .collapsable").css("display", !calibrated ? "grid" : "none");
+        $(".page.home .controls .calibration .collapsable").css("display", !calibrated ? "grid" : "none");
+        $(".page.home .controls .xyaxis .collapsable").css("display", calibrated ? "grid" : "none");
+
         $(".page.home .controls .group .title").click(ev => {
-            let buttons = $(ev.target).parent().children(".buttons");
+            let buttons = $(ev.target).parent().children(".collapsable");
             if (buttons.css("display") === "none") {
                 buttons.css("display", "grid");
             } else {

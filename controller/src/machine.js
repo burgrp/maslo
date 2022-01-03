@@ -180,6 +180,10 @@ module.exports = async ({
             }
             config.lastPosition.xMm = Math.round(state.sled.xMm * 1000) / 1000;
             config.lastPosition.yMm = Math.round(state.sled.yMm * 1000) / 1000;
+            if (!isFinite(config.lastPosition.xMm) || !isFinite(config.lastPosition.yMm)) {
+                delete config.lastPosition.xMm;
+                delete config.lastPosition.yMm;
+            }
         }
 
         function checkSpindlePosition() {
@@ -203,6 +207,9 @@ module.exports = async ({
                 delete state.spindle.zMm;
             }
             config.lastPosition.zMm = Math.round(state.spindle.zMm * 1000) / 1000;
+            if (!isFinite(config.lastPosition.zMm)) {
+                delete config.lastPosition.zMm;
+            }
         }
 
         async function checkTarget() {
