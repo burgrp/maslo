@@ -59,7 +59,7 @@ module.exports = async ({
 
         let state = machine.getState();
 
-        if (!state.sled.position) {
+        if (!isFinite(state.sled.xMm) || !isFinite(state.sled.yMm)) {
             throw new Error(`Unknown sled position`);
         }
 
@@ -67,8 +67,8 @@ module.exports = async ({
 
         await router.run([{
             code: rapidMove ? "G0" : "G1",
-            x: state.sled.position.xMm + 10000 * directionX,
-            y: state.sled.position.yMm + 10000 * directionY,
+            x: state.sled.xMm + 10000 * directionX,
+            y: state.sled.yMm + 10000 * directionY,
             f: rapidMove ? manualRapidSpeedMmPerMin : manualCuttingSpeedMmPerMin
         }]);
 
@@ -122,11 +122,11 @@ module.exports = async ({
 
                 async resetUserOrigin() {
                     let state = machine.getState();
-                    if (state.sled.position) {
-                        if (state.userOrigin.xMm === state.sled.position.xMm && state.userOrigin.yMm === state.sled.position.yMm) {
+                    if (isFinite(state.sled.xMm) && isFinite(state.sled.yMm)) {
+                        if (state.userOrigin.xMm === state.sled.xMm && state.userOrigin.yMm === state.sled.yMm) {
                             machine.setUserOrigin(0, 0);
                         } else {
-                            machine.setUserOrigin(state.sled.position.xMm, state.sled.position.yMm);
+                            machine.setUserOrigin(state.sled.xMm, state.sled.yMm);
                         }
                     }
                 },
@@ -140,7 +140,7 @@ module.exports = async ({
                         throw new Error("Please enter a valid number");
                     }
                     let state = machine.getState();
-                    machine.setSledReference(0, state.workspace.heightMm / 2 - state.sled.diaMm / 2 - workspaceTopToSledTopMm);
+                    machine.setSledReference(0, config.workspace.heightMm / 2 - config.sled.diaMm / 2 - workspaceTopToSledTopMm);
                 },
 
                 async setCalibrationZ(zMm) {

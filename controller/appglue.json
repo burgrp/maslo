@@ -53,6 +53,18 @@
                         "address": 97
                     }
                 }
+            },
+            "checkIntervalMs": 50,
+            "beam": {
+                "motorsDistanceMm": 3402,
+                "motorsToWorkspaceMm": 708
+            },
+            "workspace": {
+                "widthMm": 2500,
+                "heightMm": 1250
+            },
+            "sled": {
+                "diaMm": 400
             }
         }
     },
@@ -68,21 +80,7 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "config": "-> config",
-        "checkIntervalMs": 50,
-        "geometry": {
-            "beam": {
-                "motorsDistanceMm": 3402,
-                "motorsToWorkspaceMm": 708
-            },
-            "workspace": {
-                "widthMm": 2500,
-                "heightMm": 1250
-            },
-            "sled": {
-                "diaMm": 400
-            }
-        }
+        "config": "-> config"
     },
     "router": {
         "module": "./router.js",

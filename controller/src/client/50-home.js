@@ -6,6 +6,8 @@ wg.pages.home = {
 
         let machineState;
 
+        let config = await wg.config.get();
+
         function svg(name) {
             return $(document.createElementNS('http://www.w3.org/2000/svg', name));
         }
@@ -18,8 +20,8 @@ wg.pages.home = {
 
             let previewSvg = $("#previewSvg").empty();
             let pos = {
-                x: machineState.sled.position && machineState.sled.position.xMm,
-                y: machineState.sled.position && machineState.sled.position.yMm
+                x: machineState.sled.xMm,
+                y: machineState.sled.yMm
             }
 
             for (let command of job) {
@@ -47,8 +49,8 @@ wg.pages.home = {
 
             machineState = state;
 
-            let sledX = state.sled.position && state.sled.position.xMm;
-            let sledY = state.sled.position && state.sled.position.yMm;
+            let sledX = state.sled.xMm;
+            let sledY = state.sled.yMm;
 
             $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
 
@@ -62,19 +64,15 @@ wg.pages.home = {
 
             $(".scene svg").attr({
                 viewBox: [
-                    -machineState.beam.motorsDistanceMm / 2 - 100,
-                    -machineState.beam.motorsToWorkspaceMm - machineState.workspace.heightMm / 2 - 100,
-                    (machineState.beam.motorsDistanceMm + 200),
-                    (machineState.beam.motorsToWorkspaceMm + machineState.workspace.heightMm / 2 + 200)
-                    // -50,
-                    // -1500,
-                    // 700,
-                    // 1500
+                    -config.beam.motorsDistanceMm / 2 - 100,
+                    -config.beam.motorsToWorkspaceMm - config.workspace.heightMm / 2 - 100,
+                    (config.beam.motorsDistanceMm + 200),
+                    (config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 + 200)
                 ].join(' ')
             });
 
-            let mX = state.beam.motorsDistanceMm / 2;
-            let mY = state.workspace.heightMm / 2 + state.beam.motorsToWorkspaceMm;
+            let mX = config.beam.motorsDistanceMm / 2;
+            let mY = config.workspace.heightMm / 2 + config.beam.motorsToWorkspaceMm;
 
             $(".scene .motor.a").attr({
                 cx: -mX,
@@ -87,10 +85,10 @@ wg.pages.home = {
             });
 
             $(".scene .workspace").attr({
-                x: -state.workspace.widthMm / 2,
-                y: -state.workspace.heightMm / 2,
-                width: state.workspace.widthMm,
-                height: state.workspace.heightMm
+                x: -config.workspace.widthMm / 2,
+                y: -config.workspace.heightMm / 2,
+                width: config.workspace.widthMm,
+                height: config.workspace.heightMm
             });
 
             $(".scene .sled").attr({
@@ -99,7 +97,7 @@ wg.pages.home = {
             });
 
             $(".scene .sled.outline").attr({
-                r: state.sled.diaMm / 2
+                r: config.sled.diaMm / 2
             });
 
             $(".scene .userorigin.x").attr({
@@ -117,7 +115,7 @@ wg.pages.home = {
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: state.sled.position ? "visible" : "hidden"
+                visibility: (isFinite(state.sled.xMm) && isFinite(state.sled.yMm)) ? "visible" : "hidden"
             });
 
             $(".scene .chain.a").attr({
@@ -136,16 +134,16 @@ wg.pages.home = {
 
             for (let motor of [{ name: "a", "side": -1 }, { name: "b", "side": 1 }]) {
                 $(`.scene .duty-bar.${motor.name}`).attr({
-                    x1: motor.side * state.beam.motorsDistanceMm / 2,
+                    x1: motor.side * config.beam.motorsDistanceMm / 2,
                     y1: 0,
-                    x2: motor.side * state.beam.motorsDistanceMm / 2,
-                    y2: state.workspace.heightMm / 2 * (state.motors[motor.name].duty || 0)
+                    x2: motor.side * config.beam.motorsDistanceMm / 2,
+                    y2: config.workspace.heightMm / 2 * (state.motors[motor.name].duty || 0)
                 });
                 $(`.scene .error-bar.${motor.name}`).attr({
-                    x1: motor.side * (state.beam.motorsDistanceMm / 2 - 100),
+                    x1: motor.side * (config.beam.motorsDistanceMm / 2 - 100),
                     y1: 0,
-                    x2: motor.side * (state.beam.motorsDistanceMm / 2 - 100),
-                    y2: state.workspace.heightMm / 2 * (state.motors[motor.name].offset || 0)
+                    x2: motor.side * (config.beam.motorsDistanceMm / 2 - 100),
+                    y2: config.workspace.heightMm / 2 * (state.motors[motor.name].offset || 0)
                 });
             }
 

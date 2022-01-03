@@ -124,7 +124,7 @@ module.exports = ({ machine }) => {
 
                     let state = machine.getState();
 
-                    if (!state.sled.position) {
+                    if (!isFinite(state.sled.xMm) || !isFinite(state.sled.yMm)) {
                         throw new Error("Unknown sled position");
                     }
 
@@ -133,8 +133,8 @@ module.exports = ({ machine }) => {
                     }
 
                     let queue = [{
-                        x: state.sled.position.xMm,
-                        y: state.sled.position.yMm,
+                        x: state.sled.xMm,
+                        y: state.sled.yMm,
                         z: state.spindle.zMm,
                         f: 0
                     }];

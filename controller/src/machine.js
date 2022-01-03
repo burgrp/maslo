@@ -19,22 +19,14 @@ const MODE_JOB = "JOB";
 
 module.exports = async ({
     drivers,
-    driver: driverConfig,
-    checkIntervalMs,
+    driver,
     geometry,
     config
 }) => {
 
     let state = {
         mode: MODE_STANDBY,
-        beam: {
-            ...geometry.beam
-        },
-        workspace: {
-            ...geometry.workspace
-        },
         sled: {
-            ...geometry.sled
         },
         spindle: {
             on: false
@@ -48,7 +40,7 @@ module.exports = async ({
         errors: {}
     }
 
-    let driverInstance = drivers[driverConfig];
+    let driverInstance = drivers[driver];
     await driverInstance.open();
 
     let motors = {};
@@ -75,22 +67,22 @@ module.exports = async ({
     function userToMachineCS(pos) {
         return {
             xMm: pos.xMm,
-            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm / 2 - pos.yMm
+            yMm: config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 - pos.yMm
         }
     }
 
     function machineToUserCS(pos) {
         return {
             xMm: pos.xMm,
-            yMm: state.beam.motorsToWorkspaceMm + state.workspace.heightMm / 2 - pos.yMm
+            yMm: config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 - pos.yMm
         }
     }
 
     function getChainLengths(positionUCS) {
         let positionMCS = userToMachineCS(positionUCS);
         return {
-            aMm: hypot(state.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
-            bMm: hypot(state.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
+            aMm: hypot(config.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
+            bMm: hypot(config.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
         };
     }
 
@@ -127,9 +119,12 @@ module.exports = async ({
         function checkSledPosition() {
             if (state.motors.a.state && state.motors.b.state) {
 
-                if (!state.sled.position &&
+                if (
+                    !isFinite(state.sled.xMm) &&
+                    !isFinite(state.sled.yMm) &&
                     isFinite(config.lastPosition.xMm) &&
-                    isFinite(config.lastPosition.yMm)) {
+                    isFinite(config.lastPosition.yMm)
+                ) {
                     state.sled.reference = {
                         xMm: config.lastPosition.xMm,
                         yMm: config.lastPosition.yMm,
@@ -145,7 +140,7 @@ module.exports = async ({
                     let referenceASteps = distanceMmToAbsSteps(
                         config.motors.a,
                         hypot(
-                            state.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
+                            config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
                             referenceMCS.yMm
                         )
                     ) - state.sled.reference.aSteps;
@@ -153,7 +148,7 @@ module.exports = async ({
                     let referenceBSteps = distanceMmToAbsSteps(
                         config.motors.b,
                         hypot(
-                            state.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
+                            config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
                             referenceMCS.yMm
                         )
                     ) - state.sled.reference.bSteps;
@@ -164,22 +159,27 @@ module.exports = async ({
                     // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
                     let a = absStepsToDistanceMm(config.motors.a, referenceASteps + state.motors.a.state.steps);
                     let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + state.motors.b.state.steps);
-                    let aa = (pow2(a) - pow2(b) + pow2(state.beam.motorsDistanceMm)) / (2 * state.beam.motorsDistanceMm);
+                    let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
 
-                    state.sled.position = machineToUserCS({
-                        xMm: aa - state.beam.motorsDistanceMm / 2,
+                    let position = machineToUserCS({
+                        xMm: aa - config.beam.motorsDistanceMm / 2,
                         yMm: sqrt(pow2(a) - pow2(aa))
                     });
 
+                    state.sled.xMm = position.xMm;
+                    state.sled.yMm = position.yMm;
+
                 } else {
-                    delete state.sled.position;
+                    delete state.sled.xMm;
+                    delete state.sled.yMm;
                 }
 
             } else {
-                delete state.sled.position;
+                delete state.sled.xMm;
+                delete state.sled.yMm;
             }
-            config.lastPosition.xMm = state.sled.position && Math.round(state.sled.position.xMm * 1000) / 1000;
-            config.lastPosition.yMm = state.sled.position && Math.round(state.sled.position.yMm * 1000) / 1000;
+            config.lastPosition.xMm = Math.round(state.sled.xMm * 1000) / 1000;
+            config.lastPosition.yMm = Math.round(state.sled.yMm * 1000) / 1000;
         }
 
         function checkSpindlePosition() {
@@ -207,10 +207,15 @@ module.exports = async ({
 
         async function checkTarget() {
 
-            if (state.sled.position && isFinite(state.spindle.zMm) && state.target) {
+            if (
+                isFinite(state.sled.xMm) &&
+                isFinite(state.sled.yMm) &&
+                isFinite(state.spindle.zMm) &&
+                state.target
+            ) {
 
                 let targetChains = getChainLengths(state.target);
-                let sledChains = getChainLengths(state.sled.position);
+                let sledChains = getChainLengths(state.sled);
 
                 for (let m of ["a", "b", "z"]) {
 
@@ -329,7 +334,7 @@ module.exports = async ({
 
     async function machineCheckLoop() {
         while (true) {
-            let wait = new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+            let wait = new Promise(resolve => setTimeout(resolve, config.checkIntervalMs));
             try {
                 await checkMachineState();
                 delete state.errors.check;
