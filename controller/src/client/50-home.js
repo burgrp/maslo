@@ -218,15 +218,15 @@ wg.pages.home = {
             `)]).css({ visibility: "hidden" }),
             DIV("controls", [
                 DIV("group job", [
-                    DIV("title").text("job"),
-                    DIV("buttons collapsable", [
+                    DIV("group-title").text("job"),
+                    DIV("group-content", [
                         BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
                         BUTTON("delete control standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ]),
                 DIV("group abchains", [
-                    DIV("title").text("chains"),
-                    DIV("buttons collapsable", [
+                    DIV("group-title").text("chains"),
+                    DIV("group-content", [
                         DIV("a side").text("A"),
                         wg.common.manualMoveButton("a up", "caret-up", "a", -1),
                         wg.common.manualMoveButton("a down", "caret-down", "a", 1),
@@ -239,22 +239,22 @@ wg.pages.home = {
                     ])
                 ]),
                 DIV("group calibration", [
-                    DIV("title").text("calibration"),
-                    DIV("controls collapsable", [
+                    DIV("group-title").text("calibration"),
+                    DIV("group-content", [
                         DIV("value", [
                             NUMBER(),
-                            DIV().text("mm")
+                            DIV("units").text("mm")
                         ]),                        
                         DIV("save", [
-                            BUTTON().text("Top"),
-                            BUTTON().text("Bottom"),
-                            BUTTON().text("Tool")                            
+                            BUTTON("top").text("Top"),
+                            BUTTON("bottom").text("Bottom"),
+                            BUTTON("tool").text("Tool")                            
                         ])
                     ])
                 ]),
                 DIV("group xyaxis", [
-                    DIV("title").text("X,Y axis"),
-                    DIV("buttons collapsable", [
+                    DIV("group-title").text("X,Y axis"),
+                    DIV("group-content", [
                         wg.common.manualMoveButton("dir0", "caret-up", "xy", 0, 1),
                         wg.common.manualMoveButton("dir45", "caret-up", "xy", 1, 1),
                         wg.common.manualMoveButton("dir90", "caret-up", "xy", 1, 0),
@@ -271,8 +271,8 @@ wg.pages.home = {
                     ])
                 ]),
                 DIV("group zaxis", [
-                    DIV("title").text("Z axis"),
-                    DIV("buttons collapsable", [
+                    DIV("group-title").text("Z axis"),
+                    DIV("group-content", [
                         BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
                         BUTTON("stop control standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
@@ -296,19 +296,14 @@ wg.pages.home = {
                 })
         ]);
 
-
         let calibrated = isFinite(state.sled.xMm) && isFinite(state.sled.yMm) && isFinite(state.spindle.zMm);
-        $(".page.home .controls .abchains .collapsable").css("display", !calibrated ? "grid" : "none");
-        $(".page.home .controls .calibration .collapsable").css("display", !calibrated ? "grid" : "none");
-        $(".page.home .controls .xyaxis .collapsable").css("display", calibrated ? "grid" : "none");
+        $(".page.home .controls .abchains .group-content").toggleClass("hidden", calibrated);
+        $(".page.home .controls .calibration .group-content").toggleClass("hidden", calibrated);
+        $(".page.home .controls .xyaxis .group-content").toggleClass("hidden", !calibrated);
 
-        $(".page.home .controls .group .title").click(ev => {
-            let buttons = $(ev.target).parent().children(".collapsable");
-            if (buttons.css("display") === "none") {
-                buttons.css("display", "grid");
-            } else {
-                buttons.css("display", "none");
-            }
+        $(".page.home .controls .group-title").click(ev => {
+            let content = $(ev.target).parent().children(".group-content");
+            content.toggleClass("hidden");
         });
 
         updateRouterJob();
