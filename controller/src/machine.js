@@ -4,11 +4,13 @@ const objectHash = require("object-hash");
 
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
+    let stretch = motorConfig.stretch || 1;
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev * stretch);
 }
 
 function absStepsToDistanceMm(motorConfig, steps) {
-    return steps * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
+    let stretch = motorConfig.stretch || 1;
+    return steps * motorConfig.mmPerRev * stretch / (motorConfig.encoderPpr * motorConfig.gearRatio);
 }
 
 let pow2 = a => a * a;
@@ -120,10 +122,10 @@ module.exports = async ({
             if (state.motors.a.state && state.motors.b.state) {
 
                 if (
-                    !isFinite(state.sled.xMm) &&
-                    !isFinite(state.sled.yMm) &&
-                    isFinite(config.lastPosition.xMm) &&
-                    isFinite(config.lastPosition.yMm)
+                    !Number.isFinite(state.sled.xMm) &&
+                    !Number.isFinite(state.sled.yMm) &&
+                    Number.isFinite(config.lastPosition.xMm) &&
+                    Number.isFinite(config.lastPosition.yMm)
                 ) {
                     state.sled.reference = {
                         xMm: config.lastPosition.xMm,
@@ -180,7 +182,7 @@ module.exports = async ({
             }
             config.lastPosition.xMm = Math.round(state.sled.xMm * 1000) / 1000;
             config.lastPosition.yMm = Math.round(state.sled.yMm * 1000) / 1000;
-            if (!isFinite(config.lastPosition.xMm) || !isFinite(config.lastPosition.yMm)) {
+            if (!Number.isFinite(config.lastPosition.xMm) || !Number.isFinite(config.lastPosition.yMm)) {
                 delete config.lastPosition.xMm;
                 delete config.lastPosition.yMm;
             }
@@ -189,8 +191,8 @@ module.exports = async ({
         function checkSpindlePosition() {
             if (state.motors.z.state) {
 
-                if (!isFinite(state.spindle.zMm) &&
-                    isFinite(config.lastPosition.zMm)) {
+                if (!Number.isFinite(state.spindle.zMm) &&
+                    Number.isFinite(config.lastPosition.zMm)) {
                     state.spindle.reference = {
                         zMm: config.lastPosition.zMm,
                         zSteps: state.motors.z.state.steps
@@ -207,7 +209,7 @@ module.exports = async ({
                 delete state.spindle.zMm;
             }
             config.lastPosition.zMm = Math.round(state.spindle.zMm * 1000) / 1000;
-            if (!isFinite(config.lastPosition.zMm)) {
+            if (!Number.isFinite(config.lastPosition.zMm)) {
                 delete config.lastPosition.zMm;
             }
         }
@@ -215,9 +217,9 @@ module.exports = async ({
         async function checkTarget() {
 
             if (
-                isFinite(state.sled.xMm) &&
-                isFinite(state.sled.yMm) &&
-                isFinite(state.spindle.zMm) &&
+                Number.isFinite(state.sled.xMm) &&
+                Number.isFinite(state.sled.yMm) &&
+                Number.isFinite(state.spindle.zMm) &&
                 state.target
             ) {
 
@@ -379,12 +381,31 @@ module.exports = async ({
         },
 
         setSledReference(xMm, yMm) {
+            config.motors.a.stretch = 1;
+            config.motors.b.stretch = 1;
             state.sled.reference = {
                 xMm,
                 yMm,
                 aSteps: state.motors.a.state.steps,
                 bSteps: state.motors.b.state.steps
             };
+        },
+
+        setChainStretchCompensation(xMm, yMm) {
+            if (!Number.isFinite(state.sled.xMm) || !Number.isFinite(state.sled.yMm)) {
+                throw new Error("Please calibrate top at first");
+            }
+            let reportedChainLengths = getChainLengths({ xMm: state.sled.xMm, yMm, yMm: state.sled.yMm });
+            let actualChainLengths = getChainLengths({ xMm, yMm });
+
+
+            console.info(reportedChainLengths);
+            console.info(actualChainLengths);
+
+            config.motors.a.stretch = actualChainLengths.aMm / reportedChainLengths.aMm;
+            config.motors.b.stretch = actualChainLengths.bMm / reportedChainLengths.bMm;
+
+            console.info(config.motors.a.stretch, config.motors.b.stretch);
         },
 
         setSpindleReference(zMm) {

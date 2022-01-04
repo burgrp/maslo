@@ -124,11 +124,11 @@ module.exports = ({ machine }) => {
 
                 try {
 
-                    if (!isFinite(machineState.sled.xMm) || !isFinite(machineState.sled.yMm)) {
+                    if (!Number.isFinite(machineState.sled.xMm) || !Number.isFinite(machineState.sled.yMm)) {
                         throw new Error("Unknown sled position");
                     }
 
-                    if (!isFinite(machineState.spindle.zMm)) {
+                    if (!Number.isFinite(machineState.spindle.zMm)) {
                         throw new Error("Unknown spindle position");
                     }
 
@@ -146,7 +146,7 @@ module.exports = ({ machine }) => {
                             let lastParams = queue[queue.length - 1];
                             let newParams = {};
                             for (let key in lastParams) {
-                                newParams[key] = isFinite(params[key]) ? params[key] : lastParams[key];
+                                newParams[key] = Number.isFinite(params[key]) ? params[key] : lastParams[key];
                             }
 
                             queue.push(newParams);

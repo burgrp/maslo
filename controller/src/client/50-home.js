@@ -80,7 +80,7 @@ wg.pages.home = {
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: (isFinite(state.sled.xMm) && isFinite(state.sled.yMm)) ? "visible" : "hidden"
+                visibility: (Number.isFinite(state.sled.xMm) && Number.isFinite(state.sled.yMm)) ? "visible" : "hidden"
             });
 
             $(".scene .chain.a").attr({
@@ -113,9 +113,9 @@ wg.pages.home = {
             }
 
             let dist = Math.sqrt(Math.pow(sledX - lastSledX, 2) + Math.pow(sledY - lastSledY, 2));
-            if (dist > 10 || !isFinite(dist)) {
+            if (dist > 10 || !Number.isFinite(dist)) {
 
-                if (isFinite(lastSledX) && isFinite(lastSledY) && isFinite(sledX) && isFinite(sledY)) {
+                if (Number.isFinite(lastSledX) && Number.isFinite(lastSledY) && Number.isFinite(sledX) && Number.isFinite(sledY)) {
 
                     svg("line").attr({
                         x1: lastSledX,
@@ -170,10 +170,10 @@ wg.pages.home = {
             }
 
             for (let command of job) {
-                if ((command.code === "G0" || command.code === "G1") && (isFinite(command.x) || isFinite(command.y))) {
+                if ((command.code === "G0" || command.code === "G1") && (Number.isFinite(command.x) || Number.isFinite(command.y))) {
 
-                    let x = isFinite(command.x) && command.x || pos.x;
-                    let y = isFinite(command.y) && command.y || pos.y;
+                    let x = Number.isFinite(command.x) && command.x || pos.x;
+                    let y = Number.isFinite(command.y) && command.y || pos.y;
 
                     if (pos) {
                         previewSvg.append(svg("line").attr({
@@ -241,15 +241,18 @@ wg.pages.home = {
                 DIV("group calibration", [
                     DIV("group-title").text("calibration"),
                     DIV("group-content", [
-                        DIV("value", [
-                            NUMBER(),
-                            DIV("units").text("mm")
-                        ]),                        
-                        DIV("save", [
-                            BUTTON("top").text("Top"),
-                            BUTTON("bottom").text("Bottom"),
-                            BUTTON("tool").text("Tool")                            
-                        ])
+                        NUMBER("value"),
+                        DIV("unit").text("mm"),
+                        ...["top", "bottom", "tool"]
+                            .map(kind =>
+                                BUTTON(kind).text(kind).click(() => {
+                                    wg.common.check(async () => {
+                                        let input = $(".calibration .group-content input");
+                                        await wg.machine.setCalibration(kind, parseFloat(input.val()));
+                                        input.val("");
+                                    }); 
+                                })
+                            )
                     ])
                 ]),
                 DIV("group xyaxis", [
@@ -296,7 +299,7 @@ wg.pages.home = {
                 })
         ]);
 
-        let calibrated = isFinite(state.sled.xMm) && isFinite(state.sled.yMm) && isFinite(state.spindle.zMm);
+        let calibrated = Number.isFinite(state.sled.xMm) && Number.isFinite(state.sled.yMm) && Number.isFinite(state.spindle.zMm);
         $(".page.home .controls .abchains .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .calibration .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .xyaxis .group-content").toggleClass("hidden", !calibrated);

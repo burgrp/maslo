@@ -114,29 +114,39 @@
 /*---------------------------------------------------------------*/
 
 .page.home .controls .calibration .group-content {
-    display: flex;
-    align-items: stretch;
-    padding: 1em 1em 0em 1em;
-}
-
-.page.home .controls .calibration .group-content>* {
-    margin-bottom: 1em;
+    padding: 1em 1em 1em 1em;
 }
 
 .page.home .controls .calibration .value {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-}
-
-.page.home .controls .calibration .value input {
+    grid-row: 1;
+    grid-column: 2;
     max-width: 5em;
     margin-right: 0.5em
 }
 
-.page.home .controls .calibration .save {
-    flex-direction: row;
-    justify-content: space-around;
+.page.home .controls .calibration .unit {
+    grid-row: 1;
+    grid-column: 3;
+    justify-self: left;
+}
+
+.page.home .controls .calibration .top {
+    grid-row: 2;
+    grid-column: 1;
+}
+
+.page.home .controls .calibration .bottom {
+    grid-row: 2;
+    grid-column: 2;
+}
+
+.page.home .controls .calibration .tool {
+    grid-row: 2;
+    grid-column: 3;
+}
+
+.page.home .controls .calibration button {
+    margin-top: 1em;
 }
 
 /*---------------------------------------------------------------*/

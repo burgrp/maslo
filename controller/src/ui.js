@@ -66,7 +66,7 @@ module.exports = async ({
 
     async function manualMoveStart(directionX, directionY) {
 
-        if (!isFinite(machineState.sled.xMm) || !isFinite(machineState.sled.yMm)) {
+        if (!Number.isFinite(machineState.sled.xMm) || !Number.isFinite(machineState.sled.yMm)) {
             throw new Error(`Unknown sled position`);
         }
 
@@ -128,7 +128,7 @@ module.exports = async ({
                 },
 
                 async resetUserOrigin() {
-                    if (isFinite(machineState.sled.xMm) && isFinite(machineState.sled.yMm)) {
+                    if (Number.isFinite(machineState.sled.xMm) && Number.isFinite(machineState.sled.yMm)) {
                         if (machineState.userOrigin.xMm === machineState.sled.xMm && machineState.userOrigin.yMm === machineState.sled.yMm) {
                             machine.setUserOrigin(0, 0);
                         } else {
@@ -153,6 +153,25 @@ module.exports = async ({
                         throw new Error("Please enter a valid number");
                     }
                     machine.setSpindleReference(zMm);
+                },
+
+                async setCalibration(kind, value) {
+                    if (!Number.isFinite(value)) {
+                        throw new Error("Please enter a valid number");
+                    }
+                    switch (kind) {
+                        case "top":
+                            machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - value);
+                            break;
+                        case "bottom":
+                            machine.setChainStretchCompensation(0, -config.data.workspace.heightMm / 2 + config.data.sled.diaMm / 2 + value);
+                            break;
+                        case "tool":
+                            machine.setSpindleReference(-value);
+                            break;
+                        default:
+                            throw new Error(`Sorry, I don't know how to calibrate ${kind}`);
+                    }
                 }
             },
             router: {
