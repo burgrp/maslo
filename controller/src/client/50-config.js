@@ -1,4 +1,5 @@
 wg.pages.config = {
+    title: "Configuration",
     async render(container, pageName) {                
 
         wg.common.page(container, pageName, [

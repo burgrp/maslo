@@ -42,8 +42,6 @@ wg.common = {
             DIV("navigation", [
                 link("home", "/", "home"),
                 //link("jobs", "jobs", "folder-open"),
-                link("calibxy", "calibxy", "ruler-combined"),
-                link("calibz", "calibz", "sort"),
                 link("config", "config", "tools"),
                 DIV("end", [
                     BUTTON("stop", [
@@ -111,12 +109,4 @@ wg.common = {
         return button;
     }
 
-}
-
-/*---------------------------------------------------------------*/
-
-wg.pages.settings = {
-    async render(container, pageName) {
-        wg.common.page(container, pageName, []);
-    }
 }

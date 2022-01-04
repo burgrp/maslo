@@ -63,6 +63,10 @@ module.exports = ({ machine }) => {
 
         logInfo(from, to, future);
 
+        if (!to.f) {
+            throw new Error(`No feed rate set for the move ${JSON.stringify(to)}`);
+        }
+
         let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y, to.z - from.z);
 
         if (moveDistanceAbsMm > 0) {

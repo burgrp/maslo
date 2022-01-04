@@ -1,4 +1,5 @@
 wg.pages.home = {
+    title: "Home",
     async render(container, pageName) {
 
         let lastSledX, lastSledY;
