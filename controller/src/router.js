@@ -4,6 +4,7 @@ const { resolve } = require("path");
 const { pid } = require("process");
 const readline = require("readline");
 const { start } = require("repl");
+const { Readable } = require("stream");
 
 //const logError = require("debug")("app:router:error");
 const logInfo = require("debug")("app:router:info");
@@ -18,8 +19,23 @@ module.exports = ({ machine, config }) => {
     let machineState = machine.state;
 
     function convertFromSvg(svgPath) {
-        let converter = childProcess.spawn(config.gcodeplot.executable, [...Object.entries(config.gcodeplot.options).map(([k, v]) => `--${k}=${v}`), svgPath]);
-        return converter.stdout;
+        return new Promise((resolve, reject) => {
+            let converter = childProcess.spawn(config.gcodeplot.executable, [...Object.entries(config.gcodeplot.options).map(([k, v]) => `--${k}=${v}`), svgPath]);
+            let stdout = new Readable();
+            let stderr = "";
+
+            converter.stdout.on("data", data => stdout.push(data));
+            converter.stderr.on("data", data => stderr = stderr + data);
+
+            converter.on("close", code => {
+                stdout.push(null);
+                if (code) {
+                    reject(new Error(`${config.gcodeplot.executable} exited with code ${code}: ${stderr.split("\n")[0]}`));
+                } else {
+                    resolve(stdout);
+                }
+            });
+        });
     }
 
     async function* parseLines(linesAsyncIter) {
@@ -54,7 +70,7 @@ module.exports = ({ machine, config }) => {
         }
 
         if (svgStream) {
-            let stream = convertFromSvg(svgPath);
+            let stream = await convertFromSvg(svgPath);
             for await (let parsed of parseStream(stream)) {
                 yield parsed;
             }
