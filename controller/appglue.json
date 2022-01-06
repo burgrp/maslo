@@ -118,5 +118,9 @@
                 "config": "-> config"
             }
         ]
+    },
+    "rest": {
+        "module": "./rest-api.js",
+        "router": "-> router"        
     }
 }
