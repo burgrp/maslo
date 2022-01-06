@@ -1,28 +1,28 @@
 /*---------------------------------------------------------------*/
 
 function formatLength(mm) {
-    return Number.isFinite(mm)? mm.toFixed(1): "-";
+    return Number.isFinite(mm) ? mm.toFixed(1) : "-";
 }
 
 /*---------------------------------------------------------------*/
 
 jQuery.event.special.touchstart = {
-    setup: function( _, ns, handle ) {
+    setup: function (_, ns, handle) {
         this.addEventListener("touchstart", handle, { passive: !ns.includes("noPreventDefault") });
     }
 };
 jQuery.event.special.touchmove = {
-    setup: function( _, ns, handle ) {
+    setup: function (_, ns, handle) {
         this.addEventListener("touchmove", handle, { passive: !ns.includes("noPreventDefault") });
     }
 };
 jQuery.event.special.wheel = {
-    setup: function( _, ns, handle ){
+    setup: function (_, ns, handle) {
         this.addEventListener("wheel", handle, { passive: true });
     }
 };
 jQuery.event.special.mousewheel = {
-    setup: function( _, ns, handle ){
+    setup: function (_, ns, handle) {
         this.addEventListener("mousewheel", handle, { passive: true });
     }
 };
@@ -36,13 +36,27 @@ function ICON(glyph) {
 wg.common = {
     page(container, name, content) {
 
-        let link = (linkName, path, icon) => AHREF(linkName + (linkName === name ? " active" : ""), { href: path }, [ICON(icon)]);
+        let link = (linkName, icon, page, clazz) => AHREF(linkName + (linkName === name ? " active" : "") + (clazz ? " " + clazz : ""), { href: page }, [ICON(icon)]);
 
         container.append(DIV("page " + name, [
             DIV("navigation", [
-                link("home", "/", "home"),
-                //link("jobs", "jobs", "folder-open"),
-                link("config", "config", "tools"),
+                link("home", "home", "/"),
+                link("load", "folder-open")
+                    .toggleClass("wg-no-handle", true)
+                    .click(() => {
+                        $(".navigation .load-input").click();
+                    }),
+                INPUT("load-input", { type: "file" })
+                    .change(ev => {
+                        if (ev.currentTarget.files.length) {
+                            wg.common.check(async () => {
+                                let data = await ev.currentTarget.files[0].arrayBuffer();
+                                await wg.pages.home.importFile(data);
+                                wg.goto("/");
+                            });
+                        }
+                    }),
+                link("config", "tools", "config"),
                 DIV("end", [
                     BUTTON("stop", [
                         ICON("exclamation-triangle"),

@@ -129,6 +129,10 @@ button:active {
     top: .1em;
 }
 
+.page .navigation .load-input {
+    display: none;
+}
+
 /*---------------------------------------------------------------*/
 
 .page .errors {
