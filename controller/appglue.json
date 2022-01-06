@@ -86,6 +86,17 @@
                         "max": 0.9
                     }
                 }
+            },
+            "gcodeplot": {
+                "executable": "gcodeplot",
+                "options": {
+                    "area": "0,0,1250,625",
+                    "init-code": "",
+                    "end-code": "",
+                    "pen-up-speed": 10,
+                    "pen-down-speed": 5,
+                    "z-speed": 5
+                }
             }
         }
     },
@@ -121,6 +132,6 @@
     },
     "rest": {
         "module": "./rest-api.js",
-        "router": "-> router"        
+        "router": "-> router"
     }
 }

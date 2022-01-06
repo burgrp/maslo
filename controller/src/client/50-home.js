@@ -349,7 +349,9 @@ wg.pages.home = {
                 contentType: "application/octet-stream",
                 processData: false,
                 success: resolve,
-                error: reject
+                error: error => {
+                        reject(error.responseJSON && error.responseJSON.message || error.responseText || error.message || error);
+                }
             });
         }
         );

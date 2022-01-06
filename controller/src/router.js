@@ -1,4 +1,6 @@
 const fs = require("fs");
+const childProcess = require("child_process");
+const { resolve } = require("path");
 const { pid } = require("process");
 const readline = require("readline");
 const { start } = require("repl");
@@ -15,31 +17,62 @@ module.exports = ({ machine, config }) => {
 
     let machineState = machine.state;
 
-    async function* parseGcodeLines(linesAsyncIter) {
-        for await (let line of linesAsyncIter) {
-            line = line.replace(/;.*/, "").trim();
-            if (line) {
-                let tokens = line.split(/ +/);
-                let code = tokens.shift();
-                let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
-                code = match && match.groups.l + parseFloat(match.groups.n) || code;
-                let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
+    function convertFromSvg(svgPath) {
+        let converter = childProcess.spawn(config.gcodeplot.executable, [...Object.entries(config.gcodeplot.options).map(([k, v]) => `--${k}=${v}`), svgPath]);
+        return converter.stdout;
+    }
+
+    async function* parseLines(linesAsyncIter) {
+        let svgStream;
+        let svgPath = "/tmp/svg";
+
+        try {
+            for await (let line of linesAsyncIter) {
+
+                if (line.trim().startsWith("<") && !svgStream) {
+                    svgStream = fs.createWriteStream(svgPath);
+                }
+
+                if (svgStream) {
+                    svgStream.write(line + "\n");
+                } else {
+                    line = line.replace(/;.*/, "").trim();
+                    if (line) {
+                        let tokens = line.split(/ +/);
+                        let code = tokens.shift();
+                        let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
+                        code = match && match.groups.l + parseFloat(match.groups.n) || code;
+                        let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
+                        yield parsed;
+                    }
+                }
+            }
+        } finally {
+            if (svgStream) {
+                svgStream.close();
+            }
+        }
+
+        if (svgStream) {
+            let stream = convertFromSvg(svgPath);
+            for await (let parsed of parseStream(stream)) {
                 yield parsed;
             }
         }
+
     }
 
-    function parseGcodeStream(stream) {
+    function parseStream(stream) {
         const lines = readline.createInterface({
             input: stream,
             crlfDelay: Infinity,
             terminal: false
         });
-        return parseGcodeLines(lines);
+        return parseLines(lines);
     }
 
     function parseLocalFile(fileName) {
-        return parseGcodeStream(fs.createReadStream(fileName));
+        return parseStream(fs.createReadStream(fileName));
     }
 
     async function loadJob(gcodeAsyncIter) {
@@ -113,7 +146,7 @@ module.exports = ({ machine, config }) => {
         },
 
         async loadJobFromStream(stream) {
-            await loadJob(parseGcodeStream(stream));
+            await loadJob(parseStream(stream));
         },
 
         async runJob() {
