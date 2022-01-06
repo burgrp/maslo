@@ -8,7 +8,7 @@ const logInfo = require("debug")("app:router:info");
 
 let { round, ceil, hypot, min, max, abs, sign } = Math;
 
-module.exports = ({ machine }) => {
+module.exports = ({ machine, config }) => {
 
     let job = [];
     let jobChangedListeners = [];
@@ -21,6 +21,8 @@ module.exports = ({ machine }) => {
             if (line) {
                 let tokens = line.split(/ +/);
                 let code = tokens.shift();
+                let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
+                code = match && match.groups.l + parseFloat(match.groups.n) || code;
                 let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
                 yield parsed;
             }
@@ -64,7 +66,7 @@ module.exports = ({ machine }) => {
         logInfo(from, to, future);
 
         if (!to.f) {
-            throw new Error(`No feed rate set for the move ${JSON.stringify(to)}`);
+            throw new Error(`Zero feed rate for move ${JSON.stringify(to)}`);
         }
 
         let moveDistanceAbsMm = hypot(to.x - from.x, to.y - from.y, to.z - from.z);
@@ -140,7 +142,7 @@ module.exports = ({ machine }) => {
                         x: machineState.sled.xMm,
                         y: machineState.sled.yMm,
                         z: machineState.spindle.zMm,
-                        f: 0
+                        f: min(config.speed.xyRapidMmPerMin, config.speed.xyDefaultMmPerMin, config.speed.zMmPerMin)
                     }];
 
                     async function enqueueMove(params) {

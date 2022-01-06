@@ -216,7 +216,26 @@ wg.pages.home = {
                 <g id="previewSvg"/>
                 </g>
             </svg>                      
-            `)]).css({ visibility: "hidden" }),
+            `),
+            ]).css({ visibility: "hidden" })
+            //                 .on("dragover", ev => {
+            //                     console.info("over");
+            //                     ev.preventDefault();
+            //                     ev.stopPropagation();
+            //                 })
+            //                 .on("dragleave", ev => {
+            //                     console.info("leave");
+            //                     ev.preventDefault();
+            //                     ev.stopPropagation();
+            //                 })
+            //                 .on("drop", ev => {
+            //                     console.info("drop");
+            //                     ev.preventDefault();
+            //                     ev.stopPropagation();
+            //                 })
+
+
+            ,
             DIV("controls", [
                 DIV("group job", [
                     DIV("group-title").text("job"),
@@ -251,7 +270,7 @@ wg.pages.home = {
                                         let input = $(".calibration .group-content input");
                                         await wg.machine.setCalibration(kind, parseFloat(input.val()));
                                         input.val("");
-                                    }); 
+                                    });
                                 })
                             )
                     ])
@@ -311,5 +330,46 @@ wg.pages.home = {
         });
 
         updateRouterJob();
+
+        function importFile(data) {
+            return new Promise((resolve, reject) => {
+                $.ajax("/job", {
+                    method: "post",
+                    data: new Uint8Array(data),
+                    contentType: "application/octet-stream",
+                    processData: false,
+                    success: resolve,
+                    error: reject
+                });
+            }
+            );
+        }
+
+        let dropFrame = $(".page.home .scene");
+        $(".page.home .state, .page.home .scene, .page.home .scene *")
+            .on("dragover", ev => {
+                dropFrame.toggleClass("drop", true);
+                ev.preventDefault();
+                ev.stopPropagation();
+            })
+            .on("dragleave", ev => {
+                dropFrame.toggleClass("drop", false);
+                ev.preventDefault();
+                ev.stopPropagation();
+            })
+            .on("drop", ev => {
+                dropFrame.toggleClass("drop", false);
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (ev.originalEvent.dataTransfer.files.length) {
+                    wg.common.check(async () => {
+                        let data = await ev.originalEvent.dataTransfer.files[0].arrayBuffer();
+                        await importFile(data);
+                        console.info("Done");
+                    });
+                }
+            });
+
     }
 }
+

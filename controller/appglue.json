@@ -66,9 +66,12 @@
             "sled": {
                 "diaMm": 400
             },
+            "speed": {
+                "xyRapidMmPerMin": 600,
+                "xyDefaultMmPerMin": 300,
+                "zMmPerMin": 100
+            },
             "manual": {
-                "cuttingSpeedMmPerMin": 200,
-                "rapidSpeedMmPerMin": 1000,
                 "motorDuty": {
                     "a": {
                         "min": 0.6,
@@ -102,7 +105,8 @@
     },
     "router": {
         "module": "./router.js",
-        "machine": "-> machine"
+        "machine": "-> machine",
+        "config": "-> config.data"
     },
     "webserver": {
         "module": "@burgrp/webglue",

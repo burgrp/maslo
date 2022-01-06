@@ -76,7 +76,7 @@ module.exports = async ({
             code: rapidMove ? "G0" : "G1",
             x: machineState.sled.xMm + 10000 * directionX,
             y: machineState.sled.yMm + 10000 * directionY,
-            f: rapidMove ? config.data.manual.rapidSpeedMmPerMin : config.data.manual.cuttingSpeedMmPerMin
+            f: rapidMove ? config.data.speed.xyRapidMmPerMin : config.data.speed.xyDefaultMmPerMin
         }]);
 
     }
