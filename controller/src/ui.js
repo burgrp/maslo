@@ -141,37 +141,25 @@ module.exports = async ({
                     machine.interruptCurrentJob();
                 },
 
-                async setCalibrationXY(workspaceTopToSledTopMm) {
-                    if (!Number.isFinite(workspaceTopToSledTopMm)) {
-                        throw new Error("Please enter a valid number");
-                    }
-                    machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - workspaceTopToSledTopMm);
-                },
-
-                async setCalibrationZ(zMm) {
-                    if (!Number.isFinite(zMm)) {
-                        throw new Error("Please enter a valid number");
-                    }
-                    machine.setSpindleReference(zMm);
-                },
-
                 async setCalibration(kind, value) {
-                    if (!Number.isFinite(value)) {
-                        throw new Error("Please enter a valid number");
-                    }
-                    switch (kind) {
-                        case "top":
-                            machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - value);
-                            break;
-                        case "bottom":
-                            machine.setChainStretchCompensation(0, -config.data.workspace.heightMm / 2 + config.data.sled.diaMm / 2 + value);
-                            break;
-                        case "tool":
-                            machine.setSpindleReference(-value);
-                            break;
-                        default:
-                            throw new Error(`Sorry, I don't know how to calibrate ${kind}`);
-                    }
+                    await machine.doJob(async () => {
+                        if (!Number.isFinite(value)) {
+                            throw new Error("Please enter a valid number");
+                        }
+                        switch (kind) {
+                            case "top":
+                                machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - value);
+                                break;
+                            case "bottom":
+                                machine.setChainStretchCompensation(0, -config.data.workspace.heightMm / 2 + config.data.sled.diaMm / 2 + value);
+                                break;
+                            case "tool":
+                                machine.setSpindleReference(-value);
+                                break;
+                            default:
+                                throw new Error(`Sorry, I don't know how to calibrate ${kind}`);
+                        }
+                    });
                 }
             },
             router: {

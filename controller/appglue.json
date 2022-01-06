@@ -87,10 +87,15 @@
                     }
                 }
             },
+            "translateJob": {
+                "xMm": -1250,
+                "yMm": -625,
+                "zMm": 0
+            },
             "gcodeplot": {
                 "executable": "gcodeplot",                
                 "options": {
-                    "area": "0,0,1250,625",
+                    "area": "0,0,2500,1250",
                     "init-code": "",
                     "end-code": "",
                     "pen-up-speed": 10,

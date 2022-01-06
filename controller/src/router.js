@@ -64,7 +64,10 @@ module.exports = ({ machine, config }) => {
                             let code = tokens.shift();
                             let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
                             code = match && match.groups.l + parseFloat(match.groups.n) || code;
-                            let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
+                            let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({
+                                ...acc,
+                                [match[1].toLowerCase()]: parseFloat(match[2]) + (config.translateJob[`${match[1].toLowerCase()}Mm`] || 0)
+                            }), { code });
                             yield parsed;
                         }
                     }
