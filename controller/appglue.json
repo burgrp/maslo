@@ -69,7 +69,7 @@
             "speed": {
                 "xyRapidMmPerMin": 600,
                 "xyDefaultMmPerMin": 300,
-                "zMmPerMin": 100
+                "zMmPerMin": 120
             },
             "manual": {
                 "motorDuty": {
@@ -88,15 +88,16 @@
                 }
             },
             "gcodeplot": {
-                "executable": "gcodeplot",
+                "executable": "gcodeplot",                
                 "options": {
                     "area": "0,0,1250,625",
                     "init-code": "",
                     "end-code": "",
                     "pen-up-speed": 10,
                     "pen-down-speed": 5,
-                    "z-speed": 5
-                }
+                    "z-speed": 2
+                },
+                "filter": "; (!!Ybottom|!!Xleft)"
             }
         }
     },

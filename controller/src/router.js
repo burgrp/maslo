@@ -3,7 +3,7 @@ const childProcess = require("child_process");
 const readline = require("readline");
 const { Readable } = require("stream");
 
-//const logError = require("debug")("app:router:error");
+const logError = require("debug")("app:router:error");
 const logInfo = require("debug")("app:router:info");
 
 let { round, ceil, hypot, min, max, abs, sign } = Math;
@@ -17,7 +17,13 @@ module.exports = ({ machine, config }) => {
 
     function convertFromSvg(svgPath) {
         return new Promise((resolve, reject) => {
-            let converter = childProcess.spawn(config.gcodeplot.executable, [...Object.entries(config.gcodeplot.options).map(([k, v]) => `--${k}=${v}`), svgPath]);
+
+            let executable = config.gcodeplot.executable;
+            let params = [...Object.entries(config.gcodeplot.options).map(([k, v]) => `--${k}=${v}`), svgPath];
+
+            logInfo(`Converting SVG: ${executable} ${params.join(" ")}`);
+
+            let converter = childProcess.spawn(executable, params);
             let stdout = new Readable();
             let stderr = "";
 
@@ -27,7 +33,9 @@ module.exports = ({ machine, config }) => {
             converter.on("close", code => {
                 stdout.push(null);
                 if (code) {
-                    reject(new Error(`${config.gcodeplot.executable} exited with code ${code}: ${stderr.split("\n")[0]}`));
+                    reject(new Error(`${executable} exited with code ${code}: ${stderr.split("\n")[0]}`));
+                    logError(`${executable} exited with code ${code}`);
+                    logError(stderr);
                 } else {
                     resolve(stdout);
                 }
@@ -35,7 +43,7 @@ module.exports = ({ machine, config }) => {
         });
     }
 
-    async function* parseLines(linesAsyncIter) {
+    async function* parseLines(linesAsyncIter, filter) {
         let svgStream;
         let svgPath = "/tmp/svg";
 
@@ -49,14 +57,16 @@ module.exports = ({ machine, config }) => {
                 if (svgStream) {
                     svgStream.write(line + "\n");
                 } else {
-                    line = line.replace(/;.*/, "").trim();
-                    if (line) {
-                        let tokens = line.split(/ +/);
-                        let code = tokens.shift();
-                        let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
-                        code = match && match.groups.l + parseFloat(match.groups.n) || code;
-                        let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
-                        yield parsed;
+                    if (!filter || filter(line)) {
+                        line = line.replace(/;.*/, "").trim();
+                        if (line) {
+                            let tokens = line.split(/ +/);
+                            let code = tokens.shift();
+                            let match = code.match(/^(?<l>[A-Z])(?<n>[0-9.]*)/);
+                            code = match && match.groups.l + parseFloat(match.groups.n) || code;
+                            let parsed = tokens.map(token => /(.)(.*)/.exec(token)).reduce((acc, match) => ({ ...acc, [match[1].toLowerCase()]: parseFloat(match[2]) }), { code });
+                            yield parsed;
+                        }
                     }
                 }
             }
@@ -68,20 +78,21 @@ module.exports = ({ machine, config }) => {
 
         if (svgStream) {
             let stream = await convertFromSvg(svgPath);
-            for await (let parsed of parseStream(stream)) {
+            let filterMatch = config.gcodeplot.filter && new RegExp(config.gcodeplot.filter);
+            for await (let parsed of parseStream(stream, line => !line.match(filterMatch))) {
                 yield parsed;
             }
         }
 
     }
 
-    function parseStream(stream) {
+    function parseStream(stream, filter) {
         const lines = readline.createInterface({
             input: stream,
             crlfDelay: Infinity,
             terminal: false
         });
-        return parseLines(lines);
+        return parseLines(lines, filter);
     }
 
     function parseLocalFile(fileName) {
