@@ -105,6 +105,10 @@
                     "shading-darkest": 50
                 },
                 "filter": "; (!!Ybottom|!!Xleft)"
+            },
+            "userOrigin": {
+                "xMm": 0,
+                "yMm": 0
             }
         }
     },

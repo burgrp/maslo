@@ -21,8 +21,8 @@ wg.pages.home = {
 
             $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
 
-            $(".xyaxis .position .x").text(formatLength(sledX - state.userOrigin.xMm));
-            $(".xyaxis .position .y").text(formatLength(sledY - state.userOrigin.yMm));
+            $(".xyaxis .position .x").text(formatLength(sledX - config.userOrigin.xMm));
+            $(".xyaxis .position .y").text(formatLength(sledY - config.userOrigin.yMm));
             $(".zaxis .position").text(formatLength(state.spindle.zMm));
             $(".zaxis .position")
                 .toggleClass("moving", state.motors.z.state && Math.abs(state.motors.z.state.duty) > 0.1)
@@ -68,17 +68,17 @@ wg.pages.home = {
             });
 
             $(".scene .userorigin.x").attr({
-                x1: state.userOrigin.xMm - 30,
-                y1: state.userOrigin.yMm,
-                x2: state.userOrigin.xMm + 100,
-                y2: state.userOrigin.yMm
+                x1: config.userOrigin.xMm - 30,
+                y1: config.userOrigin.yMm,
+                x2: config.userOrigin.xMm + 100,
+                y2: config.userOrigin.yMm
             });
 
             $(".scene .userorigin.y").attr({
-                x1: state.userOrigin.xMm,
-                y1: state.userOrigin.yMm + 100,
-                x2: state.userOrigin.xMm,
-                y2: state.userOrigin.yMm - 30
+                x1: config.userOrigin.xMm,
+                y1: config.userOrigin.yMm + 100,
+                x2: config.userOrigin.xMm,
+                y2: config.userOrigin.yMm - 30
             });
 
             $(".scene .chain, .scene .sled").attr({

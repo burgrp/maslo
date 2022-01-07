@@ -4,11 +4,11 @@ const objectHash = require("object-hash");
 
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.ratio;
+    return distanceMm * motorConfig.stepsPerMm;
 }
 
 function absStepsToDistanceMm(motorConfig, steps) {
-    return steps / motorConfig.ratio;
+    return steps / motorConfig.stepsPerMm;
 }
 
 let pow2 = a => a * a;
@@ -30,10 +30,6 @@ module.exports = async ({
         spindle: {
             on: false
         },
-        userOrigin: {
-            xMm: 0,
-            yMm: 0
-        },
         motors: {},
         relays: {},
         errors: {}
@@ -45,8 +41,8 @@ module.exports = async ({
     let motors = {};
     for (let name in config.motors) {
         let motorConfig = config.motors[name];
-        if (!Number.isFinite(motorConfig.ratio)) {
-            motorConfig.ratio = motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
+        if (!Number.isFinite(motorConfig.stepsPerMm)) {
+            motorConfig.stepsPerMm = motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
         }
         motors[name] = await driverInstance.createMotor(name, motorConfig);
         state.motors[name] = {
@@ -369,10 +365,6 @@ module.exports = async ({
             stateChangedListeners.push(listener);
         },
 
-        setUserOrigin(xMm, yMm) {
-            state.userOrigin = { xMm, yMm };
-        },
-
         setMotorDuty(motor, duty) {
             state.motors[motor].duty = duty;
         },
@@ -416,9 +408,9 @@ module.exports = async ({
                 let steps1 = p1[motor + "Steps"];
                 let steps2 = p2[motor + "Steps"];
 
-                config.motors[motor].ratio = (steps1-steps2)/(len1mm-len2mm);
+                config.motors[motor].stepsPerMm = (steps1-steps2)/(len1mm-len2mm);
 
-                logInfo(`Motor ${motor} ratio set to ${config.motors[motor].ratio}`);
+                logInfo(`Motor ${motor} stepsPerMm set to ${config.motors[motor].stepsPerMm}`);
             }
         },
 

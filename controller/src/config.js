@@ -49,7 +49,7 @@ module.exports = async ({ file, defaults }) => {
                     }
                 }
             }
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 200));
         }
     }
 

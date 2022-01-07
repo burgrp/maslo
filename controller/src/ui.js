@@ -129,10 +129,10 @@ module.exports = async ({
 
                 async resetUserOrigin() {
                     if (Number.isFinite(machineState.sled.xMm) && Number.isFinite(machineState.sled.yMm)) {
-                        if (machineState.userOrigin.xMm === machineState.sled.xMm && machineState.userOrigin.yMm === machineState.sled.yMm) {
-                            machine.setUserOrigin(0, 0);
+                        if (config.data.userOrigin.xMm === machineState.sled.xMm && config.data.userOrigin.yMm === machineState.sled.yMm) {
+                            config.data.userOrigin = {xMm: 0, yMm: 0};
                         } else {
-                            machine.setUserOrigin(machineState.sled.xMm, machineState.sled.yMm);
+                            config.data.userOrigin = {xMm: machineState.sled.xMm, yMm: machineState.sled.yMm};
                         }
                     }
                 },
