@@ -246,7 +246,7 @@ wg.pages.home = {
                     DIV("group-content", [
                         NUMBER("value"),
                         DIV("unit").text("mm"),
-                        ...["ra", "rb", "top", "tool"]
+                        ...["top", "bottom", "tool"]
                             .map(kind =>
                                 BUTTON(kind).text(kind).click(() => {
                                     wg.common.check(async () => {

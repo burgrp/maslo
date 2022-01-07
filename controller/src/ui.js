@@ -143,12 +143,17 @@ module.exports = async ({
 
                 async setCalibration(kind, value) {
                     await machine.doJob(async () => {
+                        
                         if (!Number.isFinite(value)) {
                             throw new Error("Please enter a valid number");
                         }
+
                         switch (kind) {
                             case "top":
                                 machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - value);
+                                break;
+                            case "bottom":
+                                machine.recalculateRatio(0, -config.data.workspace.heightMm / 2 + config.data.sled.diaMm / 2 + value);
                                 break;
                             case "tool":
                                 machine.setSpindleReference(-value);

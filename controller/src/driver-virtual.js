@@ -10,7 +10,7 @@ module.exports = async () => {
         async createMotor(name, config) {
 
             let state = {
-                steps: config.virtual && config.virtual.steps || 0,
+                steps: Math.round(2000 * Math.random()) - 1000, //config.virtual && config.virtual.steps || 0,
                 stops: [false, false],
                 currentMA: 0,
                 duty: 0

@@ -127,43 +127,21 @@
 
 .page.home .controls .calibration .value {
     grid-row: 1;
-    grid-column: 2 / span 2;
+    grid-column: 1 / span 2;
     max-width: 5em;
     margin-right: 0.5em;
     justify-self: right;
 }
 
-.page.home .controls .calibration button {
-    min-width: 3em;
-}
-
 .page.home .controls .calibration .unit {
     grid-row: 1;
-    grid-column: 4;
+    grid-column: 3;
     justify-self: left;
 }
 
-.page.home .controls .calibration .ra {
-    grid-row: 2;
-    grid-column: 1;
-}
-
-.page.home .controls .calibration .rb {
-    grid-row: 2;
-    grid-column: 2;
-}
-
-.page.home .controls .calibration .top {
-    grid-row: 2;
-    grid-column: 3;
-}
-
-.page.home .controls .calibration .tool {
-    grid-row: 2;
-    grid-column: 4;
-}
-
 .page.home .controls .calibration button {
+    grid-row: 2;
+    min-width: 3em;
     margin-top: 1em;
 }
 

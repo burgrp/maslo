@@ -4,11 +4,11 @@ const objectHash = require("object-hash");
 
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
+    return distanceMm * motorConfig.ratio;
 }
 
 function absStepsToDistanceMm(motorConfig, steps) {
-    return steps * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
+    return steps / motorConfig.ratio;
 }
 
 let pow2 = a => a * a;
@@ -20,7 +20,6 @@ const MODE_JOB = "JOB";
 module.exports = async ({
     drivers,
     driver,
-    geometry,
     config
 }) => {
 
@@ -45,7 +44,11 @@ module.exports = async ({
 
     let motors = {};
     for (let name in config.motors) {
-        motors[name] = await driverInstance.createMotor(name, config.motors[name]);
+        let motorConfig = config.motors[name];
+        if (!Number.isFinite(motorConfig.ratio)) {
+            motorConfig.ratio = motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
+        }
+        motors[name] = await driverInstance.createMotor(name, motorConfig);
         state.motors[name] = {
             duty: 0
         };
@@ -385,6 +388,38 @@ module.exports = async ({
                 aSteps: state.motors.a.state.steps,
                 bSteps: state.motors.b.state.steps
             };
+        },
+
+        recalculateRatio(xMm, yMm) {
+            if (!state.sled.reference) {
+                throw new Error("No sled reference. Please calibrate top at first.");
+            }
+            for (let motor of ['a', 'b']) {
+                
+                let p1 = state.sled.reference;
+                let p2 = {
+                    xMm,
+                    yMm,
+                    aSteps: state.motors.a.state.steps,
+                    bSteps: state.motors.b.state.steps
+                }
+
+                let calcLen = pos => hypot(config.beam.motorsDistanceMm / 2 - abs(pos.xMm), config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 - pos.yMm);
+
+                let len1mm = calcLen(p1);
+                let len2mm = calcLen(p2);
+
+                if (abs(len2mm - len1mm) < 200) {
+                    throw new Error("Calibration distances too small");
+                }
+
+                let steps1 = p1[motor + "Steps"];
+                let steps2 = p2[motor + "Steps"];
+
+                config.motors[motor].ratio = (steps1-steps2)/(len1mm-len2mm);
+
+                logInfo(`Motor ${motor} ratio set to ${config.motors[motor].ratio}`);
+            }
         },
 
         setSpindleReference(zMm) {
