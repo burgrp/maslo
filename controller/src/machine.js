@@ -4,13 +4,11 @@ const objectHash = require("object-hash");
 
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
-    let stretch = motorConfig.stretch || 1;
-    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / (motorConfig.mmPerRev * stretch);
+    return distanceMm * motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
 }
 
 function absStepsToDistanceMm(motorConfig, steps) {
-    let stretch = motorConfig.stretch || 1;
-    return steps * motorConfig.mmPerRev * stretch / (motorConfig.encoderPpr * motorConfig.gearRatio);
+    return steps * motorConfig.mmPerRev / (motorConfig.encoderPpr * motorConfig.gearRatio);
 }
 
 let pow2 = a => a * a;
@@ -381,31 +379,12 @@ module.exports = async ({
         },
 
         setSledReference(xMm, yMm) {
-            config.motors.a.stretch = 1;
-            config.motors.b.stretch = 1;
             state.sled.reference = {
                 xMm,
                 yMm,
                 aSteps: state.motors.a.state.steps,
                 bSteps: state.motors.b.state.steps
             };
-        },
-
-        setChainStretchCompensation(xMm, yMm) {
-            if (!Number.isFinite(state.sled.xMm) || !Number.isFinite(state.sled.yMm)) {
-                throw new Error("Please calibrate top at first");
-            }
-            let reportedChainLengths = getChainLengths({ xMm: state.sled.xMm, yMm, yMm: state.sled.yMm });
-            let actualChainLengths = getChainLengths({ xMm, yMm });
-
-
-            console.info(reportedChainLengths);
-            console.info(actualChainLengths);
-
-            config.motors.a.stretch = actualChainLengths.aMm / reportedChainLengths.aMm;
-            config.motors.b.stretch = actualChainLengths.bMm / reportedChainLengths.bMm;
-
-            console.info(config.motors.a.stretch, config.motors.b.stretch);
         },
 
         setSpindleReference(zMm) {
