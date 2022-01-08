@@ -14,7 +14,7 @@ module.exports = async ({ bus, motors }) => {
             try {
                 await i2c.setReset(false);
                 await i2c.setReset(true);
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch(e) {
                 logError("Could not reset devices on I2C bus:", e);
             }

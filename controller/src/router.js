@@ -24,7 +24,9 @@ module.exports = ({ machine, config }) => {
             logInfo(`Converting SVG: ${executable} ${params.join(" ")}`);
 
             let converter = childProcess.spawn(executable, params);
-            let stdout = new Readable();
+            let stdout = new Readable({
+                highWaterMark: 100 // TODO: fix this workaround for small files
+            });
             let stderr = "";
 
             converter.stdout.on("data", data => stdout.push(data));
