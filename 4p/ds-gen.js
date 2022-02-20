@@ -2,7 +2,7 @@ const Jimp = require("jimp");
 
 let width = 640;
 let height = 480;
-let count = 1000;
+let count = 1;
 let dir = "/home/paul/tmp/dataset";
 
 async function start() {
@@ -100,6 +100,7 @@ async function start() {
         );
 
         let file = `${dir}/${("000000000000" + (id++)).slice(-10)},${name},${shiftX},${shiftY}.jpg`;
+        file = "sample.jpg";
         console.info(file);
         await image.writeAsync(file);;
     }
