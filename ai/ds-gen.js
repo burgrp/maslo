@@ -100,7 +100,7 @@ async function start() {
     for (let dataset of [
         {
             name: "train",
-            count: 3
+            count: 100
         },
         {
             name: "test",
@@ -122,7 +122,7 @@ async function start() {
                     width,
                     height,
                     shape: shapes[shapeIndex],
-                    thick: 2 * (1 + Math.round(Math.random() * 20)),
+                    thick: 2 * (1 + Math.round(Math.random() * 10)),
                     rotate: Math.round((Math.random() - 0.5) * 60),
                     center: {
                         x: shapes[shapeIndex].name === "lr"? 0: Math.round((Math.random() - 0.5) * width / 1.5),
