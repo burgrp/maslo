@@ -1,7 +1,7 @@
 const Jimp = require("jimp");
 const fs = require("fs").promises;
 
-async function save({ data, width, height }, fileName) {
+async function save(data, width, height, fileName) {
     let jimpImage = await Jimp.create(width, height);
     jimpImage.scan(0, 0, width, height, (x, y, idx) => {
         let color = data[x + y * width];
@@ -11,20 +11,17 @@ async function save({ data, width, height }, fileName) {
     await jimpImage.writeAsync(fileName);
 }
 
-function translate(srcData, srcWidth, srcHeight, dstWidth, dstHeight, angle, shiftX, shiftY) {
+function translate(srcData, srcWidth, srcHeight, dstWidth, dstHeight, angle, center) {
 
     let dstData = new Uint8Array(new ArrayBuffer(dstWidth * dstHeight));
 
     angle = Math.PI * angle / 180;
 
-    shiftX = Math.round(srcWidth * shiftX / 400);
-    shiftY = Math.round(srcHeight * shiftY / 400);
-
     for (let dstX = 0; dstX < dstWidth; dstX++) {
         for (let dstY = 0; dstY < dstHeight; dstY++) {
 
-            let dx = dstX - dstWidth / 2 - shiftX;
-            let dy = dstY - dstHeight / 2 - shiftY;
+            let dx = dstX - dstWidth / 2 - center.x;
+            let dy = dstY - dstHeight / 2 - center.y;
 
             let sx = dx * Math.cos(angle) + dy * Math.sin(angle);
             let sy = dy * Math.cos(angle) - dx * Math.sin(angle);
@@ -70,10 +67,13 @@ function generate(params) {
         data[index] = Math.min(255, 50 + data[index]);
     }
 
-    let final = translate(data, size, size, params.width, params.height, params.rotate, params.shiftX, params.shiftY);
+    let final = translate(data, size, size, params.width, params.height, params.rotate, params.center);
 
     return {
-        ...params,
+        meta: {
+            ...params,
+            shape: params.shape.name
+        },
         data: final
     };
 }
@@ -104,7 +104,7 @@ async function start() {
         },
         {
             name: "test",
-            count: 5
+            count: 3
         }
     ]) {
 
@@ -112,29 +112,31 @@ async function start() {
         height = 224;
 
         let id = 0;
-        let paramsList = [];
-        
+        let metaList = [];
+
         for (let shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
             for (let imageIndex = 0; imageIndex < dataset.count; imageIndex++) {
-                
+
                 let params = {
                     name: ("000000000000" + (id++)).slice(-10) + ".jpg",
                     width,
                     height,
-                    shape: shapes[shapeIndex],                        
+                    shape: shapes[shapeIndex],
                     thick: 2 * (1 + Math.round(Math.random() * 20)),
-                    rotate: Math.round(Math.random() * 60 - 30),
-                    shiftX: Math.round(Math.random() * 100 - 50),
-                    shiftY: Math.round(Math.random() * 100 - 50)
+                    rotate: Math.round((Math.random() - 0.5) * 60),
+                    center: {
+                        x: shapes[shapeIndex].name === "lr"? 0: Math.round((Math.random() - 0.5) * width / 1.5),
+                        y: shapes[shapeIndex].name === "ud"? 0: Math.round((Math.random() - 0.5) * height / 1.5)
+                    }
                 };
 
-                paramsList.push(params);
-
                 let image = generate(params);
-                await save(image, `${directory}/${dataset.name}/${params.name}`);
+                await save(image.data, image.meta.width, image.meta.height, `${directory}/${dataset.name}/${params.name}`);
+
+                metaList.push(image.meta);
             }
 
-            await fs.writeFile(`${directory}/${dataset.name}.json`, JSON.stringify(paramsList, null, 2), "utf-8");
+            await fs.writeFile(`${directory}/${dataset.name}.json`, JSON.stringify(metaList, null, 2), "utf-8");
 
         }
 
