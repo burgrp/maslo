@@ -29,7 +29,7 @@ async function save(data, size, fileName, mark) {
 
         for (let point of mark.points) {
             jimpImage.scan(point.x - 1, point.y - 1, 3, 3, (x, y, idx) => {
-                if (idx >= 0 && idx < size * size * 4 && x >=0 && y >= 0 && x < size && y < size) {
+                if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
                     jimpImage.bitmap.data.writeUInt32BE(0xFF0000FF, idx);
                 }
             });
@@ -90,7 +90,7 @@ function generate(params) {
         }
     }
 
-    for (let c = 0; c < size * size * 10; c++) {
+    for (let c = 0; c < size * size * 2; c++) {
         let index = Math.floor(Math.random() * size * size);
         data[index] = Math.max(0, Math.min(255, data[index] + 50 - Math.random() * 100));
     }
@@ -126,17 +126,36 @@ function detect(image, size) {
     let points = [];
 
     for (let x = 0; x < size; x++) {
-      
+
+        let sum = 0;
+        for (let y = 0; y < size; y++) {
+            sum += image[x + y * size];
+        }
+
+        let avg = sum / size;
+
+        let start;
+        let spots = [];
 
         for (let y = 0; y < size; y++) {
             let v = image[x + y * size];
-            
+            if (v > avg && start === undefined) {
+                start = y;
+            }
+            if (v <= avg && start !== undefined) {
+                spots.push({ start, stop: y });
+                start = undefined;
+            }
         }
 
-        points.push({
-            x: x,
-            y: 10
-        });
+        let max = spots.length && spots.reduce((acc, s) => (!s || s.stop - s.start > acc.stop - acc.start ? s : acc));
+
+        if (max) {
+            points.push({
+                x,
+                y: (max.stop + max.start) / 2
+            });
+        }
     }
 
     return {
