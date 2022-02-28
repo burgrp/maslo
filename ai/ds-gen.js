@@ -123,7 +123,7 @@ async function start() {
                     height,
                     shape: shapes[shapeIndex],
                     thick: 2 * (1 + Math.round(Math.random() * 10)),
-                    rotate: Math.round((Math.random() - 0.5) * 60),
+                    rotate: Math.round((Math.random() - 0.5) * 40),
                     center: {
                         x: shapes[shapeIndex].name === "lr"? 0: Math.round((Math.random() - 0.5) * width / 1.5),
                         y: shapes[shapeIndex].name === "ud"? 0: Math.round((Math.random() - 0.5) * height / 1.5)
