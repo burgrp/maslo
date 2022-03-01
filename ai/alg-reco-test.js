@@ -125,41 +125,66 @@ function detect(image, size) {
 
     let points = [];
 
-    for (let x = 0; x < size; x++) {
+    for ([xm, ym, coord] of [[1, size, ["x", "y"]], [size, 1, ["y", "x"]]]) {
 
-        let sum = 0;
-        for (let y = 0; y < size; y++) {
-            sum += image[x + y * size];
-        }
+        for (let scan = 0; scan < size; scan++) {
 
-        let avg = sum / size;
-
-        let start;
-        let spots = [];
-
-        for (let y = 0; y < size; y++) {
-            let v = image[x + y * size];
-            if (v > avg && start === undefined) {
-                start = y;
+            let sum = 0;
+            for (let index = 0; index < size; index++) {
+                sum += image[scan * xm + index * ym];
             }
-            if (v <= avg && start !== undefined) {
-                spots.push({ start, stop: y });
-                start = undefined;
+
+            let avg = sum / size;
+
+            let start;
+            let spots = [];
+
+            for (let index = 0; index < size; index++) {
+                let v = image[scan * xm + index * ym];
+                if (v > avg && start === undefined) {
+                    start = index;
+                }
+                if (v <= avg && start !== undefined) {
+                    spots.push({ start, stop: index });
+                    start = undefined;
+                }
+            }
+
+            let max = spots.length && spots.reduce((acc, s) => (!s || s.stop - s.start > acc.stop - acc.start ? s : acc));
+
+            if (max) {
+                points.push({
+                    [coord[0]]: scan,
+                    [coord[1]]: (max.stop + max.start) / 2,
+                    score: 0
+                });
             }
         }
+    }
 
-        let max = spots.length && spots.reduce((acc, s) => (!s || s.stop - s.start > acc.stop - acc.start ? s : acc));
+    let filtered = [];
 
-        if (max) {
-            points.push({
-                x,
-                y: (max.stop + max.start) / 2
-            });
+    for (let p0 of points) {
+        for (let p1 of points) {
+            for (let p2 of points) {
+                let d01 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+                let d02 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
+                let p2incident = {
+                    x: p0.x + (p1.x - p0.x) * d02 / d01,
+                    y: p0.y + (p1.y - p0.y) * d02 / d01
+                };
+                if (
+                    Math.abs(p2incident.x - p2.x) < 10 &&
+                    Math.abs(p2incident.y - p2.y) < 10
+                ) {
+                    p2.score++;
+                }
+            }
         }
     }
 
     return {
-        points,
+        points: points,
         text: 'ul'
     };
 }
