@@ -121,71 +121,100 @@ let shapes = Object.entries({
 }).map(([k, v]) => ({ name: k, lines: v }));
 
 
-function detect(image, size) {
+function detect(hrImage, hrSize) {
+
+    let t0 = new Date().getTime();
+
+    let size = 10;
+    let dsRatio = hrSize / size;
+    let dsQuadrantSize = Math.ceil(dsRatio);
+
+    let image = new Uint8Array(new ArrayBuffer(size * size));
+
+    // down sample image
+    for (let y = 0; y < size; y++) {
+        let hrCenterY = Math.round(y * dsRatio);
+        for (let x = 0; x < size; x++) {
+            let hrCenterX = Math.round(x * dsRatio);
+            let sum = 0;
+            let count = 0;
+            for (let hrY = Math.max(0, hrCenterY - dsQuadrantSize); hrY <= Math.min(hrSize, hrCenterY + dsQuadrantSize); hrY++) {
+                for (let hrX = Math.max(0, hrCenterX - dsQuadrantSize); hrX <= Math.min(hrSize, hrCenterX + dsQuadrantSize); hrX++) {
+                    sum += hrImage[hrX + hrSize * hrY];
+                    count++;
+                }
+            }
+            image[x + size * y] = sum / count;
+        }
+    }
+
+    // count average
+    let sum = 0;
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            sum += image[x + size * y];
+        }
+    }
+    let avg = sum / (size * size);
+
+    // 100% contrast
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            image[x + size * y] = image[x + size * y] >= avg ? 255 : 0;
+            hrImage[20 + x + hrSize * (20 + y)] = image[x + size * y];
+        }
+    }
+
+    let lines = [];
+
+    for (let y1 = 0; y1 < size; y1++) {
+        for (let x1 = 0; x1 < size; x1++) {
+            for (let y2 = 0; y2 < size; y2++) {
+                for (let x2 = 0; x2 < size; x2++) {
+
+                    let line = true;
+
+                    let len = Math.round(Math.hypot(x2 - x1, y2 - y1));
+                    for (let posPix = 0; posPix < len; posPix++) {
+                        let posNorm = posPix / len;
+                        let x = Math.round(x1 + (x2 - x1) * posNorm);
+                        let y = Math.round(y1 + (y2 - y1) * posNorm);
+                        if (image[x + size * y] !== 255) {
+                            line = false;
+                            break;
+                        }
+                    }
+
+                    if (line && len) {
+                        lines.push({ x1, y1, x2, y2, len });
+                    }
+
+                }
+            }
+        }
+    }
+
+
+    let longest = lines.sort((a, b) => b.len - a.len)[0];
+
 
     let points = [];
 
-    for ([xm, ym, coord] of [[1, size, ["x", "y"]], [size, 1, ["y", "x"]]]) {
-
-        for (let scan = 0; scan < size; scan++) {
-
-            let sum = 0;
-            for (let index = 0; index < size; index++) {
-                sum += image[scan * xm + index * ym];
-            }
-
-            let avg = sum / size;
-
-            let start;
-            let spots = [];
-
-            for (let index = 0; index < size; index++) {
-                let v = image[scan * xm + index * ym];
-                if (v > avg && start === undefined) {
-                    start = index;
-                }
-                if (v <= avg && start !== undefined) {
-                    spots.push({ start, stop: index });
-                    start = undefined;
-                }
-            }
-
-            let max = spots.length && spots.reduce((acc, s) => (!s || s.stop - s.start > acc.stop - acc.start ? s : acc));
-
-            if (max) {
-                points.push({
-                    [coord[0]]: scan,
-                    [coord[1]]: (max.stop + max.start) / 2,
-                    score: 0
-                });
-            }
-        }
+    if (longest) {
+        points.push({
+            x: Math.round(dsRatio / 2 + longest.x1 * dsRatio),
+            y: Math.round(dsRatio / 2 + longest.y1 * dsRatio),
+        });
+        points.push({
+            x: Math.round(dsRatio / 2 + longest.x2 * dsRatio),
+            y: Math.round(dsRatio / 2 + longest.y2 * dsRatio),
+        });
     }
 
-    let filtered = [];
-
-    for (let p0 of points) {
-        for (let p1 of points) {
-            for (let p2 of points) {
-                let d01 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-                let d02 = Math.hypot(p2.x - p0.x, p2.y - p0.y);
-                let p2incident = {
-                    x: p0.x + (p1.x - p0.x) * d02 / d01,
-                    y: p0.y + (p1.y - p0.y) * d02 / d01
-                };
-                if (
-                    Math.abs(p2incident.x - p2.x) < 10 &&
-                    Math.abs(p2incident.y - p2.y) < 10
-                ) {
-                    p2.score++;
-                }
-            }
-        }
-    }
-
+    let t1 = new Date().getTime();
     return {
         points: points,
-        text: 'ul'
+        text: `ul ${t1 - t0}ms`
     };
 }
 
