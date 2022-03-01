@@ -161,12 +161,16 @@ function detect(hrImage, hrSize) {
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
             image[x + size * y] = image[x + size * y] >= avg ? 255 : 0;
-            hrImage[20 + x + hrSize * (20 + y)] = image[x + size * y];
+            //hrImage[20 + x + hrSize * (20 + y)] = image[x + size * y];
         }
     }
 
-    let lines = [];
+    let lines = {
+        vertical: [],
+        horizontal: []
+    };
 
+    // find lines
     for (let y1 = 0; y1 < size; y1++) {
         for (let x1 = 0; x1 < size; x1++) {
             if (image[x1 + size * y1]) {
@@ -189,7 +193,7 @@ function detect(hrImage, hrSize) {
                             }
 
                             if (line && len) {
-                                lines.push({ x1, y1, x2, y2, len });
+                                (Math.abs(x1 - x2) > Math.abs(y1 - y2) ? lines.horizontal : lines.vertical).push({ x1, y1, x2, y2, len });
                             }
 
                         }
@@ -200,21 +204,21 @@ function detect(hrImage, hrSize) {
         }
     }
 
-
-    let longest = lines.sort((a, b) => b.len - a.len)[0];
-
-
     let points = [];
 
-    if (longest) {
-        points.push({
-            x: Math.round(dsRatio / 2 + longest.x1 * dsRatio),
-            y: Math.round(dsRatio / 2 + longest.y1 * dsRatio),
-        });
-        points.push({
-            x: Math.round(dsRatio / 2 + longest.x2 * dsRatio),
-            y: Math.round(dsRatio / 2 + longest.y2 * dsRatio),
-        });
+    for (let dirLines of Object.values(lines)) {        
+        let longest = dirLines.sort((a, b) => b.len - a.len)[0];
+
+        if (longest) {
+            points.push({
+                x: Math.round(dsRatio / 2 + longest.x1 * dsRatio),
+                y: Math.round(dsRatio / 2 + longest.y1 * dsRatio),
+            });
+            points.push({
+                x: Math.round(dsRatio / 2 + longest.x2 * dsRatio),
+                y: Math.round(dsRatio / 2 + longest.y2 * dsRatio),
+            });
+        }
     }
 
     let t1 = new Date().getTime();
