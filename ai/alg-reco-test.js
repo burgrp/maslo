@@ -125,7 +125,7 @@ function detect(hrImage, hrSize) {
 
     let t0 = new Date().getTime();
 
-    let size = 10;
+    let size = 50;
     let dsRatio = hrSize / size;
     let dsQuadrantSize = Math.ceil(dsRatio);
 
@@ -169,26 +169,32 @@ function detect(hrImage, hrSize) {
 
     for (let y1 = 0; y1 < size; y1++) {
         for (let x1 = 0; x1 < size; x1++) {
-            for (let y2 = 0; y2 < size; y2++) {
-                for (let x2 = 0; x2 < size; x2++) {
+            if (image[x1 + size * y1]) {
+                for (let y2 = 0; y2 < size; y2++) {
+                    for (let x2 = 0; x2 < size; x2++) {
 
-                    let line = true;
+                        if (image[x2 + size * y2]) {
 
-                    let len = Math.round(Math.hypot(x2 - x1, y2 - y1));
-                    for (let posPix = 0; posPix < len; posPix++) {
-                        let posNorm = posPix / len;
-                        let x = Math.round(x1 + (x2 - x1) * posNorm);
-                        let y = Math.round(y1 + (y2 - y1) * posNorm);
-                        if (image[x + size * y] !== 255) {
-                            line = false;
-                            break;
+                            let line = true;
+
+                            let len = Math.round(Math.hypot(x2 - x1, y2 - y1));
+                            for (let posPix = 0; posPix < len; posPix++) {
+                                let posNorm = posPix / len;
+                                let x = Math.round(x1 + (x2 - x1) * posNorm);
+                                let y = Math.round(y1 + (y2 - y1) * posNorm);
+                                if (!image[x + size * y]) {
+                                    line = false;
+                                    break;
+                                }
+                            }
+
+                            if (line && len) {
+                                lines.push({ x1, y1, x2, y2, len });
+                            }
+
                         }
-                    }
 
-                    if (line && len) {
-                        lines.push({ x1, y1, x2, y2, len });
                     }
-
                 }
             }
         }
