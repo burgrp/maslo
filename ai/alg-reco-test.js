@@ -121,103 +121,53 @@ let shapes = Object.entries({
 }).map(([k, v]) => ({ name: k, lines: v }));
 
 
-function detect(hrImage, hrSize) {
+function detect(image, size) {
 
     let t0 = new Date().getTime();
 
-    let size = 50;
-    let dsRatio = hrSize / size;
-    let dsQuadrantSize = Math.ceil(dsRatio);
 
-    let image = new Uint8Array(new ArrayBuffer(size * size));
+    let histograms = [];
 
-    // down sample image
-    for (let y = 0; y < size; y++) {
-        let hrCenterY = Math.round(y * dsRatio);
-        for (let x = 0; x < size; x++) {
-            let hrCenterX = Math.round(x * dsRatio);
-            let sum = 0;
-            let count = 0;
-            for (let hrY = Math.max(0, hrCenterY - dsQuadrantSize); hrY <= Math.min(hrSize, hrCenterY + dsQuadrantSize); hrY++) {
-                for (let hrX = Math.max(0, hrCenterX - dsQuadrantSize); hrX <= Math.min(hrSize, hrCenterX + dsQuadrantSize); hrX++) {
-                    sum += hrImage[hrX + hrSize * hrY];
-                    count++;
-                }
+    // allocate histograms
+    for (let dir = 0; dir <=1; dir++) {
+        histograms[dir] = new Uint32Array(new ArrayBuffer(size * 4));
+    }
+
+    // count histograms sums
+    for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {            
+            v = image[x + size * y];
+            histograms[0][x] += v;
+            histograms[1][y] += v;            
+        }
+    }
+
+    // find maximums, normalize to 0..100
+    let maxPos = [];
+    for (let dir = 0; dir <=1; dir++) {
+        let max = 0;
+        for (let i = 0; i < size; i++) {
+            if (histograms[dir][i] > max) {
+                max = histograms[dir][i];
+                maxPos[dir] = i;
             }
-            image[x + size * y] = sum / count;
         }
-    }
-
-    // count average
-    let sum = 0;
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            sum += image[x + size * y];
-        }
-    }
-    let avg = sum / (size * size);
-
-    // 100% contrast
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            image[x + size * y] = image[x + size * y] >= avg ? 255 : 0;
-            //hrImage[20 + x + hrSize * (20 + y)] = image[x + size * y];
-        }
-    }
-
-    let lines = {};
-
-    // find lines
-    for (let y1 = 0; y1 < size; y1++) {
-        for (let x1 = 0; x1 < size; x1++) {
-            if (image[x1 + size * y1]) {
-                for (let y2 = 0; y2 < size; y2++) {
-                    for (let x2 = 0; x2 < size; x2++) {
-
-                        if (image[x2 + size * y2]) {
-
-                            let line = true;
-
-                            let len = Math.round(Math.hypot(x2 - x1, y2 - y1));
-                            for (let posPix = 0; posPix < len; posPix++) {
-                                let posNorm = posPix / len;
-                                let x = Math.round(x1 + (x2 - x1) * posNorm);
-                                let y = Math.round(y1 + (y2 - y1) * posNorm);
-                                if (!image[x + size * y]) {
-                                    line = false;
-                                    break;
-                                }
-                            }
-
-                            if (line && len) {
-                                let dir = Math.abs(x1 - x2) > Math.abs(y1 - y2) ? "horizontal" : "vertical";
-                                if (!lines[dir] || lines[dir].len < len) {
-                                    lines[dir] = { x1, y1, x2, y2, len };
-                                }
-                            }
-
-                        }
-
-                    }
-                }
-            }
+        for (let i = 0; i < size; i++) {
+            histograms[dir][i] = 100 * histograms[dir][i] / max;
         }
     }
 
     let points = [];
 
-    for (let line of Object.values(lines)) {
-        if (line) {
-            points.push({
-                x: Math.round(dsRatio / 2 + line.x1 * dsRatio),
-                y: Math.round(dsRatio / 2 + line.y1 * dsRatio),
-            });
-            points.push({
-                x: Math.round(dsRatio / 2 + line.x2 * dsRatio),
-                y: Math.round(dsRatio / 2 + line.y2 * dsRatio),
-            });
+    points.push({x: maxPos[0], y: maxPos[1]});
+
+    for (let dir = 0; dir <=1; dir++) {
+        for (let i = 0; i < size; i++) {
+            points.push({x: i, y: size - histograms[0][i]/5});
+            points.push({x: size - histograms[1][i]/5, y: i});
         }
     }
+
 
     let t1 = new Date().getTime();
     return {
