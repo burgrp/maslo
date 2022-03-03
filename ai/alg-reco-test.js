@@ -165,10 +165,7 @@ function detect(hrImage, hrSize) {
         }
     }
 
-    let lines = {
-        vertical: [],
-        horizontal: []
-    };
+    let lines = {};
 
     // find lines
     for (let y1 = 0; y1 < size; y1++) {
@@ -193,7 +190,10 @@ function detect(hrImage, hrSize) {
                             }
 
                             if (line && len) {
-                                (Math.abs(x1 - x2) > Math.abs(y1 - y2) ? lines.horizontal : lines.vertical).push({ x1, y1, x2, y2, len });
+                                let dir = Math.abs(x1 - x2) > Math.abs(y1 - y2) ? "horizontal" : "vertical";
+                                if (!lines[dir] || lines[dir].len < len) {
+                                    lines[dir] = { x1, y1, x2, y2, len };
+                                }
                             }
 
                         }
@@ -203,11 +203,6 @@ function detect(hrImage, hrSize) {
             }
         }
     }
-
-    // find longest lines
-    lines = Object.entries(lines)
-        .map(([k, v]) => [k, v.sort((a, b) => b.len - a.len)[0]])
-        .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
 
     let points = [];
 
