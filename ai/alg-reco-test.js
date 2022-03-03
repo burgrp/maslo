@@ -204,19 +204,22 @@ function detect(hrImage, hrSize) {
         }
     }
 
+    // find longest lines
+    lines = Object.entries(lines)
+        .map(([k, v]) => [k, v.sort((a, b) => b.len - a.len)[0]])
+        .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+
     let points = [];
 
-    for (let dirLines of Object.values(lines)) {        
-        let longest = dirLines.sort((a, b) => b.len - a.len)[0];
-
-        if (longest) {
+    for (let line of Object.values(lines)) {
+        if (line) {
             points.push({
-                x: Math.round(dsRatio / 2 + longest.x1 * dsRatio),
-                y: Math.round(dsRatio / 2 + longest.y1 * dsRatio),
+                x: Math.round(dsRatio / 2 + line.x1 * dsRatio),
+                y: Math.round(dsRatio / 2 + line.y1 * dsRatio),
             });
             points.push({
-                x: Math.round(dsRatio / 2 + longest.x2 * dsRatio),
-                y: Math.round(dsRatio / 2 + longest.y2 * dsRatio),
+                x: Math.round(dsRatio / 2 + line.x2 * dsRatio),
+                y: Math.round(dsRatio / 2 + line.y2 * dsRatio),
             });
         }
     }
