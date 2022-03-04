@@ -100,7 +100,7 @@ function generate(params) {
             let offset = {
                 x: Math.floor(Math.random() * s / 2 - s),
                 y: Math.floor(Math.random() * s / 2 - s)
-            };    
+            };
             let index = center.x + offset.x + size * (center.y + offset.y);
             data[index] = Math.max(0, Math.min(255, data[index] + 20 - Math.random() * 40));
         }
@@ -155,18 +155,23 @@ function detect(image, size) {
 
     // normalize to 0..100
     for (let dir = 0; dir <= 1; dir++) {
-        let max = 0;
+        let max;
         for (let i = 0; i < size; i++) {
-            if (histograms[dir][i] > max) {
+            if (max === undefined || max < histograms[dir][i]) {
                 max = histograms[dir][i];
             }
         }
         let sum = 0;
+        let min;
         for (let i = 0; i < size; i++) {
             histograms[dir][i] = 100 * histograms[dir][i] / max;
+            if (min === undefined || min > histograms[dir][i]) {
+                min = histograms[dir][i];
+            }
             sum += histograms[dir][i];
         }
         histograms[dir].avg = sum / size;
+        histograms[dir].min = min;
     }
 
     // identify flat histogram, find centers of maximum band if any 
@@ -175,7 +180,6 @@ function detect(image, size) {
         let start;
         let stop;
 
-        let flat = !(histograms[dir].some(v => v < 60));
         let sideLeft = {
             count: 0,
             sum: 0
@@ -185,38 +189,35 @@ function detect(image, size) {
             sum: 0
         };
 
-        if (!flat) {
-
-            for (let i = 0; i < size; i++) {
-                let v = histograms[dir][i];
-                if (v > (histograms[dir].avg + 100) / 2) {
-                    if (start === undefined) {
-                        start = i;
-                    }
-                } else {
-                    if (start !== undefined && stop === undefined) {
-                        stop = i;
-                    }
+        for (let i = 0; i < size; i++) {
+            let v = histograms[dir][i];
+            if (v > (histograms[dir].avg + 100) / 2) {
+                if (start === undefined) {
+                    start = i;
                 }
-                if (start === undefined && stop === undefined) {
-                    sideLeft.count++;
-                    sideLeft.sum += v;
-                }
-                if (start !== undefined && stop !== undefined) {
-                    sideRight.count++;
-                    sideRight.sum += v;
+            } else {
+                if (start !== undefined && stop === undefined) {
+                    stop = i;
                 }
             }
-
-            histograms[dir].peak = (start + stop) / 2;
+            if (start === undefined && stop === undefined) {
+                sideLeft.count++;
+                sideLeft.sum += v;
+            }
+            if (start !== undefined && stop !== undefined) {
+                sideRight.count++;
+                sideRight.sum += v;
+            }
         }
+
+        histograms[dir].peak = (start + stop) / 2;
 
         let sides = [
             sideLeft.count && sideLeft.sum / sideLeft.count,
             sideRight.count && sideRight.sum / sideRight.count
         ];
 
-        let compare = (a, b) => Math.sign(Math.round((a - b) / 10) * 10);
+        let compare = (a, b) => Math.sign(a-b);
 
         histograms[dir].sides = [
             compare(sides[0], sides[1]),
