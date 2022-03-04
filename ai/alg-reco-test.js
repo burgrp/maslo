@@ -3,7 +3,7 @@ const fs = require("fs").promises;
 
 let font;
 
-async function save(data, size, fileName, mark) {
+async function save(data, size, fileName, debug) {
 
     if (!font) {
         font = await Jimp.loadFont(Jimp.FONT_SANS_12_BLACK);
@@ -17,24 +17,45 @@ async function save(data, size, fileName, mark) {
         jimpImage.bitmap.data.writeInt32BE(color, idx);
     });
 
-    if (mark) {
+    if (debug) {
 
-        jimpImage.scan(0, 0, Jimp.measureText(font, mark.text), Jimp.measureTextHeight(font, mark.text), (x, y, idx) => {
+        let text = `${debug.shape} ${debug.timeMs}ms`
+        jimpImage.scan(0, 0, Jimp.measureText(font, text), Jimp.measureTextHeight(font, text), (x, y, idx) => {
             if (idx >= 0 && idx < size * size) {
-                jimpImage.bitmap.data.writeUInt32BE(0xFFFFFFFF, idx);
+                jimpImage.bitmap.data.writeUInt32BE(0xB0B0B0FF, idx);
             }
         });
-        console.info();
-        jimpImage.print(font, 0, 0, mark.text);
+        jimpImage.print(font, 0, 0, text);
 
-        for (let point of mark.points) {
-            jimpImage.scan(point.x - 1, point.y - 1, 3, 3, (x, y, idx) => {
+        if (debug.center) {
+            jimpImage.scan(Math.floor(debug.center.x * size) - 2, Math.floor(debug.center.y * size) - 2, 5, 5, (x, y, idx) => {
                 if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
                     jimpImage.bitmap.data.writeUInt32BE(0xFF0000FF, idx);
                 }
             });
         }
+
+        if (debug.histograms) {
+            for (let dir = 0; dir <= 1; dir++) {
+                for (let i = 0; i < size; i++) {
+
+                    let v = size - size * debug.histograms[dir][i] / 500;
+
+                    let x = dir * v + Math.abs(dir - 1) * i;
+                    let y = dir * i + Math.abs(dir - 1) * v;
+
+                    jimpImage.scan(x - 1, y - 1, 3, 3, (x, y, idx) => {
+                        if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
+                            jimpImage.bitmap.data.writeUInt32BE(0xFF0000FF, idx);
+                        }
+                    });
+
+                }
+            }
+
+        }
     }
+
 
     await jimpImage.writeAsync(fileName);
 }
@@ -68,7 +89,7 @@ function translate(srcData, srcSize, dstSize, angle, center) {
 
 function generate(params) {
 
-    let size = params.size * 2;  
+    let size = params.size * 2;
     let thick = Math.round(params.thick / 2) * 2;
     let data = new Uint8Array(new ArrayBuffer(size * size));
 
@@ -91,21 +112,21 @@ function generate(params) {
         }
     }
 
-    for (let f = 0; f < 100; f++) {
-        let center = {
-            x: Math.floor(Math.random() * size),
-            y: Math.floor(Math.random() * size)
-        };
-        let s = Math.floor(Math.random() * size / 3);
-        for (let c = 0; c < 1000; c++) {
-            let offset = {
-                x: Math.floor(Math.random() * s / 2 - s),
-                y: Math.floor(Math.random() * s / 2 - s)
-            };
-            let index = center.x + offset.x + size * (center.y + offset.y);
-            data[index] = Math.max(0, Math.min(255, data[index] + 20 - Math.random() * 40));
-        }
-    }
+    // for (let f = 0; f < 100; f++) {
+    //     let center = {
+    //         x: Math.floor(Math.random() * size),
+    //         y: Math.floor(Math.random() * size)
+    //     };
+    //     let s = Math.floor(Math.random() * size / 3);
+    //     for (let c = 0; c < 1000; c++) {
+    //         let offset = {
+    //             x: Math.floor(Math.random() * s / 2 - s),
+    //             y: Math.floor(Math.random() * s / 2 - s)
+    //         };
+    //         let index = center.x + offset.x + size * (center.y + offset.y);
+    //         data[index] = Math.max(0, Math.min(255, data[index] + 20 - Math.random() * 40));
+    //     }
+    // }
 
     let final = translate(data, size, params.size, params.rotate, params.center);
 
@@ -118,23 +139,7 @@ function generate(params) {
     };
 }
 
-let shapes = Object.entries({
-    none: [0, 0, 0, 0],
-    horizontal: [0, 1, 0, 1],
-    vertical: [1, 0, 1, 0],
-    cross: [1, 1, 1, 1],
-    west: [1, 1, 1, 0],
-    north: [0, 1, 1, 1],
-    east: [1, 0, 1, 1],
-    south: [1, 1, 0, 1],
-    southwest: [1, 1, 0, 0],
-    northwest: [0, 1, 1, 0],
-    southeast: [1, 0, 0, 1],
-    northeast: [0, 0, 1, 1]
-}).map(([k, v]) => ({ name: k, lines: v }));
-
-
-function detect(image, size) {
+function detect(image, size, debug) {
 
     let t0 = new Date().getTime();
 
@@ -177,7 +182,7 @@ function detect(image, size) {
             hoh[histograms[dir][i]]++;
         }
         // identify empty image with noise only
-        histograms[dir].clean = hoh.some(v => v > 15);
+        histograms[dir].clean = hoh.some(v => v > 15) && hoh[0] !== 101;
     }
 
     // identify flat histogram, find centers of maximum band if any 
@@ -185,15 +190,6 @@ function detect(image, size) {
 
         let start;
         let stop;
-
-        let sideLeft = {
-            count: 0,
-            sum: 0
-        };
-        let sideRight = {
-            count: 0,
-            sum: 0
-        };
 
         if (histograms[dir].clean && histograms[dir].avg < 70) {
 
@@ -208,67 +204,89 @@ function detect(image, size) {
                         stop = i;
                     }
                 }
-                // if (start === undefined && stop === undefined) {
-                //     sideLeft.count++;
-                //     sideLeft.sum += v;
-                // }
-                // if (start !== undefined && stop !== undefined) {
-                //     sideRight.count++;
-                //     sideRight.sum += v;
-                // }
             }
 
+            let loSide = {
+                count: 0,
+                sum: 0
+            };
+            let hiSide = {
+                count: 0,
+                sum: 0
+            };
+
             for (let i = 0; i < start - size / 10; i++) {
-                sideLeft.count++;
-                sideLeft.sum += histograms[dir][i];
+                loSide.count++;
+                loSide.sum += histograms[dir][i];
             }
 
             for (let i = stop + size / 10; i < size; i++) {
-                sideRight.count++;
-                sideRight.sum += histograms[dir][i];
+                hiSide.count++;
+                hiSide.sum += histograms[dir][i];
             }
 
             histograms[dir].peak = (start + stop) / 2;
 
             histograms[dir].sides = Math.sign(Math.round((
-                (sideRight.count && sideRight.sum / sideRight.count) -
-                (sideLeft.count && sideLeft.sum / sideLeft.count)
-            ) / 3) * 3);
+                (loSide.count && loSide.sum / loSide.count) -
+                (hiSide.count && hiSide.sum / hiSide.count)
+            ) / 3) * 3) + 1;
 
         }
     }
 
-    let center = {
-        x: Number.isFinite(histograms[0].peak) ? histograms[0].peak : size / 2,
-        y: Number.isFinite(histograms[1].peak) ? histograms[1].peak : size / 2
-    };
+    let shapes = {
+        0: ["northwest", "north", "northeast"],
+        1: ["west", "cross", "east", "horizontal"],
+        2: ["southwest", "south", "southeast"],
+        3: [, "vertical"]
+    }
 
-    let points = [];
-
-    points.push(center);
-
-    for (let dir = 0; dir <= 1; dir++) {
-        for (let i = 0; i < size; i++) {
-            points.push({ x: i, y: size - histograms[0][i] / 5 });
-            points.push({ x: size - histograms[1][i] / 5, y: i });
-        }
+    let result = {
+        shape: shapes[histograms[1].sides === undefined ? 3 : histograms[1].sides][histograms[0].sides === undefined ? 3 : histograms[0].sides],
+        center: Number.isFinite(histograms[0].peak) || Number.isFinite(histograms[1].peak) ? {
+            x: Number.isFinite(histograms[0].peak) ? histograms[0].peak / size : 0.5,
+            y: Number.isFinite(histograms[1].peak) ? histograms[1].peak / size : 0.5
+        } : undefined
     }
 
     let t1 = new Date().getTime();
-    return {
-        points,
-        center,
-        text: `${t1 - t0}ms ${histograms.map(h => h.sides).flatMap(v => v).map(v => Number.isFinite(v) ? Math.round(v) : "-").join(",")}`
-    };
+
+    if (debug) {
+        result.debug = {
+            timeMs: t1 - t0,
+            shape: result.shape,
+            center: result.center,
+            histograms
+        }
+    }
+
+    return result;
 }
 
 async function start() {
 
-    directory = "./samples";
+    let directory = "./samples";
 
-    size = 150;
-    count = 2;
+    let size = 150;
+    let count = 2;
     let id = 0;
+
+    let shapes = Object.entries({
+        empty: [0, 0, 0, 0],
+        horizontal: [0, 1, 0, 1],
+        vertical: [1, 0, 1, 0],
+        cross: [1, 1, 1, 1],
+        west: [1, 1, 1, 0],
+        north: [0, 1, 1, 1],
+        east: [1, 0, 1, 1],
+        south: [1, 1, 0, 1],
+        southwest: [1, 1, 0, 0],
+        northwest: [0, 1, 1, 0],
+        southeast: [1, 0, 0, 1],
+        northeast: [0, 0, 1, 1]
+    }).map(([k, v]) => ({ name: k, lines: v }));
+
 
     for (let shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
         for (let imageIndex = 0; imageIndex < count; imageIndex++) {
@@ -286,9 +304,8 @@ async function start() {
             };
 
             let image = generate(params);
-            //await save(image.data, image.meta.size, `${directory}/${params.name}`);
-            let mark = detect(image.data, image.meta.size);
-            await save(image.data, image.meta.size, `${directory}/${params.name}`, mark);
+            let result = detect(image.data, image.meta.size, true);
+            await save(image.data, image.meta.size, `${directory}/${params.name}`, result.debug);
 
         }
     }
