@@ -90,9 +90,20 @@ function generate(params) {
         }
     }
 
-    for (let c = 0; c < size * size * 2; c++) {
-        let index = Math.floor(Math.random() * size * size);
-        data[index] = Math.max(0, Math.min(255, data[index] + 50 - Math.random() * 100));
+    for (let f = 0; f < 100; f++) {
+        let center = {
+            x: Math.floor(Math.random() * size),
+            y: Math.floor(Math.random() * size)
+        };
+        let s = Math.floor(Math.random() * size / 3);
+        for (let c = 0; c < 1000; c++) {
+            let offset = {
+                x: Math.floor(Math.random() * s / 2 - s),
+                y: Math.floor(Math.random() * s / 2 - s)
+            };    
+            let index = center.x + offset.x + size * (center.y + offset.y);
+            data[index] = Math.max(0, Math.min(255, data[index] + 20 - Math.random() * 40));
+        }
     }
 
     let final = translate(data, size, params.size, params.rotate, params.center);
@@ -129,50 +140,111 @@ function detect(image, size) {
     let histograms = [];
 
     // allocate histograms
-    for (let dir = 0; dir <=1; dir++) {
+    for (let dir = 0; dir <= 1; dir++) {
         histograms[dir] = new Uint32Array(new ArrayBuffer(size * 4));
     }
 
     // count histograms sums
     for (let x = 0; x < size; x++) {
-        for (let y = 0; y < size; y++) {            
+        for (let y = 0; y < size; y++) {
             v = image[x + size * y];
             histograms[0][x] += v;
-            histograms[1][y] += v;            
+            histograms[1][y] += v;
         }
     }
 
-    // find maximums, normalize to 0..100
-    let maxPos = [];
-    for (let dir = 0; dir <=1; dir++) {
+    // normalize to 0..100
+    for (let dir = 0; dir <= 1; dir++) {
         let max = 0;
         for (let i = 0; i < size; i++) {
             if (histograms[dir][i] > max) {
                 max = histograms[dir][i];
-                maxPos[dir] = i;
             }
         }
+        let sum = 0;
         for (let i = 0; i < size; i++) {
             histograms[dir][i] = 100 * histograms[dir][i] / max;
+            sum += histograms[dir][i];
         }
+        histograms[dir].avg = sum / size;
     }
+
+    // identify flat histogram, find centers of maximum band if any 
+    for (let dir = 0; dir <= 1; dir++) {
+
+        let start;
+        let stop;
+
+        let flat = !(histograms[dir].some(v => v < 60));
+        let sideLeft = {
+            count: 0,
+            sum: 0
+        };
+        let sideRight = {
+            count: 0,
+            sum: 0
+        };
+
+        if (!flat) {
+
+            for (let i = 0; i < size; i++) {
+                let v = histograms[dir][i];
+                if (v > (histograms[dir].avg + 100) / 2) {
+                    if (start === undefined) {
+                        start = i;
+                    }
+                } else {
+                    if (start !== undefined && stop === undefined) {
+                        stop = i;
+                    }
+                }
+                if (start === undefined && stop === undefined) {
+                    sideLeft.count++;
+                    sideLeft.sum += v;
+                }
+                if (start !== undefined && stop !== undefined) {
+                    sideRight.count++;
+                    sideRight.sum += v;
+                }
+            }
+
+            histograms[dir].peak = (start + stop) / 2;
+        }
+
+        let sides = [
+            sideLeft.count && sideLeft.sum / sideLeft.count,
+            sideRight.count && sideRight.sum / sideRight.count
+        ];
+
+        let compare = (a, b) => Math.sign(Math.round((a - b) / 10) * 10);
+
+        histograms[dir].sides = [
+            compare(sides[0], sides[1]),
+            compare(sides[1], sides[0])
+        ];
+    }
+
+    let center = {
+        x: Number.isFinite(histograms[0].peak) ? histograms[0].peak : size / 2,
+        y: Number.isFinite(histograms[1].peak) ? histograms[1].peak : size / 2
+    };
 
     let points = [];
 
-    points.push({x: maxPos[0], y: maxPos[1]});
+    points.push(center);
 
-    for (let dir = 0; dir <=1; dir++) {
+    for (let dir = 0; dir <= 1; dir++) {
         for (let i = 0; i < size; i++) {
-            points.push({x: i, y: size - histograms[0][i]/5});
-            points.push({x: size - histograms[1][i]/5, y: i});
+            points.push({ x: i, y: size - histograms[0][i] / 5 });
+            points.push({ x: size - histograms[1][i] / 5, y: i });
         }
     }
 
-
     let t1 = new Date().getTime();
     return {
-        points: points,
-        text: `ul ${t1 - t0}ms`
+        points,
+        center,
+        text: `${t1 - t0}ms ${histograms.map(h => h.sides).flatMap(v => v).map(v => Number.isFinite(v) ? Math.round(v) : "-").join(",")}`
     };
 }
 
@@ -192,10 +264,10 @@ async function start() {
                 size,
                 shape: shapes[shapeIndex],
                 thick: 2 * (1 + Math.round(Math.random() * 10)),
-                rotate: Math.round((Math.random() - 0.5) * 40),
+                rotate: Math.round((Math.random() - 0.5) * 20),
                 center: {
-                    x: shapes[shapeIndex].name === "lr" ? 0 : Math.round((Math.random() - 0.5) * size / 1.5),
-                    y: shapes[shapeIndex].name === "ud" ? 0 : Math.round((Math.random() - 0.5) * size / 1.5)
+                    x: shapes[shapeIndex].name === "lr" ? 0 : Math.round((Math.random() - 0.5) * size / 2),
+                    y: shapes[shapeIndex].name === "ud" ? 0 : Math.round((Math.random() - 0.5) * size / 2)
                 }
             };
 
