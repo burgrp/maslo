@@ -189,40 +189,37 @@ function detect(image, size) {
             sum: 0
         };
 
-        for (let i = 0; i < size; i++) {
-            let v = histograms[dir][i];
-            if (v > (histograms[dir].avg + 100) / 2) {
-                if (start === undefined) {
-                    start = i;
+        if (histograms[dir].avg < 80) {
+
+            for (let i = 0; i < size; i++) {
+                let v = histograms[dir][i];
+                if (v > (histograms[dir].avg + 100) / 2) {
+                    if (start === undefined) {
+                        start = i;
+                    }
+                } else {
+                    if (start !== undefined && stop === undefined) {
+                        stop = i;
+                    }
                 }
-            } else {
-                if (start !== undefined && stop === undefined) {
-                    stop = i;
+                if (start === undefined && stop === undefined) {
+                    sideLeft.count++;
+                    sideLeft.sum += v;
+                }
+                if (start !== undefined && stop !== undefined) {
+                    sideRight.count++;
+                    sideRight.sum += v;
                 }
             }
-            if (start === undefined && stop === undefined) {
-                sideLeft.count++;
-                sideLeft.sum += v;
-            }
-            if (start !== undefined && stop !== undefined) {
-                sideRight.count++;
-                sideRight.sum += v;
-            }
+
+            histograms[dir].peak = (start + stop) / 2;
+
+            histograms[dir].sides = Math.sign(Math.round((
+                (sideRight.count && sideRight.sum / sideRight.count) -
+                (sideLeft.count && sideLeft.sum / sideLeft.count)
+            ) / 5) * 5);
+
         }
-
-        histograms[dir].peak = (start + stop) / 2;
-
-        let sides = [
-            sideLeft.count && sideLeft.sum / sideLeft.count,
-            sideRight.count && sideRight.sum / sideRight.count
-        ];
-
-        let compare = (a, b) => Math.sign(a-b);
-
-        histograms[dir].sides = [
-            compare(sides[0], sides[1]),
-            compare(sides[1], sides[0])
-        ];
     }
 
     let center = {
