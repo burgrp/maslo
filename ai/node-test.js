@@ -91,7 +91,9 @@ function generate(params) {
 
     let size = params.size * 2;
     let thick = Math.round(params.thick / 2) * 2;
-    let data = new Uint8Array(new ArrayBuffer(size * size));
+
+    let background = Math.round(Math.random() * 100);
+    let data = new Uint8Array(new ArrayBuffer(size * size)).fill(background);
 
     let directions = [
         [0, -1],
@@ -100,17 +102,21 @@ function generate(params) {
         [-1, 0]
     ];
 
+    let foreground = 255 - Math.round(Math.random() * 100);
+
     for (let dir = 0; dir < 4; dir++) {
         if (params.shape.lines[dir]) {
             for (let pos = -thick / 2; pos < size / 2; pos++) {
                 for (let line = -thick / 2; line <= thick / 2; line++) {
                     let x = size / 2 + pos * directions[dir][0] + line * directions[dir][1];
                     let y = size / 2 + pos * directions[dir][1] + line * directions[dir][0];
-                    data[x + y * size] = 255;
+                    data[x + y * size] = foreground;
                 }
             }
         }
     }
+
+    let noise = (foreground - background) / 20;
 
     for (let f = 0; f < 100; f++) {
         let center = {
@@ -124,7 +130,7 @@ function generate(params) {
                 y: Math.floor(Math.random() * s / 2 - s)
             };
             let index = center.x + offset.x + size * (center.y + offset.y);
-            data[index] = Math.max(0, Math.min(255, data[index] + 20 - Math.random() * 40));
+            data[index] = Math.max(0, Math.min(255, data[index] + noise - Math.random() * noise * 2));
         }
     }
 
@@ -174,8 +180,8 @@ async function start() {
                 thick: size / 10 + Math.round(Math.random() * size / 10),
                 rotate: Math.round((Math.random() - 0.5) * 20),
                 center: {
-                    x: shapes[shapeIndex].name === "horizontal" ? 0 : Math.round((Math.random() - 0.5) * size / 2),
-                    y: shapes[shapeIndex].name === "vertical" ? 0 : Math.round((Math.random() - 0.5) * size / 2)
+                    x: shapes[shapeIndex].name === "horizontal" ? 0 : Math.round((Math.random() - 0.5) * size / 3),
+                    y: shapes[shapeIndex].name === "vertical" ? 0 : Math.round((Math.random() - 0.5) * size / 3)
                 }
             };
 

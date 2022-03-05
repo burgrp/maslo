@@ -22,16 +22,22 @@ module.exports = () => {
     
         // normalize to 0..100
         for (let dir = 0; dir <= 1; dir++) {
-            let max = 0;
+            
+            let min;
+            let max;
             for (let i = 0; i < size; i++) {
-                if (max < histograms[dir][i]) {
-                    max = histograms[dir][i];
+                let v = histograms[dir][i];
+                if (min === undefined || min > v) {
+                    min = v;
+                }
+                if (max === undefined || max < v) {
+                    max = v;
                 }
             }
     
             let sum = 0;
             for (let i = 0; i < size; i++) {
-                histograms[dir][i] = 100 * histograms[dir][i] / max;
+                histograms[dir][i] = max === min? 0: 100 * (histograms[dir][i] - min) / (max - min);
                 sum += histograms[dir][i];
             }
             histograms[dir].avg = sum / size;
