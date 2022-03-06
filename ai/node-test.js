@@ -116,7 +116,7 @@ function generate(params) {
         }
     }
 
-    let noise = (foreground - background) / 20;
+    let noise = (foreground - background) / 5;
 
     for (let f = 0; f < 100; f++) {
         let center = {
@@ -177,7 +177,7 @@ async function start() {
                 name: ("000000000000" + (id++)).slice(-10) + ".jpg",
                 size,
                 shape: shapes[shapeIndex],
-                thick: size / 10 + Math.round(Math.random() * size / 10),
+                thick: size / 50 + Math.round(Math.random() * size / 5),
                 rotate: Math.round((Math.random() - 0.5) * 20),
                 center: {
                     x: shapes[shapeIndex].name === "horizontal" ? 0 : Math.round((Math.random() - 0.5) * size / 3),
