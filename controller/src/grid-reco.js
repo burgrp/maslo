@@ -1,9 +1,5 @@
 module.exports = () => {
 
-    function index(a, b, size, dir) {
-        return dir === 0 ? a + b * size : b + a * size;
-    }
-
     function calculateHistogram(image, size, dir) {
 
         let histogram = new Uint32Array(new ArrayBuffer(size * 4));
@@ -11,7 +7,7 @@ module.exports = () => {
         // count histograms sums
         for (let a = 0; a < size; a++) {
             for (let b = 0; b < size; b++) {
-                v = image[index(a, b, size, dir)];
+                v = image[dir === 0 ? a + b * size : b + a * size];
                 histogram[a] += v;
             }
         }
