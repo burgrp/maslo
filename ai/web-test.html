@@ -69,6 +69,7 @@
                             frameData.data[i + 1],
                             frameData.data[i + 2]
                         );
+                        //v = v > 150? 255:0;
                         bwData[x + size * y] = 0xFF - v;
                     }
                 }
@@ -96,7 +97,6 @@
 
                     for (let y = center.y - 3; y <= center.y + 3; y++) {
                         for (let x = center.x - 3; x <= center.x + 3; x++) {
-
                             let i = 4 * Math.floor(x + size * y);
                             recoData.data[i] = 0xFF;
                             recoData.data[i + 1] = 0;
@@ -105,6 +105,33 @@
                         }
                     }
                 }
+
+                if (result.debug && result.debug.histograms) {
+                    for (let dir = 0; dir <= 1; dir++) {
+                        for (let i = 0; i < size; i++) {
+
+                            let v = Math.round(size - size * result.debug.histograms[dir][i] / 500);
+
+                            let cx = dir * v + Math.abs(dir - 1) * i;
+                            let cy = dir * i + Math.abs(dir - 1) * v;
+
+                            for (let y = cy - 2; y <= cy + 2; y++) {
+                                for (let x = cx - 2; x <= cx + 2; x++) {
+                                    if (x > 0 && x < size && y > 0 && y < size) {
+                                        let i = 4 * Math.floor(x + size * y);
+                                        recoData.data[i] = 0xFF;
+                                        recoData.data[i + 1] = 0;
+                                        recoData.data[i + 2] = 0;
+                                        recoData.data[i + 3] = 0xFF;
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+
 
                 let recoBitmap = await createImageBitmap(recoData);
                 recoCanvas.drawImage(recoBitmap, 0, 0, recoEl.width, recoEl.height);

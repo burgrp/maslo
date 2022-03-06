@@ -28,9 +28,9 @@ async function save(data, size, fileName, debug) {
         jimpImage.print(font, 0, 0, text);
 
         if (debug.center) {
-            jimpImage.scan(Math.floor(debug.center.x * size) - 2, Math.floor(debug.center.y * size) - 2, 5, 5, (x, y, idx) => {
+            jimpImage.scan(Math.floor(debug.center.x * size) - 3, Math.floor(debug.center.y * size) - 3, 7, 7, (x, y, idx) => {
                 if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
-                    jimpImage.bitmap.data.writeUInt32BE(0xFF0000FF, idx);
+                    jimpImage.bitmap.data.writeUInt32BE(0x0050FFFF, idx);
                 }
             });
         }
@@ -39,7 +39,7 @@ async function save(data, size, fileName, debug) {
             for (let dir = 0; dir <= 1; dir++) {
                 for (let i = 0; i < size; i++) {
 
-                    let v = size - size * debug.histograms[dir][i] / 500;
+                    let v = Math.round(size - size * debug.histograms[dir][i] / 500);
 
                     let x = dir * v + Math.abs(dir - 1) * i;
                     let y = dir * i + Math.abs(dir - 1) * v;
