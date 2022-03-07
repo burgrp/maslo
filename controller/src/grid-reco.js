@@ -85,76 +85,45 @@ module.exports = () => {
             result.debug.histograms.push(verticalHistogram);
         }
 
-        if (horizontalHistogram.peak && !verticalHistogram.peak) {
-            result.shape = "vertical";
+        if (horizontalHistogram.peak || verticalHistogram.peak) {
             result.center = {
-                x: horizontalHistogram.peak / size,
-                y: 0.5
+                x: horizontalHistogram.peak === undefined ? 0.5 : horizontalHistogram.peak / size,
+                y: verticalHistogram.peak === undefined ? 0.5 : verticalHistogram.peak / size
             };
         }
 
-        if (!horizontalHistogram.peak && verticalHistogram.peak) {
-            result.shape = "horizontal";
-            result.center = {
-                x: 0.5,
-                y: verticalHistogram.peak / size
-            };
+        let depth = Math.round(size / 4);
+
+        // histograms for north, east, south, west
+        let histograms = [
+            calculateHistogram({ image, size, dir: 0, shift: 0, depth }),
+            calculateHistogram({ image, size, dir: 1, shift: size - depth, depth }),
+            calculateHistogram({ image, size, dir: 0, shift: size - depth, depth }),
+            calculateHistogram({ image, size, dir: 1, shift: 0, depth })
+        ];
+
+        let index = 0;
+        for (let i = 0; i < histograms.length; i++) {
+            index |= (histograms[i].peak ? 1 : 0) << (histograms.length - 1 - i);
         }
 
-        if (horizontalHistogram.peak && verticalHistogram.peak) {
+        result.shape = {
+            0b0101: "horizontal",
+            0b1010: "vertical",
+            0b1100: "northeast",
+            0b0110: "southeast",
+            0b0011: "southwest",
+            0b1001: "northwest",
+            0b0111: "north",
+            0b1011: "east",
+            0b1101: "south",
+            0b1110: "west",
+            0b1111: "cross"
+        }[index];
 
-            result.center = {
-                x: horizontalHistogram.peak / size,
-                y: verticalHistogram.peak / size
-            };
-
-            let x = horizontalHistogram.peak;
-            let y = verticalHistogram.peak;
-
-            let depth = Math.round(size / 3);
-
-
-            // histograms for north, east, south, west
-            let histograms = [
-                calculateHistogram({ image, size, dir: 0, shift: 0, depth}),
-                calculateHistogram({ image, size, dir: 1, shift: size - depth, depth}),
-                calculateHistogram({ image, size, dir: 0, shift: size - depth, depth}),
-                calculateHistogram({ image, size, dir: 1, shift: 0, depth})
-            ];
-
-            let index = 0;
-            for (let i = 0; i < histograms.length; i++) {
-                index |= (histograms[i].peak? 1: 0) << i;
-            }
-
-            result.shape  = {
-                0b1110: "north",
-                0b1101: "east",
-                0b1011: "south",
-                0b0111: "west",
-                0b1111: "cross"
-            }[index] || index;
-
-            if (result.debug) {
-                result.debug.histograms.push(...histograms);
-            }
-
+        if (result.debug) {
+            result.debug.histograms.push(...histograms);
         }
-
-        // let shapes = {
-        //     0: ["northwest", "north", "northeast"],
-        //     1: ["west", "cross", "east", "horizontal"],
-        //     2: ["southwest", "south", "southeast"],
-        //     3: [, "vertical"]
-        // }
-
-        // let result = {
-        //     shape: shapes[fullHistograms[1].sides === undefined ? 3 : fullHistograms[1].sides][fullHistograms[0].sides === undefined ? 3 : fullHistograms[0].sides],
-        //     center: Number.isFinite(fullHistograms[0].peak) || Number.isFinite(fullHistograms[1].peak) ? {
-        //         x: Number.isFinite(fullHistograms[0].peak) ? fullHistograms[0].peak / size : 0.5,
-        //         y: Number.isFinite(fullHistograms[1].peak) ? fullHistograms[1].peak / size : 0.5
-        //     } : undefined
-        // }
 
         if (result.debug) {
             result.debug.timeMs = new Date().getTime() - t0;
