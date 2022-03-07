@@ -115,6 +115,11 @@
             }
         }
     },
+    "hardware": {},
+    "kinematics": {
+        "module": "./mc-kinematics.js",
+        "config": "-> config.model"
+    },
     "machine": {
         "module": "./machine.js",
         "drivers": {
@@ -127,7 +132,12 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "config": "-> config.model"
+        "config": "-> config.model",
+        "checks": [
+            "-> kinematics.checkSledPosition",
+            "-> kinematics.checkSpindlePosition",
+            "-> kinematics.checkTarget"
+        ]
     },
     "router": {
         "module": "./router.js",
