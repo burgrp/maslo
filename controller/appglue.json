@@ -161,7 +161,8 @@
                 "-> ui.onModelChanged"
             ],
             "config": [
-                "-> ui.onModelChanged"
+                "-> ui.onModelChanged",
+                "-> config.onModelChanged"
             ],
             "router": [
                 "-> ui.onModelChanged"

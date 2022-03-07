@@ -56,6 +56,8 @@ module.exports = async ({ file, defaults }) => {
     saveConfigLoop().catch(e => logError("Error in save config loop:", e));
 
     return {
-        model
+        model,
+        onModelChanged() {
+        }
     };
 }
