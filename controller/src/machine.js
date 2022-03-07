@@ -1,7 +1,5 @@
 const logError = require("debug")("app:machine:error");
 const logInfo = require("debug")("app:machine:info");
-const objectHash = require("object-hash");
-
 
 function distanceMmToAbsSteps(motorConfig, distanceMm) {
     return distanceMm * motorConfig.stepsPerMm;
