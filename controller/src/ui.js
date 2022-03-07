@@ -26,14 +26,6 @@ module.exports = async ({
         }
     };
 
-    // router.onJobChanged(code => {
-    //     events.router.jobChanged(code);
-    // });
-
-    // config.onDataChanged(data => {
-    //     events.config.dataChanged(data);
-    // });
-
     let { min, max, abs } = Math;
 
     async function manualMotorStart(motors, direction) {
@@ -45,12 +37,12 @@ module.exports = async ({
             try {
                 let d = {};
                 for (let motor of motors) {
-                    d[motor] = config.data.manual.motorDuty[motor].min;
+                    d[motor] = config.model.manual.motorDuty[motor].min;
                 }
 
                 while (true) {
                     for (let motor of motors) {
-                        d[motor] = min(config.data.manual.motorDuty[motor].max, d[motor] + 0.05);
+                        d[motor] = min(config.model.manual.motorDuty[motor].max, d[motor] + 0.05);
                         machine.setMotorDuty(motor, direction * d[motor]);
                     }
                     await machine.synchronizeJob();
@@ -76,7 +68,7 @@ module.exports = async ({
             code: rapidMove ? "G0" : "G1",
             x: machineModel.sled.xMm + 10000 * directionX,
             y: machineModel.sled.yMm + 10000 * directionY,
-            f: rapidMove ? config.data.speed.xyRapidMmPerMin : config.data.speed.xyDefaultMmPerMin
+            f: rapidMove ? config.model.speed.xyRapidMmPerMin : config.model.speed.xyDefaultMmPerMin
         }]);
 
     }
@@ -89,17 +81,17 @@ module.exports = async ({
         client: __dirname + "/client",
         api: {
             config: {
-                get() {
-                    return config.data;
+                getModel() {
+                    return config.model;
                 },
 
                 merge(data) {
                     delete data.lastPosition;
-                    Object.assign(config.data, data);
+                    Object.assign(config.model, data);
                 }
             },
             machine: {
-                getState() {
+                getModel() {
                     return machineModel;
                 },
 
@@ -130,10 +122,10 @@ module.exports = async ({
 
                 async resetUserOrigin() {
                     if (Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm)) {
-                        if (config.data.userOrigin.xMm === machineModel.sled.xMm && config.data.userOrigin.yMm === machineModel.sled.yMm) {
-                            config.data.userOrigin = {xMm: 0, yMm: 0};
+                        if (config.model.userOrigin.xMm === machineModel.sled.xMm && config.model.userOrigin.yMm === machineModel.sled.yMm) {
+                            config.model.userOrigin = {xMm: 0, yMm: 0};
                         } else {
-                            config.data.userOrigin = {xMm: machineModel.sled.xMm, yMm: machineModel.sled.yMm};
+                            config.model.userOrigin = {xMm: machineModel.sled.xMm, yMm: machineModel.sled.yMm};
                         }
                     }
                 },
@@ -151,10 +143,10 @@ module.exports = async ({
 
                         switch (kind) {
                             case "top":
-                                machine.setSledReference(0, config.data.workspace.heightMm / 2 - config.data.sled.diaMm / 2 - value);
+                                machine.setSledReference(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
                                 break;
                             case "bottom":
-                                machine.recalculateRatio(0, -config.data.workspace.heightMm / 2 + config.data.sled.diaMm / 2 + value);
+                                machine.recalculateRatio(0, -config.model.workspace.heightMm / 2 + config.model.sled.diaMm / 2 + value);
                                 break;
                             case "tool":
                                 machine.setSpindleReference(-value);

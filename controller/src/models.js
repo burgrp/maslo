@@ -1,6 +1,6 @@
 const objectHash = require("object-hash");
 const logError = require("debug")("app:models:error");
-const logDebug = require("debug")("app:router:debug");
+const logDebug = require("debug")("app:models:debug");
 
 module.exports = ({
     models = {},

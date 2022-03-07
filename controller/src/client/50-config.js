@@ -13,7 +13,7 @@ wg.pages.config = {
                 })
             ]),            
             TEXTAREA("editor", async el => {
-                let data = await wg.config.get();
+                let data = await wg.config.getModel();
                 delete data.lastPosition;                    
                 el.val(JSON.stringify(data, null, 2));
             })

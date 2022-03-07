@@ -127,12 +127,12 @@
             }
         },
         "driver": "-> $.MACHINE_DRIVER || 'virtual'",
-        "config": "-> config.data"
+        "config": "-> config.model"
     },
     "router": {
         "module": "./router.js",
         "machine": "-> machine",
-        "config": "-> config.data"
+        "config": "-> config.model"
     },
     "ui": {
         "module": "./ui.js",
@@ -153,10 +153,17 @@
     "models": {
         "module": "./models.js",
         "models": {
-            "machine": "-> machine.model"
+            "machine": "-> machine.model",
+            "config": "-> config.model"
         },
         "listeners": {
             "machine": [
+                "-> ui.onModelChanged"
+            ],
+            "config": [
+                "-> ui.onModelChanged"
+            ],
+            "router": [
                 "-> ui.onModelChanged"
             ]
         }

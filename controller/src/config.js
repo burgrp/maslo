@@ -4,34 +4,34 @@ const fs = require("fs").promises;
 
 module.exports = async ({ file, defaults }) => {
 
-    let data;
+    let model;
 
     try {
-        data = JSON.parse(await fs.readFile(file));
+        model = JSON.parse(await fs.readFile(file));
     } catch (e) {
         if (e.code !== "ENOENT") {
             throw e;
         }
-        data = {};
+        model = {};
     }
 
-    data = {
+    model = {
         ...defaults,
-        ...data
+        ...model
     };
 
     let dataChangedListeners = [];
 
-    let prevDataJson = JSON.stringify(data);
+    let prevDataJson = JSON.stringify(model);
     let prevChanged = false;
 
     async function save() {
-        await fs.writeFile(file, JSON.stringify(data, null, 2));
+        await fs.writeFile(file, JSON.stringify(model, null, 2));
     }
 
     async function saveConfigLoop() {
         while (true) {
-            let dataJson = JSON.stringify(data);
+            let dataJson = JSON.stringify(model);
             if (dataJson !== prevDataJson) {
                 prevChanged = true;
                 prevDataJson = dataJson;
@@ -42,7 +42,7 @@ module.exports = async ({ file, defaults }) => {
                     await save();
                     try {
                         for (listener of dataChangedListeners) {
-                            await listener(data);
+                            await listener(model);
                         }
                     } catch(e) {
                         logError("Error in config data changed listener:", e);
@@ -56,10 +56,6 @@ module.exports = async ({ file, defaults }) => {
     saveConfigLoop().catch(e => logError("Error in save config loop:", e));
 
     return {
-        data,
-
-        onDataChanged(listener) {
-            dataChangedListeners.push(listener);
-        },
+        model
     };
 }

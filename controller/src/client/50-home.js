@@ -6,9 +6,9 @@ wg.pages.home = {
         let lastSledX, lastSledY;
         let trackToggle = false;
 
-        let state = await wg.machine.getState();
-        let config = await wg.config.get();
-        let job = await wg.router.getCode();
+        let machineModel = await wg.machine.getModel();
+        let configModel = await wg.config.getModel();
+        let jobModel = await wg.router.getCode();
 
         function svg(name) {
             return $(document.createElementNS('http://www.w3.org/2000/svg', name));
@@ -16,30 +16,30 @@ wg.pages.home = {
 
         function updateScene() {
 
-            let sledX = state.sled.xMm;
-            let sledY = state.sled.yMm;
+            let sledX = machineModel.sled.xMm;
+            let sledY = machineModel.sled.yMm;
 
-            $("button.standby").toggleClass("disabled", state.mode !== "STANDBY");
+            $("button.standby").toggleClass("disabled", machineModel.mode !== "STANDBY");
 
-            $(".xyaxis .position .x").text(formatLength(sledX - config.userOrigin.xMm));
-            $(".xyaxis .position .y").text(formatLength(sledY - config.userOrigin.yMm));
-            $(".zaxis .position").text(formatLength(state.spindle.zMm));
+            $(".xyaxis .position .x").text(formatLength(sledX - configModel.userOrigin.xMm));
+            $(".xyaxis .position .y").text(formatLength(sledY - configModel.userOrigin.yMm));
+            $(".zaxis .position").text(formatLength(machineModel.spindle.zMm));
             $(".zaxis .position")
-                .toggleClass("moving", state.motors.z.state && Math.abs(state.motors.z.state.duty) > 0.1)
-                .toggleClass("out", state.spindle.zMm < 0);
-            $(".zaxis .spindle").toggleClass("on", state.relays.spindle.state && state.relays.spindle.state.on);
+                .toggleClass("moving", machineModel.motors.z.state && Math.abs(machineModel.motors.z.state.duty) > 0.1)
+                .toggleClass("out", machineModel.spindle.zMm < 0);
+            $(".zaxis .spindle").toggleClass("on", machineModel.relays.spindle.state && machineModel.relays.spindle.state.on);
 
             $(".scene svg").attr({
                 viewBox: [
-                    -config.beam.motorsDistanceMm / 2 - 100,
-                    -config.beam.motorsToWorkspaceMm - config.workspace.heightMm / 2 - 100,
-                    (config.beam.motorsDistanceMm + 200),
-                    (config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 + 200)
+                    -configModel.beam.motorsDistanceMm / 2 - 100,
+                    -configModel.beam.motorsToWorkspaceMm - configModel.workspace.heightMm / 2 - 100,
+                    (configModel.beam.motorsDistanceMm + 200),
+                    (configModel.beam.motorsToWorkspaceMm + configModel.workspace.heightMm / 2 + 200)
                 ].join(' ')
             });
 
-            let mX = config.beam.motorsDistanceMm / 2;
-            let mY = config.workspace.heightMm / 2 + config.beam.motorsToWorkspaceMm;
+            let mX = configModel.beam.motorsDistanceMm / 2;
+            let mY = configModel.workspace.heightMm / 2 + configModel.beam.motorsToWorkspaceMm;
 
             $(".scene .motor.a").attr({
                 cx: -mX,
@@ -52,10 +52,10 @@ wg.pages.home = {
             });
 
             $(".scene .workspace").attr({
-                x: -config.workspace.widthMm / 2,
-                y: -config.workspace.heightMm / 2,
-                width: config.workspace.widthMm,
-                height: config.workspace.heightMm
+                x: -configModel.workspace.widthMm / 2,
+                y: -configModel.workspace.heightMm / 2,
+                width: configModel.workspace.widthMm,
+                height: configModel.workspace.heightMm
             });
 
             $(".scene .sled").attr({
@@ -64,25 +64,25 @@ wg.pages.home = {
             });
 
             $(".scene .sled.outline").attr({
-                r: config.sled.diaMm / 2
+                r: configModel.sled.diaMm / 2
             });
 
             $(".scene .userorigin.x").attr({
-                x1: config.userOrigin.xMm - 30,
-                y1: config.userOrigin.yMm,
-                x2: config.userOrigin.xMm + 100,
-                y2: config.userOrigin.yMm
+                x1: configModel.userOrigin.xMm - 30,
+                y1: configModel.userOrigin.yMm,
+                x2: configModel.userOrigin.xMm + 100,
+                y2: configModel.userOrigin.yMm
             });
 
             $(".scene .userorigin.y").attr({
-                x1: config.userOrigin.xMm,
-                y1: config.userOrigin.yMm + 100,
-                x2: config.userOrigin.xMm,
-                y2: config.userOrigin.yMm - 30
+                x1: configModel.userOrigin.xMm,
+                y1: configModel.userOrigin.yMm + 100,
+                x2: configModel.userOrigin.xMm,
+                y2: configModel.userOrigin.yMm - 30
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: (Number.isFinite(state.sled.xMm) && Number.isFinite(state.sled.yMm)) ? "visible" : "hidden"
+                visibility: (Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm)) ? "visible" : "hidden"
             });
 
             $(".scene .chain.a").attr({
@@ -101,16 +101,16 @@ wg.pages.home = {
 
             for (let motor of [{ name: "a", "side": -1 }, { name: "b", "side": 1 }]) {
                 $(`.scene .duty-bar.${motor.name}`).attr({
-                    x1: motor.side * config.beam.motorsDistanceMm / 2,
+                    x1: motor.side * configModel.beam.motorsDistanceMm / 2,
                     y1: 0,
-                    x2: motor.side * config.beam.motorsDistanceMm / 2,
-                    y2: config.workspace.heightMm / 2 * (state.motors[motor.name].duty || 0)
+                    x2: motor.side * configModel.beam.motorsDistanceMm / 2,
+                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].duty || 0)
                 });
                 $(`.scene .error-bar.${motor.name}`).attr({
-                    x1: motor.side * (config.beam.motorsDistanceMm / 2 - 100),
+                    x1: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
                     y1: 0,
-                    x2: motor.side * (config.beam.motorsDistanceMm / 2 - 100),
-                    y2: config.workspace.heightMm / 2 * (state.motors[motor.name].offset || 0)
+                    x2: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
+                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].offset || 0)
                 });
             }
 
@@ -136,24 +136,24 @@ wg.pages.home = {
             }
 
             $(".scene .target.x").attr({
-                x1: state.target && state.target.xMm - 50,
-                y1: state.target && state.target.yMm - 50,
-                x2: state.target && state.target.xMm + 50,
-                y2: state.target && state.target.yMm + 50,
-                visibility: state.target ? "visible" : "hidden"
+                x1: machineModel.target && machineModel.target.xMm - 50,
+                y1: machineModel.target && machineModel.target.yMm - 50,
+                x2: machineModel.target && machineModel.target.xMm + 50,
+                y2: machineModel.target && machineModel.target.yMm + 50,
+                visibility: machineModel.target ? "visible" : "hidden"
             });
 
             $(".scene .target.y").attr({
-                x1: state.target && state.target.xMm - 50,
-                y1: state.target && state.target.yMm + 50,
-                x2: state.target && state.target.xMm + 50,
-                y2: state.target && state.target.yMm - 50,
-                visibility: state.target ? "visible" : "hidden"
+                x1: machineModel.target && machineModel.target.xMm - 50,
+                y1: machineModel.target && machineModel.target.yMm + 50,
+                x2: machineModel.target && machineModel.target.xMm + 50,
+                y2: machineModel.target && machineModel.target.yMm - 50,
+                visibility: machineModel.target ? "visible" : "hidden"
             });
 
             $(".scene").css({ visibility: "visible" });
 
-            $(".state .text").text(JSON.stringify(state, null, 2));
+            $(".state .text").text(JSON.stringify(machineModel, null, 2));
 
         }
 
@@ -161,17 +161,17 @@ wg.pages.home = {
 
             updateScene();
 
-            $(".page.home .controls .abchains .collapsable").css("display", job.length ? "none" : "grid");
-            $(".page.home .controls .job .collapsable").css("display", job.length ? "grid" : "none");
-            $(".page.home .controls .job").css("display", job.length ? "flex" : "none");
+            $(".page.home .controls .abchains .collapsable").css("display", jobModel.length ? "none" : "grid");
+            $(".page.home .controls .job .collapsable").css("display", jobModel.length ? "grid" : "none");
+            $(".page.home .controls .job").css("display", jobModel.length ? "flex" : "none");
 
             let previewSvg = $("#previewSvg").empty();
             let pos = {
-                x: state.sled.xMm,
-                y: state.sled.yMm
+                x: machineModel.sled.xMm,
+                y: machineModel.sled.yMm
             }
 
-            for (let command of job) {
+            for (let command of jobModel) {
                 if ((command.code === "G0" || command.code === "G1") && (Number.isFinite(command.x) || Number.isFinite(command.y))) {
 
                     let x = Number.isFinite(command.x) && command.x || pos.x;
@@ -288,21 +288,21 @@ wg.pages.home = {
                     ])
                 ])
             ])
-                .onMachineModelChanged(s => {
-                    state = s;
+                .onMachineModelChanged(m => {
+                    machineModel = m;
                     updateScene();
                 })
                 .onConfigModelChanged(c => {
-                    config = c;
+                    configModel = c;
                     updateScene();
                 })
                 .onRouterModelChanged(j => {
-                    job = j;
+                    jobModel = j;
                     updateRouterJob();
                 })
         ]);
 
-        let calibrated = Number.isFinite(state.sled.xMm) && Number.isFinite(state.sled.yMm) && Number.isFinite(state.spindle.zMm);
+        let calibrated = Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm) && Number.isFinite(machineModel.spindle.zMm);
         $(".page.home .controls .abchains .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .calibration .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .xyaxis .group-content").toggleClass("hidden", !calibrated);
