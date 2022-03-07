@@ -20,8 +20,6 @@ module.exports = async ({ file, defaults }) => {
         ...model
     };
 
-    let dataChangedListeners = [];
-
     let prevDataJson = JSON.stringify(model);
     let prevChanged = false;
 
@@ -40,13 +38,6 @@ module.exports = async ({ file, defaults }) => {
                     prevChanged = false;
                     logInfo("Saving configuration");
                     await save();
-                    try {
-                        for (listener of dataChangedListeners) {
-                            await listener(model);
-                        }
-                    } catch(e) {
-                        logError("Error in config data changed listener:", e);
-                    }
                 }
             }
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -56,8 +47,6 @@ module.exports = async ({ file, defaults }) => {
     saveConfigLoop().catch(e => logError("Error in save config loop:", e));
 
     return {
-        model,
-        onModelChanged() {
-        }
+        model
     };
 }
