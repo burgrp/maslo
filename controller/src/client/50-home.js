@@ -288,15 +288,15 @@ wg.pages.home = {
                     ])
                 ])
             ])
-                .onMachineStateChanged(s => {
+                .onMachineModelChanged(s => {
                     state = s;
                     updateScene();
                 })
-                .onConfigDataChanged(c => {
+                .onConfigModelChanged(c => {
                     config = c;
                     updateScene();
                 })
-                .onRouterJobChanged(j => {
+                .onRouterModelChanged(j => {
                     job = j;
                     updateRouterJob();
                 })

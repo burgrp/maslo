@@ -134,19 +134,31 @@
         "machine": "-> machine",
         "config": "-> config.data"
     },
+    "ui": {
+        "module": "./ui.js",
+        "machine": "-> machine",
+        "router": "-> router",
+        "config": "-> config"
+    },
     "webserver": {
         "module": "@burgrp/webglue",
         "modules": [
-            {
-                "module": "./ui.js",
-                "machine": "-> machine",
-                "router": "-> router",
-                "config": "-> config"
-            }
+            "-> ui"
         ]
     },
     "rest": {
         "module": "./rest-api.js",
         "router": "-> router"
+    },
+    "models": {
+        "module": "./models.js",
+        "models": {
+            "machine": "-> machine.model"
+        },
+        "listeners": {
+            "machine": [
+                "-> ui.onModelChanged"
+            ]
+        }
     }
 }

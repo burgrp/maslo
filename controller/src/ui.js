@@ -6,33 +6,33 @@ module.exports = async ({
     config
 }) => {
 
-    let machineState = machine.state;
+    let machineModel = machine.model;
 
     let events = {
         machine: {
-            stateChanged: undefined
+            modelChanged: undefined
         },
         config: {
-            dataChanged: undefined
+            modelChanged: undefined
         },
         router: {
-            jobChanged: undefined
+            modelChanged: undefined
         }
     };
 
-    machine.onStateChanged(state => {
-        if (events.machine.stateChanged) {
-            events.machine.stateChanged(state);
+    function onModelChanged(model, name) {
+        if (events[name].modelChanged) {
+            events[name].modelChanged(model);
         }
-    });
+    };
 
-    router.onJobChanged(code => {
-        events.router.jobChanged(code);
-    });
+    // router.onJobChanged(code => {
+    //     events.router.jobChanged(code);
+    // });
 
-    config.onDataChanged(data => {
-        events.config.dataChanged(data);
-    });
+    // config.onDataChanged(data => {
+    //     events.config.dataChanged(data);
+    // });
 
     let { min, max, abs } = Math;
 
@@ -66,16 +66,16 @@ module.exports = async ({
 
     async function manualMoveStart(directionX, directionY) {
 
-        if (!Number.isFinite(machineState.sled.xMm) || !Number.isFinite(machineState.sled.yMm)) {
+        if (!Number.isFinite(machineModel.sled.xMm) || !Number.isFinite(machineModel.sled.yMm)) {
             throw new Error(`Unknown sled position`);
         }
 
-        let rapidMove = machineState.relays.spindle.state && !machineState.relays.spindle.state.on && machineState.spindle.zMm > 0;
+        let rapidMove = machineModel.relays.spindle.state && !machineModel.relays.spindle.state.on && machineModel.spindle.zMm > 0;
 
         await router.run([{
             code: rapidMove ? "G0" : "G1",
-            x: machineState.sled.xMm + 10000 * directionX,
-            y: machineState.sled.yMm + 10000 * directionY,
+            x: machineModel.sled.xMm + 10000 * directionX,
+            y: machineModel.sled.yMm + 10000 * directionY,
             f: rapidMove ? config.data.speed.xyRapidMmPerMin : config.data.speed.xyDefaultMmPerMin
         }]);
 
@@ -85,6 +85,7 @@ module.exports = async ({
 
     return {
         events,
+        onModelChanged,
         client: __dirname + "/client",
         api: {
             config: {
@@ -99,7 +100,7 @@ module.exports = async ({
             },
             machine: {
                 getState() {
-                    return machineState;
+                    return machineModel;
                 },
 
                 async manualMoveStart(kind, ...params) {
@@ -128,11 +129,11 @@ module.exports = async ({
                 },
 
                 async resetUserOrigin() {
-                    if (Number.isFinite(machineState.sled.xMm) && Number.isFinite(machineState.sled.yMm)) {
-                        if (config.data.userOrigin.xMm === machineState.sled.xMm && config.data.userOrigin.yMm === machineState.sled.yMm) {
+                    if (Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm)) {
+                        if (config.data.userOrigin.xMm === machineModel.sled.xMm && config.data.userOrigin.yMm === machineModel.sled.yMm) {
                             config.data.userOrigin = {xMm: 0, yMm: 0};
                         } else {
-                            config.data.userOrigin = {xMm: machineState.sled.xMm, yMm: machineState.sled.yMm};
+                            config.data.userOrigin = {xMm: machineModel.sled.xMm, yMm: machineModel.sled.yMm};
                         }
                     }
                 },

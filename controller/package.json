@@ -8,7 +8,7 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
+    "dependencies": {
     "@burgrp/appglue": "^1.2.0",
     "@burgrp/i2c": "^1.0.6",
     "@burgrp/webglue": "^1.0.20",

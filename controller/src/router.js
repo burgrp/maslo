@@ -13,7 +13,7 @@ module.exports = ({ machine, config }) => {
     let job = [];
     let jobChangedListeners = [];
 
-    let machineState = machine.state;
+    let machineModel = machine.model;
 
     function convertFromSvg(svgPath) {
         return new Promise((resolve, reject) => {
@@ -192,18 +192,18 @@ module.exports = ({ machine, config }) => {
 
                 try {
 
-                    if (!Number.isFinite(machineState.sled.xMm) || !Number.isFinite(machineState.sled.yMm)) {
+                    if (!Number.isFinite(machineModel.sled.xMm) || !Number.isFinite(machineModel.sled.yMm)) {
                         throw new Error("Unknown sled position");
                     }
 
-                    if (!Number.isFinite(machineState.spindle.zMm)) {
+                    if (!Number.isFinite(machineModel.spindle.zMm)) {
                         throw new Error("Unknown spindle position");
                     }
 
                     let queue = [{
-                        x: machineState.sled.xMm,
-                        y: machineState.sled.yMm,
-                        z: machineState.spindle.zMm,
+                        x: machineModel.sled.xMm,
+                        y: machineModel.sled.yMm,
+                        z: machineModel.spindle.zMm,
                         f: min(config.speed.xyRapidMmPerMin, config.speed.xyDefaultMmPerMin, config.speed.zMmPerMin)
                     }];
 
