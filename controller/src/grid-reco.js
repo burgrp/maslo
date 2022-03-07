@@ -1,14 +1,15 @@
 module.exports = () => {
 
-    function calculateHistogram(image, size, dir) {
+    function calculateHistogram({ image, dir, size, shift, depth }) {
 
         let histogram = new Uint32Array(new ArrayBuffer(size * 4));
+        histogram.params = { dir, size, shift, depth };
 
         // count histograms sums
-        for (let a = 0; a < size; a++) {
-            for (let b = 0; b < size; b++) {
-                v = image[dir === 0 ? a + b * size : b + a * size];
-                histogram[a] += v;
+        for (let i = 0; i < size; i++) {
+            for (let d = shift; d < shift + depth; d++) {
+                v = image[dir === 0 ? i + d * size : d + i * size];
+                histogram[i] += v;
             }
         }
 
@@ -29,7 +30,7 @@ module.exports = () => {
             histogram[i] = max === min ? 0 : 100 * (histogram[i] - min) / (max - min);
             sum += histogram[i];
         }
-        histogram.avg = sum / size;
+        histogram.avg = sum / depth;
 
         // calculate histogram of histogram
         let hoh = new Uint32Array(new ArrayBuffer(101 * 4));
@@ -37,56 +38,29 @@ module.exports = () => {
             hoh[histogram[i]]++;
         }
         // identify empty image with noise only
-        histogram.clean = hoh.some(v => v > 15) && hoh[0] !== 101;
+        let clean = hoh.some(v => v > 10);
 
         // identify flat histogram, find centers of maximum band if any 
-        for (let dir = 0; dir <= 1; dir++) {
 
-            let start;
-            let stop;
+        let start;
+        let stop;
 
-            if (histogram.clean && histogram.avg < 70) {
+        if (clean) {
 
-                for (let i = 0; i < size; i++) {
-                    let v = histogram[i];
-                    if (v > (histogram.avg + 100) / 2) {
-                        if (start === undefined) {
-                            start = i;
-                        }
-                    } else {
-                        if (start !== undefined && stop === undefined) {
-                            stop = i;
-                        }
+            for (let i = 0; i < size; i++) {
+                let v = histogram[i];
+                if (v > (histogram.avg + 100) / 2) {
+                    if (start === undefined) {
+                        start = i;
+                    }
+                } else {
+                    if (start !== undefined && stop === undefined) {
+                        stop = i;
                     }
                 }
-
-                let loSide = {
-                    count: 0,
-                    sum: 0
-                };
-                let hiSide = {
-                    count: 0,
-                    sum: 0
-                };
-
-                for (let i = 0; i < start - size / 10; i++) {
-                    loSide.count++;
-                    loSide.sum += histogram[i];
-                }
-
-                for (let i = stop + size / 10; i < size; i++) {
-                    hiSide.count++;
-                    hiSide.sum += histogram[i];
-                }
-
-                histogram.peak = (start + stop) / 2;
-
-                histogram.sides = Math.sign(Math.round((
-                    (loSide.count && loSide.sum / loSide.count) -
-                    (hiSide.count && hiSide.sum / hiSide.count)
-                ) / 3) * 3) + 1;
-
             }
+
+            histogram.peak = Math.round((start + stop) / 2);
         }
 
         return histogram;
@@ -94,37 +68,98 @@ module.exports = () => {
 
     function recognize(image, size, debug) {
 
-        let t0 = new Date().getTime();
-
-        let histograms = [
-            calculateHistogram(image, size, 0),
-            calculateHistogram(image, size, 1)
-        ];
-
-        let shapes = {
-            0: ["northwest", "north", "northeast"],
-            1: ["west", "cross", "east", "horizontal"],
-            2: ["southwest", "south", "southeast"],
-            3: [, "vertical"]
-        }
-
-        let result = {
-            shape: shapes[histograms[1].sides === undefined ? 3 : histograms[1].sides][histograms[0].sides === undefined ? 3 : histograms[0].sides],
-            center: Number.isFinite(histograms[0].peak) || Number.isFinite(histograms[1].peak) ? {
-                x: Number.isFinite(histograms[0].peak) ? histograms[0].peak / size : 0.5,
-                y: Number.isFinite(histograms[1].peak) ? histograms[1].peak / size : 0.5
-            } : undefined
-        }
-
-        let t1 = new Date().getTime();
-
+        let result = {};
         if (debug) {
             result.debug = {
-                timeMs: t1 - t0,
-                shape: result.shape,
-                center: result.center,
-                histograms
+                histograms: []
+            };
+        }
+
+        let t0 = new Date().getTime();
+
+        let horizontalHistogram = calculateHistogram({ image, size, dir: 0, shift: 0, depth: size });
+        let verticalHistogram = calculateHistogram({ image, size, dir: 1, shift: 0, depth: size });
+
+        if (result.debug) {
+            result.debug.histograms.push(horizontalHistogram);
+            result.debug.histograms.push(verticalHistogram);
+        }
+
+        if (horizontalHistogram.peak && !verticalHistogram.peak) {
+            result.shape = "vertical";
+            result.center = {
+                x: horizontalHistogram.peak / size,
+                y: 0.5
+            };
+        }
+
+        if (!horizontalHistogram.peak && verticalHistogram.peak) {
+            result.shape = "horizontal";
+            result.center = {
+                x: 0.5,
+                y: verticalHistogram.peak / size
+            };
+        }
+
+        if (horizontalHistogram.peak && verticalHistogram.peak) {
+
+            result.center = {
+                x: horizontalHistogram.peak / size,
+                y: verticalHistogram.peak / size
+            };
+
+            let x = horizontalHistogram.peak;
+            let y = verticalHistogram.peak;
+
+            let depth = Math.round(size / 3);
+
+
+            // histograms for north, east, south, west
+            let histograms = [
+                calculateHistogram({ image, size, dir: 0, shift: 0, depth}),
+                calculateHistogram({ image, size, dir: 1, shift: size - depth, depth}),
+                calculateHistogram({ image, size, dir: 0, shift: size - depth, depth}),
+                calculateHistogram({ image, size, dir: 1, shift: 0, depth})
+            ];
+
+            let index = 0;
+            for (let i = 0; i < histograms.length; i++) {
+                index |= (histograms[i].peak? 1: 0) << i;
             }
+
+            result.shape  = {
+                0b1110: "north",
+                0b1101: "east",
+                0b1011: "south",
+                0b0111: "west",
+                0b1111: "cross"
+            }[index] || index;
+
+            if (result.debug) {
+                result.debug.histograms.push(...histograms);
+            }
+
+        }
+
+        // let shapes = {
+        //     0: ["northwest", "north", "northeast"],
+        //     1: ["west", "cross", "east", "horizontal"],
+        //     2: ["southwest", "south", "southeast"],
+        //     3: [, "vertical"]
+        // }
+
+        // let result = {
+        //     shape: shapes[fullHistograms[1].sides === undefined ? 3 : fullHistograms[1].sides][fullHistograms[0].sides === undefined ? 3 : fullHistograms[0].sides],
+        //     center: Number.isFinite(fullHistograms[0].peak) || Number.isFinite(fullHistograms[1].peak) ? {
+        //         x: Number.isFinite(fullHistograms[0].peak) ? fullHistograms[0].peak / size : 0.5,
+        //         y: Number.isFinite(fullHistograms[1].peak) ? fullHistograms[1].peak / size : 0.5
+        //     } : undefined
+        // }
+
+        if (result.debug) {
+            result.debug.timeMs = new Date().getTime() - t0;
+            result.debug.center = result.center;
+            result.debug.shape = result.shape;
         }
 
         return result;

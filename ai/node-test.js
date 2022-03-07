@@ -19,14 +19,6 @@ async function save(data, size, fileName, debug) {
 
     if (debug) {
 
-        let text = `${debug.shape} ${debug.timeMs}ms`
-        jimpImage.scan(0, 0, Jimp.measureText(font, text), Jimp.measureTextHeight(font, text), (x, y, idx) => {
-            if (idx >= 0 && idx < size * size) {
-                jimpImage.bitmap.data.writeUInt32BE(0xB0B0B0FF, idx);
-            }
-        });
-        jimpImage.print(font, 0, 0, text);
-
         if (debug.center) {
             jimpImage.scan(Math.floor(debug.center.x * size) - 3, Math.floor(debug.center.y * size) - 3, 7, 7, (x, y, idx) => {
                 if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
@@ -36,24 +28,37 @@ async function save(data, size, fileName, debug) {
         }
 
         if (debug.histograms) {
-            for (let dir = 0; dir <= 1; dir++) {
-                for (let i = 0; i < size; i++) {
+            for (let histogram of debug.histograms) {
+                let color = histogram.params.depth === histogram.params.size ? 0xFF0000FF : 0x00FF00FF;
+                for (let i = 0; i < histogram.length; i++) {
 
-                    let v = Math.round(size - size * debug.histograms[dir][i] / 500);
+                    let mirror = (histogram.params.depth !== histogram.params.size && histogram.params.shift === 0) ? 1 : -1;
+
+                    let v = Math.round(size / 2 - mirror * (size / 2 - size * histogram[i] / 500));
+
+                    let dir = histogram.params.dir;
 
                     let x = dir * v + Math.abs(dir - 1) * i;
                     let y = dir * i + Math.abs(dir - 1) * v;
 
                     jimpImage.scan(x - 1, y - 1, 3, 3, (x, y, idx) => {
                         if (idx >= 0 && idx < size * size * 4 && x >= 0 && y >= 0 && x < size && y < size) {
-                            jimpImage.bitmap.data.writeUInt32BE(0xFF0000FF, idx);
+                            jimpImage.bitmap.data.writeUInt32BE(color, idx);
                         }
                     });
 
                 }
             }
-
         }
+
+        let text = `${debug.shape} ${debug.timeMs}ms`
+        jimpImage.scan(0, 0, Jimp.measureText(font, text), Jimp.measureTextHeight(font, text), (x, y, idx) => {
+            if (idx >= 0 && idx < size * size) {
+                jimpImage.bitmap.data.writeUInt32BE(0xB0B0B0FF, idx);
+            }
+        });
+        jimpImage.print(font, 0, 0, text);
+
     }
 
 
@@ -116,7 +121,7 @@ function generate(params) {
         }
     }
 
-    let noise = (foreground - background) / 5;
+    let noise = (foreground - background) / 10;
 
     for (let f = 0; f < 100; f++) {
         let center = {
