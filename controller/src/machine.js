@@ -2,11 +2,7 @@ const logError = require("debug")("app:machine:error");
 const logInfo = require("debug")("app:machine:info");
 
 
-let pow2 = a => a * a;
-let { sqrt, pow, hypot, abs, round, min, max, sign } = Math;
-
-const MODE_STANDBY = "STANDBY";
-const MODE_JOB = "JOB";
+let { hypot, abs } = Math;
 
 module.exports = async ({
     config,
@@ -15,7 +11,7 @@ module.exports = async ({
 }) => {
 
     let model = {
-        mode: MODE_STANDBY,
+        busy: false,
         errors: {}
     }
 
@@ -23,7 +19,6 @@ module.exports = async ({
     await kinematics.initializeModel(model)
 
     let waiters = [];
-
 
     async function checkModel() {
 
@@ -139,13 +134,13 @@ module.exports = async ({
             model.jobInterrupt = true;
         },
 
-        async doJob(action) {
+        async doTask(action) {
 
-            if (model.mode !== MODE_STANDBY) {
-                throw new Error("Machine not in standby mode");
+            if (model.busy) {
+                throw new Error("Machine is busy by other task");
             }
 
-            model.mode = MODE_JOB;
+            model.busy = true;
             try {
                 return await action();
             } catch (e) {
@@ -153,7 +148,7 @@ module.exports = async ({
                     throw e;
                 }
             } finally {
-                model.mode = MODE_STANDBY;
+                model.busy = false;
                 delete model.jobInterrupt;
                 delete model.target;
             }

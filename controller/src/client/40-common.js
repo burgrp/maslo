@@ -86,7 +86,7 @@ wg.common = {
     },
 
     manualMoveButton(clazz, icon, kind, ...direction) {
-        let button = BUTTON(clazz + " control standby", [ICON(icon)]);
+        let button = BUTTON(clazz + " control not-busy", [ICON(icon)]);
         let isDown = false;
 
         function down() {

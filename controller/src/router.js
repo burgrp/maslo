@@ -105,7 +105,7 @@ module.exports = ({ machine, config }) => {
     }
 
     async function loadJob(gcodeAsyncIter) {
-        await machine.doJob(async () => {
+        await machine.doTask(async () => {
 
             job = [];
             for await (let command of gcodeAsyncIter) {
@@ -188,7 +188,7 @@ module.exports = ({ machine, config }) => {
 
         async run(code) {
 
-            await machine.doJob(async () => {
+            await machine.doTask(async () => {
 
                 try {
 

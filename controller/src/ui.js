@@ -32,7 +32,7 @@ module.exports = async ({
 
         motors = motors.split("");
 
-        await machine.doJob(async () => {
+        await machine.doTask(async () => {
 
             try {
                 let d = {};
@@ -115,7 +115,7 @@ module.exports = async ({
                 },
 
                 async manualSwitch(relay, state) {
-                    await machine.doJob(async () => {
+                    await machine.doTask(async () => {
                         machine.setRelayState(relay, state);
                     });
                 },
@@ -135,7 +135,7 @@ module.exports = async ({
                 },
 
                 async setCalibration(kind, value) {
-                    await machine.doJob(async () => {
+                    await machine.doTask(async () => {
                         
                         if (!Number.isFinite(value)) {
                             throw new Error("Please enter a valid number");

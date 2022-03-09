@@ -19,7 +19,7 @@ wg.pages.home = {
             let sledX = machineModel.sled.xMm;
             let sledY = machineModel.sled.yMm;
 
-            $("button.standby").toggleClass("disabled", machineModel.mode !== "STANDBY");
+            $("button.not-busy").toggleClass("disabled", machineModel.busy);
 
             $(".xyaxis .position .x").text(formatLength(sledX - configModel.userOrigin.xMm));
             $(".xyaxis .position .y").text(formatLength(sledY - configModel.userOrigin.yMm));
@@ -223,8 +223,8 @@ wg.pages.home = {
                 DIV("group job", [
                     DIV("group-title").text("job"),
                     DIV("group-content", [
-                        BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
-                        BUTTON("delete control standby").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
+                        BUTTON("start control not-busy").text("START").click(() => wg.common.check(async () => await wg.router.runJob())),
+                        BUTTON("delete control not-busy").text("DELETE").click(() => wg.common.check(async () => wg.router.deleteJob()))
                     ])
                 ]),
                 DIV("group abchains", [
@@ -279,8 +279,8 @@ wg.pages.home = {
                 DIV("group zaxis", [
                     DIV("group-title").text("Z axis"),
                     DIV("group-content", [
-                        BUTTON("start control standby").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
-                        BUTTON("stop control standby").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
+                        BUTTON("start control not-busy").text("START").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", true))),
+                        BUTTON("stop control not-busy").text("STOP").click(() => wg.common.check(async () => await wg.machine.manualSwitch("spindle", false))),
                         DIV("spindle", [ICON("asterisk")]),
                         DIV("position dimension").text("-"),
                         wg.common.manualMoveButton("up", "caret-up", "z", 1),
