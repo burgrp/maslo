@@ -6,7 +6,7 @@ let font;
 async function save(data, size, fileName, debug) {
 
     if (!font) {
-        font = await Jimp.loadFont(Jimp.FONT_SANS_12_BLACK);
+        font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
     }
 
     let jimpImage = await Jimp.create(size, size);
@@ -155,7 +155,7 @@ async function start() {
 
     let directory = "./samples";
 
-    let size = 150;
+    let size = 400;
     let count = 2;
     let id = 0;
 

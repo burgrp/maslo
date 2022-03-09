@@ -21,11 +21,12 @@ module.exports = async () => {
             let checkIntervalMs = 10;
             setInterval(() => {
                 let stallDuty = 0.1;
-                if (state.duty > stallDuty || state.duty < -stallDuty) {
-                    state.steps += 
-                    config.maxRpm * config.encoderPpr * state.duty / (60000 / checkIntervalMs) * 
-                    (config.virtual && config.virtual.motorPolarity || 1) * 
-                    (config.virtual && config.virtual.encoderPolarity || 1);
+                let duty = Math.sign(state.duty) * Math.pow(Math.abs(state.duty), 4);
+                if (duty > stallDuty || duty < -stallDuty) {
+                    state.steps +=
+                        config.maxRpm * config.encoderPpr * duty / (60000 / checkIntervalMs) *
+                        (config.virtual && config.virtual.motorPolarity || 1) *
+                        (config.virtual && config.virtual.encoderPolarity || 1);
                 }
             }, checkIntervalMs);
 
