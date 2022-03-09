@@ -153,7 +153,7 @@ module.exports = ({ machine, config }) => {
 
                 machine.setTarget(target);
 
-                await machine.synchronizeJob();
+                await machine.synchronizeTask();
             }
 
             //machine.setMotorDuty("z", 0);

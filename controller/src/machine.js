@@ -27,9 +27,9 @@ module.exports = async ({
 
         while (waiters.length) {
             let waiter = waiters.shift();
-            if (model.jobInterrupt) {
+            if (model.taskInterrupt) {
                 let e = new Error("Move interrupted");
-                e.moveInterrupted = true;
+                e.taskInterrupted = true;
                 waiter.reject(e);
             } else {
                 waiter.resolve(model);
@@ -124,14 +124,14 @@ module.exports = async ({
             model.target = target;
         },
 
-        synchronizeJob() {
+        synchronizeTask() {
             return new Promise((resolve, reject) => {
                 waiters.push({ resolve, reject });
             });
         },
 
-        interruptCurrentJob() {
-            model.jobInterrupt = true;
+        interruptTask() {
+            model.taskInterrupt = true;
         },
 
         async doTask(action) {
@@ -144,14 +144,15 @@ module.exports = async ({
             try {
                 return await action();
             } catch (e) {
-                if (!e.moveInterrupted) {
+                if (!e.taskInterrupted) {
                     throw e;
                 }
             } finally {
                 model.busy = false;
-                delete model.jobInterrupt;
+                delete model.taskInterrupt;
                 delete model.target;
             }
-        }
+        },
+
     }
 }

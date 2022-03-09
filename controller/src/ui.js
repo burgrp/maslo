@@ -45,7 +45,7 @@ module.exports = async ({
                         d[motor] = min(config.model.manual.motorDuty[motor].max, d[motor] + 0.05);
                         machine.setMotorDuty(motor, direction * d[motor]);
                     }
-                    await machine.synchronizeJob();
+                    await machine.synchronizeTask();
                 }
             } finally {
                 for (let motor of motors) {
@@ -110,7 +110,7 @@ module.exports = async ({
 
                 async manualMoveStop(kind) {
                     if (manualMovePending) {
-                        machine.interruptCurrentJob();
+                        machine.interruptTask();
                     }
                 },
 
@@ -131,7 +131,7 @@ module.exports = async ({
                 },
 
                 async emergencyStop() {
-                    machine.interruptCurrentJob();
+                    machine.interruptTask();
                 },
 
                 async setCalibration(kind, value) {
