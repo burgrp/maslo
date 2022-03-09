@@ -143,7 +143,7 @@ module.exports = async ({
 
                         switch (kind) {
                             case "top":
-                                machine.setSledReference(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
+                                machine.calibrateTop(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
                                 break;
                             case "bottom":
                                 machine.recalculateRatio(0, -config.model.workspace.heightMm / 2 + config.model.sled.diaMm / 2 + value);

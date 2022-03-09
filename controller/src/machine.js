@@ -72,7 +72,7 @@ module.exports = async ({
             model.relays[relay].on = on;
         },
 
-        setSledReference(xMm, yMm) {
+        calibrateTop(xMm, yMm) {
             model.sled.reference = {
                 xMm,
                 yMm,
