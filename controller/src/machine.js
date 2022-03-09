@@ -81,7 +81,7 @@ module.exports = async ({
             };
         },
 
-        recalculateRatio(xMm, yMm) {
+        calibrateBottom(xMm, yMm) {
             if (!model.sled.reference) {
                 throw new Error("No sled reference. Please calibrate top at first.");
             }
@@ -113,7 +113,7 @@ module.exports = async ({
             }
         },
 
-        setSpindleReference(zMm) {
+        calibrateSpindle(zMm) {
             model.spindle.reference = {
                 zMm: zMm,
                 zSteps: model.motors.z.state.steps

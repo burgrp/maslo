@@ -146,10 +146,10 @@ module.exports = async ({
                                 machine.calibrateTop(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
                                 break;
                             case "bottom":
-                                machine.recalculateRatio(0, -config.model.workspace.heightMm / 2 + config.model.sled.diaMm / 2 + value);
+                                machine.calibrateBottom(0, -config.model.workspace.heightMm / 2 + config.model.sled.diaMm / 2 + value);
                                 break;
                             case "tool":
-                                machine.setSpindleReference(-value);
+                                machine.calibrateSpindle(-value);
                                 break;
                             default:
                                 throw new Error(`Sorry, I don't know how to calibrate ${kind}`);
