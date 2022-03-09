@@ -26,7 +26,7 @@
             ],
             "env": {
                 "MACHINE_DRIVER": "virtual",
-                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-Xapp:motor:*"
+                "DEBUG": "*,-app:models:debug,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-Xapp:motor:*"
             },
             "program": "${workspaceFolder}/src/start.js",
             "outputCapture": "std"
@@ -41,7 +41,7 @@
             "env": {
                 "MACHINE_DRIVER": "i2c",
                 "I2C": "drake,gpioIRQ=5.in.pullUp.irqFallingEdge,gpioReset=4.out.openDrain.pullUp",
-                "DEBUG": "*,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*"
+                "DEBUG": "*,-app:models:debug,-i2c:debug,-send,-engine,-engine.*,-socket.*,-express.*,-Xapp:motor:*"
             },
             "program": "${workspaceFolder}/src/start.js",
             "outputCapture": "std"

@@ -9,134 +9,41 @@ const MODE_STANDBY = "STANDBY";
 const MODE_JOB = "JOB";
 
 module.exports = async ({
-    drivers,
-    driver,
     config,
-    checks
+    hardware,
+    kinematics
 }) => {
 
     let model = {
         mode: MODE_STANDBY,
-        sled: {
-        },
-        spindle: {
-            on: false
-        },
-        motors: {},
-        relays: {},
         errors: {}
     }
 
-    let driverInstance = drivers[driver];
-    await driverInstance.open();
-
-    let motors = {};
-    for (let name in config.motors) {
-        let motorConfig = config.motors[name];
-        if (!Number.isFinite(motorConfig.stepsPerMm)) {
-            motorConfig.stepsPerMm = motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
-        }
-        motors[name] = await driverInstance.createMotor(name, motorConfig);
-        model.motors[name] = {
-            duty: 0
-        };
-    }
-
-    let relays = {};
-    for (let name in config.relays) {
-        relays[name] = await driverInstance.createRelay(name, config.relays[name]);
-        model.relays[name] = {
-            on: false
-        };
-    }
+    await hardware.initializeModel(model)
+    await kinematics.initializeModel(model)
 
     let waiters = [];
 
 
     async function checkModel() {
 
-        async function checkMotorStates() {
-            for (let name in motors) {
-                const m = model.motors[name];
-                try {
-                    m.state = await motors[name].get();
-                    delete model.errors[`motor.${name}.get`];
-                } catch (e) {
-                    logError(`Motor ${name} error on get:`, e);
-                    delete m.state;
-                    model.errors[`motor.${name}.get`] = e.message || e;
-                }
+        await hardware.readHardware(model);
+        await kinematics.updateKinematics(model)
+
+        while (waiters.length) {
+            let waiter = waiters.shift();
+            if (model.jobInterrupt) {
+                let e = new Error("Move interrupted");
+                e.moveInterrupted = true;
+                waiter.reject(e);
+            } else {
+                waiter.resolve(model);
             }
+
         }
 
-        async function checkRelayStates() {
-            for (let name in relays) {
-                const r = model.relays[name];
-                try {
-                    r.state = await relays[name].get();
-                    delete model.errors[`relay.${name}.get`];
-                } catch (e) {
-                    logError(`Relay ${name} error on get:`, e);
-                    delete r.state;
-                    model.errors[`relay.${name}.get`] = e.message || e;
-                }
-            }
-        }
+        await hardware.writeHardware(model);
 
-        function checkHooverRelay() {
-            model.relays.hoover.on = model.relays.spindle.state && model.relays.spindle.state.on && model.spindle.zMm < 0 || false;
-        }
-
-        function checkJobSynchronizers() {
-            while (waiters.length) {
-                let waiter = waiters.shift();
-                if (model.jobInterrupt) {
-                    let e = new Error("Move interrupted");
-                    e.moveInterrupted = true;
-                    waiter.reject(e);
-                } else {
-                    waiter.resolve(model);
-                }
-
-            }
-        }
-
-        async function setMotorDuties() {
-            for (let name in motors) {
-                const m = model.motors[name];
-                try {
-                    await motors[name].set(m.duty);
-                    delete model.errors[`motor.${name}.set`];
-                } catch (e) {
-                    logError(`Motor ${name} error on set:`, e);
-                    model.errors[`motor.${name}.set`] = e.message || e;
-                }
-            }
-        }
-
-        async function setRelayStates() {
-            for (let name in relays) {
-                const r = model.relays[name];
-                try {
-                    await relays[name].set(r.on);
-                    delete model.errors[`relay.${name}.set`];
-                } catch (e) {
-                    logError(`Relay ${name} error on set:`, e);
-                    model.errors[`relay.${name}.set`] = e.message || e;
-                }
-            }
-        }
-
-        await checkMotorStates();
-        await checkRelayStates();
-        await checkHooverRelay();
-        await checkJobSynchronizers();
-        await setMotorDuties();
-        await setRelayStates();
-
-        for (let check of checks) {
-            await check(model);
-        }
     }
 
     async function machineCheckLoop() {

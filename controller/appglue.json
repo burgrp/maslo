@@ -115,29 +115,27 @@
             }
         }
     },
-    "hardware": {},
-    "kinematics": {
-        "module": "./mc-kinematics.js",
-        "config": "-> config.model"
-    },
     "machine": {
         "module": "./machine.js",
-        "drivers": {
-            "virtual": {
-                "module": "./driver-virtual.js"
-            },
-            "i2c": {
-                "module": "./driver-i2c.js",
-                "bus": "-> $.I2C"
-            }
-        },
-        "driver": "-> $.MACHINE_DRIVER || 'virtual'",
         "config": "-> config.model",
-        "checks": [
-            "-> kinematics.checkSledPosition",
-            "-> kinematics.checkSpindlePosition",
-            "-> kinematics.checkTarget"
-        ]
+        "hardware": {
+            "module": "./machine-hardware.js",
+            "config": "-> config.model",
+            "drivers": {
+                "virtual": {
+                    "module": "./driver-virtual.js"
+                },
+                "i2c": {
+                    "module": "./driver-i2c.js",
+                    "bus": "-> $.I2C"
+                }
+            },
+            "driver": "-> $.MACHINE_DRIVER || 'virtual'"
+        },
+        "kinematics": {
+            "module": "./machine-kinematics.js",
+            "config": "-> config.model"
+        }
     },
     "router": {
         "module": "./router.js",
