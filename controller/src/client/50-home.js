@@ -246,7 +246,7 @@ wg.pages.home = {
                     DIV("group-content", [
                         NUMBER("value"),
                         DIV("unit").text("mm"),
-                        ...["top", "bottom", "tool"]
+                        ...["top", "tool"]
                             .map(kind =>
                                 BUTTON(kind).text(kind).click(() => {
                                     wg.common.check(async () => {
@@ -255,7 +255,12 @@ wg.pages.home = {
                                         input.val("");
                                     });
                                 })
-                            )
+                            ),
+                        BUTTON("grid").text("grid").click(() => {
+                            wg.common.check(async () => {
+                                await wg.machine.startGridCalibration();
+                            });
+                        })
                     ])
                 ]),
                 DIV("group xyaxis", [
@@ -350,7 +355,7 @@ wg.pages.home = {
                 processData: false,
                 success: resolve,
                 error: error => {
-                        reject(error.responseJSON && error.responseJSON.message || error.responseText || error.message || error);
+                    reject(error.responseJSON && error.responseJSON.message || error.responseText || error.message || error);
                 }
             });
         }
