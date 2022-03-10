@@ -119,7 +119,7 @@
         "module": "./machine.js",
         "config": "-> config.model",
         "hardware": {
-            "module": "./machine-hardware.js",
+            "module": "./hardware.js",
             "config": "-> config.model",
             "drivers": {
                 "virtual": {
@@ -133,8 +133,20 @@
             "driver": "-> $.MACHINE_DRIVER || 'virtual'"
         },
         "kinematics": {
-            "module": "./machine-kinematics.js",
-            "config": "-> config.model"
+            "module": "./kinematics.js",
+            "config": "-> config.model",
+            "zLinear": {
+                "module": "./z-linear.js",
+                "config": "-> config.model"
+            },
+            "xyTrigonometry": {
+                "module": "./xy-trigonometry.js",
+                "config": "-> config.model"
+            },
+            "xyInterpolation": {
+                "module": "./xy-interpolation.js",
+                "config": "-> config.model"
+            }
         }
     },
     "router": {

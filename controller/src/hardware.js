@@ -6,7 +6,6 @@ module.exports = async ({
     driver    
 }) => {
 
-
     let driverInstance = drivers[driver];
     await driverInstance.open();
 
