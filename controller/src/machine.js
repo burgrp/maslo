@@ -81,38 +81,6 @@ module.exports = async ({
             };
         },
 
-        calibrateBottom(xMm, yMm) {
-            if (!model.sled.reference) {
-                throw new Error("No sled reference. Please calibrate top at first.");
-            }
-            for (let motor of ['a', 'b']) {
-
-                let p1 = model.sled.reference;
-                let p2 = {
-                    xMm,
-                    yMm,
-                    aSteps: model.motors.a.state.steps,
-                    bSteps: model.motors.b.state.steps
-                }
-
-                let calcLen = pos => hypot(config.beam.motorsDistanceMm / 2 - abs(pos.xMm), config.beam.motorsToWorkspaceMm + config.workspace.heightMm / 2 - pos.yMm);
-
-                let len1mm = calcLen(p1);
-                let len2mm = calcLen(p2);
-
-                if (abs(len2mm - len1mm) < 200) {
-                    throw new Error("Calibration distances too small");
-                }
-
-                let steps1 = p1[motor + "Steps"];
-                let steps2 = p2[motor + "Steps"];
-
-                config.motors[motor].stepsPerMm = (steps1 - steps2) / (len1mm - len2mm);
-
-                logInfo(`Motor ${motor} stepsPerMm set to ${config.motors[motor].stepsPerMm}`);
-            }
-        },
-
         calibrateSpindle(zMm) {
             model.spindle.reference = {
                 zMm: zMm,

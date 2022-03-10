@@ -15,7 +15,7 @@
                     "encoderPpr": "-> 17*4",
                     "gearRatio": 280,
                     "mmPerRev": 60,
-                    "offsetToDuty": 0.3
+                    "offsetToSpeed": 0.3
                 },
                 "b": {
                     "i2c": {
@@ -27,7 +27,7 @@
                     "encoderPpr": "-> 17*4",
                     "gearRatio": 280,
                     "mmPerRev": 60,
-                    "offsetToDuty": 0.3
+                    "offsetToSpeed": 0.3
                 },
                 "z": {
                     "i2c": {
@@ -39,7 +39,7 @@
                     "encoderPpr": "-> 11*4",
                     "gearRatio": 90,
                     "mmPerRev": 2,
-                    "offsetToDuty": -0.5
+                    "offsetToSpeed": -0.5
                 }
             },
             "relays": {

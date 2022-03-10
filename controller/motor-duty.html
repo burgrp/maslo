@@ -22,7 +22,7 @@
                 let m = "a";
                 let motorConfigs = {
                     a: {
-                        offsetToDuty: 0.2
+                        offsetToSpeed: 0.2
                     }
                 }
                 let motor = {
@@ -33,7 +33,7 @@
                         
                 //////////////////////////////////////////////
                                     
-                    let duty = offset * motorConfigs[m].offsetToDuty;
+                    let duty = offset * motorConfigs[m].offsetToSpeed;
 
                     duty = sign(duty) * min(abs(duty), 1);
 

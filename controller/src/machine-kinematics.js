@@ -5,12 +5,16 @@ module.exports = async ({
     let pow2 = a => a * a;
     let { sqrt, pow, hypot, abs, round, min, max, sign } = Math;
 
+    function stepsPerMm(motorConfig) {
+        return motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
+    }
+
     function distanceMmToAbsSteps(motorConfig, distanceMm) {
-        return distanceMm * motorConfig.stepsPerMm;
+        return distanceMm * stepsPerMm(motorConfig);
     }
 
     function absStepsToDistanceMm(motorConfig, steps) {
-        return steps / motorConfig.stepsPerMm;
+        return steps / stepsPerMm(motorConfig);
     }
 
     function userToMachineCS(pos) {
@@ -118,7 +122,7 @@ module.exports = async ({
             }
 
             if (model.spindle.reference) {
-                model.spindle.zMm = model.spindle.reference.zMm + (config.motors.z, model.motors.z.state.steps - model.spindle.reference.zSteps) / config.motors.z.stepsPerMm;
+                model.spindle.zMm = model.spindle.reference.zMm + (config.motors.z, model.motors.z.state.steps - model.spindle.reference.zSteps) / stepsPerMm(config.motors.z);
             } else {
                 delete model.spindle.zMm;
             }
@@ -156,12 +160,9 @@ module.exports = async ({
 
                 if (abs(offset) > 0.3) {
 
-                    duty = (offset - (motor.offset || 0) / 2) * config.motors[m].offsetToDuty;
+                    let speed = (offset - (motor.offset || 0) / 2) * config.motors[m].offsetToSpeed;
 
-                    duty = sign(duty) * min(abs(duty), 1);
-                    duty = sign(duty) * pow(abs(duty), 1 / 4);
-
-                    //duty = (motor.duty + duty) / 2;
+                    duty = sign(speed) * min(pow(abs(speed), 1 / 4), 1);
 
                     if (abs(duty - motor.duty) > 0.4 && sign(duty) === -sign(motor.duty)) {
                         duty = 0;

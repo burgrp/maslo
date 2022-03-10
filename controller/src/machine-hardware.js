@@ -11,12 +11,8 @@ module.exports = async ({
     await driverInstance.open();
 
     let motors = {};
-    for (let name in config.motors) {
-        let motorConfig = config.motors[name];
-        if (!Number.isFinite(motorConfig.stepsPerMm)) {
-            motorConfig.stepsPerMm = motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
-        }
-        motors[name] = await driverInstance.createMotor(name, motorConfig);
+    for (let name in config.motors) {            
+        motors[name] = await driverInstance.createMotor(name, config.motors[name]);
     }
 
     let relays = {};

@@ -145,9 +145,6 @@ module.exports = async ({
                             case "top":
                                 machine.calibrateTop(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
                                 break;
-                            case "bottom":
-                                machine.calibrateBottom(0, -config.model.workspace.heightMm / 2 + config.model.sled.diaMm / 2 + value);
-                                break;
                             case "tool":
                                 machine.calibrateSpindle(-value);
                                 break;
