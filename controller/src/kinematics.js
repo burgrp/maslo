@@ -159,35 +159,33 @@ module.exports = async ({
                 b: model.motors.b.state.steps
             };
 
-            if (steps) {
+            if (
+                !model.sled.reference &&
+                steps &&
+                Number.isFinite(config.lastPosition.xMm) &&
+                Number.isFinite(config.lastPosition.yMm)
+            ) {
+                model.sled.reference = {
+                    xMm: config.lastPosition.xMm,
+                    yMm: config.lastPosition.yMm,
+                    aSteps: steps.a,
+                    bSteps: steps.b
+                };
+            }
 
-                if (
-                    !model.sled.reference &&
-                    Number.isFinite(config.lastPosition.xMm) &&
-                    Number.isFinite(config.lastPosition.yMm)
-                ) {
-                    model.sled.reference = {
-                        xMm: config.lastPosition.xMm,
-                        yMm: config.lastPosition.yMm,
-                        aSteps: steps.a,
-                        bSteps: steps.b
-                    };
-                }
+            let sledPosition = steps && model.sled.reference && stepsToPosition(steps, model.sled.reference);
 
-                let sledPosition = model.sled.reference && stepsToPosition(steps, model.sled.reference);
-                if (sledPosition) {
-                    model.sled.xMm = sledPosition.xMm;
-                    model.sled.yMm = sledPosition.yMm;                    
-                    config.lastPosition.xMm = Math.round(model.sled.xMm * 1000) / 1000;
-                    config.lastPosition.yMm = Math.round(model.sled.yMm * 1000) / 1000;    
-                } else {
-                    delete model.sled.xMm;
-                    delete model.sled.yMm;
-                    delete config.lastPosition.xMm;
-                    delete config.lastPosition.yMm;
-                }
-    
-            }    
+            if (sledPosition) {
+                model.sled.xMm = sledPosition.xMm;
+                model.sled.yMm = sledPosition.yMm;
+                config.lastPosition.xMm = Math.round(model.sled.xMm * 1000) / 1000;
+                config.lastPosition.yMm = Math.round(model.sled.yMm * 1000) / 1000;
+            } else {
+                delete model.sled.xMm;
+                delete model.sled.yMm;
+                delete config.lastPosition.xMm;
+                delete config.lastPosition.yMm;
+            }
 
             checkSpindlePosition(model);
             checkTarget(model);
