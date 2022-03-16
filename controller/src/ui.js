@@ -143,7 +143,7 @@ module.exports = async ({
 
                         switch (kind) {
                             case "top":
-                                machine.calibrateTop(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
+                                machine.calibrateSled(0, config.model.workspace.heightMm / 2 - config.model.sled.diaMm / 2 - value);
                                 break;
                             case "tool":
                                 machine.calibrateSpindle(-value);
