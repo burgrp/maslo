@@ -39,75 +39,38 @@ module.exports = async ({
         };
     }
 
-    function checkSledPosition(model) {
+    function getSledPosition(reference, states) {
 
-        if (model.motors.a.state && model.motors.b.state) {
+        let referenceMCS = userToMachineCS(reference);
 
-            if (
-                !Number.isFinite(model.sled.xMm) &&
-                !Number.isFinite(model.sled.yMm) &&
-                Number.isFinite(config.lastPosition.xMm) &&
-                Number.isFinite(config.lastPosition.yMm)
-            ) {
-                model.sled.reference = {
-                    xMm: config.lastPosition.xMm,
-                    yMm: config.lastPosition.yMm,
-                    aSteps: model.motors.a.state.steps,
-                    bSteps: model.motors.b.state.steps
-                };
-            }
+        let referenceASteps = distanceMmToAbsSteps(
+            config.motors.a,
+            hypot(
+                config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
+                referenceMCS.yMm
+            )
+        ) - reference.aSteps;
 
-            if (model.sled.reference) {
+        let referenceBSteps = distanceMmToAbsSteps(
+            config.motors.b,
+            hypot(
+                config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
+                referenceMCS.yMm
+            )
+        ) - reference.bSteps;
 
-                let referenceMCS = userToMachineCS(model.sled.reference);
+        // let's have triangle MotorA-MotorB-Sled, then:
+        // a is MotorA-Sled, i.e. chain length a
+        // b is MotorA-Sled, i.e. chain length b
+        // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+        let a = absStepsToDistanceMm(config.motors.a, referenceASteps + states.a.steps);
+        let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + states.b.steps);
+        let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
 
-                let referenceASteps = distanceMmToAbsSteps(
-                    config.motors.a,
-                    hypot(
-                        config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - model.sled.reference.aSteps;
-
-                let referenceBSteps = distanceMmToAbsSteps(
-                    config.motors.b,
-                    hypot(
-                        config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - model.sled.reference.bSteps;
-
-                // let's have triangle MotorA-MotorB-Sled, then:
-                // a is MotorA-Sled, i.e. chain length a
-                // b is MotorA-Sled, i.e. chain length b
-                // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                let a = absStepsToDistanceMm(config.motors.a, referenceASteps + model.motors.a.state.steps);
-                let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + model.motors.b.state.steps);
-                let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
-
-                let position = machineToUserCS({
-                    xMm: aa - config.beam.motorsDistanceMm / 2,
-                    yMm: sqrt(pow2(a) - pow2(aa))
-                });
-
-                model.sled.xMm = position.xMm;
-                model.sled.yMm = position.yMm;
-
-            } else {
-                delete model.sled.xMm;
-                delete model.sled.yMm;
-            }
-
-        } else {
-            delete model.sled.xMm;
-            delete model.sled.yMm;
-        }
-        config.lastPosition.xMm = Math.round(model.sled.xMm * 1000) / 1000;
-        config.lastPosition.yMm = Math.round(model.sled.yMm * 1000) / 1000;
-        if (!Number.isFinite(config.lastPosition.xMm) || !Number.isFinite(config.lastPosition.yMm)) {
-            delete config.lastPosition.xMm;
-            delete config.lastPosition.yMm;
-        }
+        return machineToUserCS({
+            xMm: aa - config.beam.motorsDistanceMm / 2,
+            yMm: sqrt(pow2(a) - pow2(aa))
+        });
     }
 
     function checkSpindlePosition(model) {
@@ -190,7 +153,42 @@ module.exports = async ({
         },
 
         async updateKinematics(model) {
-            checkSledPosition(model);
+
+            let states = {
+                a: model.motors.a.state,
+                b: model.motors.b.state
+            };
+
+            if (states.a && states.b) {
+
+                if (
+                    !model.sled.reference &&
+                    Number.isFinite(config.lastPosition.xMm) &&
+                    Number.isFinite(config.lastPosition.yMm)
+                ) {
+                    model.sled.reference = {
+                        xMm: config.lastPosition.xMm,
+                        yMm: config.lastPosition.yMm,
+                        aSteps: states.a.steps,
+                        bSteps: states.b.steps
+                    };
+                }
+
+                let sledPosition = model.sled.reference && getSledPosition(model.sled.reference, states);
+                if (sledPosition) {
+                    model.sled.xMm = sledPosition.xMm;
+                    model.sled.yMm = sledPosition.yMm;                    
+                    config.lastPosition.xMm = Math.round(model.sled.xMm * 1000) / 1000;
+                    config.lastPosition.yMm = Math.round(model.sled.yMm * 1000) / 1000;    
+                } else {
+                    delete model.sled.xMm;
+                    delete model.sled.yMm;
+                    delete config.lastPosition.xMm;
+                    delete config.lastPosition.yMm;
+                }
+    
+            }    
+
             checkSpindlePosition(model);
             checkTarget(model);
         }
