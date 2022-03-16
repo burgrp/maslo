@@ -113,7 +113,7 @@ module.exports = async ({
 
             for (let m of ["a", "b", "z"]) {
 
-                let offset = m === "z" ?
+                let offsetMm = m === "z" ?
                     model.spindle.zMm - model.target.zMm :
                     targetChains[m + "Mm"] - sledChains[m + "Mm"];
 
@@ -121,9 +121,9 @@ module.exports = async ({
 
                 let duty = 0;
 
-                if (abs(offset) > 0.3) {
+                if (abs(offsetMm) > 0.3) {
 
-                    let speed = (offset - (motor.offset || 0) / 2) * config.motors[m].offsetToSpeed;
+                    let speed = (offsetMm - (motor.offsetMm || 0) / 2) * config.motors[m].offsetToSpeed;
 
                     duty = sign(speed) * min(pow(abs(speed), 1 / 4), 1);
 
@@ -133,11 +133,11 @@ module.exports = async ({
                 }
 
                 motor.duty = duty || 0;
-                motor.offset = offset;
+                motor.offsetMm = offsetMm;
             }
         } else {
             for (let m of ["a", "b", "z"]) {
-                delete model.motors[m].offset;
+                delete model.motors[m].offsetMm;
             }
         }
     }

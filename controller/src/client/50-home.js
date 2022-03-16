@@ -110,7 +110,7 @@ wg.pages.home = {
                     x1: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
                     y1: 0,
                     x2: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
-                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].offset || 0)
+                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].offsetMm || 0)
                 });
             }
 
