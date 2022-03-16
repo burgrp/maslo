@@ -31,14 +31,6 @@ module.exports = async ({
         }
     }
 
-    function getChainLengths(positionUCS) {
-        let positionMCS = userToMachineCS(positionUCS);
-        return {
-            aMm: hypot(config.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm),
-            bMm: hypot(config.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm)
-        };
-    }
-
     let mapping = {
 
         trigonometry: {
@@ -75,6 +67,15 @@ module.exports = async ({
                     xMm: aa - config.beam.motorsDistanceMm / 2,
                     yMm: sqrt(pow2(a) - pow2(aa))
                 });
+            },
+
+            positionToSteps(positionUCS) {
+                let positionMCS = userToMachineCS(positionUCS);
+                return {
+                    aSteps: distanceMmToAbsSteps(config.motors.a, hypot(config.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm)),
+                    bSteps: distanceMmToAbsSteps(config.motors.b, hypot(config.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm))
+                };
+                
             }
 
         }
@@ -115,14 +116,14 @@ module.exports = async ({
             model.target
         ) {
 
-            let targetChains = getChainLengths(model.target);
-            let sledChains = getChainLengths(model.sled);
+            let targetChains = mapping[model.mapping].positionToSteps(model.target);
+            let sledChains = mapping[model.mapping].positionToSteps(model.sled);
 
             for (let m of ["a", "b", "z"]) {
 
                 let offsetMm = m === "z" ?
                     model.spindle.zMm - model.target.zMm :
-                    targetChains[m + "Mm"] - sledChains[m + "Mm"];
+                    absStepsToDistanceMm(config.motors[m], targetChains[m + "Steps"] - sledChains[m + "Steps"]);
 
                 let motor = model.motors[m];
 
