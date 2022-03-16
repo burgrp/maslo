@@ -12,7 +12,8 @@ module.exports = async ({
 
     let model = {
         busy: false,
-        errors: {}
+        errors: {},
+        mapping: "trigonometry"
     }
 
     await hardware.initializeModel(model)

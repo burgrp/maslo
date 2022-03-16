@@ -139,13 +139,15 @@
                 "module": "./z-linear.js",
                 "config": "-> config.model"
             },
-            "xyTrigonometry": {
-                "module": "./xy-trigonometry.js",
-                "config": "-> config.model"
-            },
-            "xyInterpolation": {
-                "module": "./xy-interpolation.js",
-                "config": "-> config.model"
+            "mapping": {
+                "trigonometry": {
+                    "module": "./mapping-trigonometry.js",
+                    "config": "-> config.model"
+                },
+                "interpolation": {
+                    "module": "./mapping-interpolation.js",
+                    "config": "-> config.model"
+                }
             }
         }
     },

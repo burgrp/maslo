@@ -39,38 +39,45 @@ module.exports = async ({
         };
     }
 
-    function stepsToPosition(steps, reference) {
+    let mapping = {
 
-        let referenceMCS = userToMachineCS(reference);
+        trigonometry: {
 
-        let referenceASteps = distanceMmToAbsSteps(
-            config.motors.a,
-            hypot(
-                config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
-                referenceMCS.yMm
-            )
-        ) - reference.aSteps;
+            stepsToPosition(steps, reference) {
 
-        let referenceBSteps = distanceMmToAbsSteps(
-            config.motors.b,
-            hypot(
-                config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
-                referenceMCS.yMm
-            )
-        ) - reference.bSteps;
+                let referenceMCS = userToMachineCS(reference);
 
-        // let's have triangle MotorA-MotorB-Sled, then:
-        // a is MotorA-Sled, i.e. chain length a
-        // b is MotorA-Sled, i.e. chain length b
-        // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-        let a = absStepsToDistanceMm(config.motors.a, referenceASteps + steps.a);
-        let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + steps.b);
-        let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
+                let referenceASteps = distanceMmToAbsSteps(
+                    config.motors.a,
+                    hypot(
+                        config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
+                        referenceMCS.yMm
+                    )
+                ) - reference.aSteps;
 
-        return machineToUserCS({
-            xMm: aa - config.beam.motorsDistanceMm / 2,
-            yMm: sqrt(pow2(a) - pow2(aa))
-        });
+                let referenceBSteps = distanceMmToAbsSteps(
+                    config.motors.b,
+                    hypot(
+                        config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
+                        referenceMCS.yMm
+                    )
+                ) - reference.bSteps;
+
+                // let's have triangle MotorA-MotorB-Sled, then:
+                // a is MotorA-Sled, i.e. chain length a
+                // b is MotorA-Sled, i.e. chain length b
+                // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
+                let a = absStepsToDistanceMm(config.motors.a, referenceASteps + steps.a);
+                let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + steps.b);
+                let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
+
+                return machineToUserCS({
+                    xMm: aa - config.beam.motorsDistanceMm / 2,
+                    yMm: sqrt(pow2(a) - pow2(aa))
+                });
+            }
+
+        }
     }
 
     function checkSpindlePosition(model) {
@@ -173,7 +180,7 @@ module.exports = async ({
                 };
             }
 
-            let sledPosition = steps && model.sled.reference && stepsToPosition(steps, model.sled.reference);
+            let sledPosition = steps && model.sled.reference && mapping[model.mapping].stepsToPosition(steps, model.sled.reference);
 
             if (sledPosition) {
                 model.sled.xMm = sledPosition.xMm;
