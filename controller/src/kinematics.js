@@ -39,7 +39,7 @@ module.exports = async ({
         };
     }
 
-    function getSledPosition(reference, states) {
+    function stepsToPosition(steps, reference) {
 
         let referenceMCS = userToMachineCS(reference);
 
@@ -63,8 +63,8 @@ module.exports = async ({
         // a is MotorA-Sled, i.e. chain length a
         // b is MotorA-Sled, i.e. chain length b
         // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-        let a = absStepsToDistanceMm(config.motors.a, referenceASteps + states.a.steps);
-        let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + states.b.steps);
+        let a = absStepsToDistanceMm(config.motors.a, referenceASteps + steps.a);
+        let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + steps.b);
         let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
 
         return machineToUserCS({
@@ -154,12 +154,12 @@ module.exports = async ({
 
         async updateKinematics(model) {
 
-            let states = {
-                a: model.motors.a.state,
-                b: model.motors.b.state
+            let steps = model.motors.a.state && model.motors.b.state && {
+                a: model.motors.a.state.steps,
+                b: model.motors.b.state.steps
             };
 
-            if (states.a && states.b) {
+            if (steps) {
 
                 if (
                     !model.sled.reference &&
@@ -169,12 +169,12 @@ module.exports = async ({
                     model.sled.reference = {
                         xMm: config.lastPosition.xMm,
                         yMm: config.lastPosition.yMm,
-                        aSteps: states.a.steps,
-                        bSteps: states.b.steps
+                        aSteps: steps.a,
+                        bSteps: steps.b
                     };
                 }
 
-                let sledPosition = model.sled.reference && getSledPosition(model.sled.reference, states);
+                let sledPosition = model.sled.reference && stepsToPosition(steps, model.sled.reference);
                 if (sledPosition) {
                     model.sled.xMm = sledPosition.xMm;
                     model.sled.yMm = sledPosition.yMm;                    
