@@ -74,19 +74,11 @@ module.exports = async ({
         },
 
         calibrateSled(xMm, yMm) {
-            model.sled.reference = {
-                xMm,
-                yMm,
-                aSteps: model.motors.a.state.steps,
-                bSteps: model.motors.b.state.steps
-            };
+            kinematics.calibrateSled(model, xMm, yMm);
         },
 
         calibrateSpindle(zMm) {
-            model.spindle.reference = {
-                zMm: zMm,
-                zSteps: model.motors.z.state.steps
-            };
+            kinematics.calibrateSpindle(model, zMm);
         },
 
         setTarget(target) {

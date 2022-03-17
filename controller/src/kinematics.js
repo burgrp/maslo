@@ -37,24 +37,6 @@ module.exports = async ({
 
             stepsToPosition(steps) {
 
-                // let referenceMCS = userToMachineCS(reference);
-
-                // let referenceASteps = distanceMmToAbsSteps(
-                //     config.motors.a,
-                //     hypot(
-                //         config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
-                //         referenceMCS.yMm
-                //     )
-                // ) - reference.aSteps;
-
-                // let referenceBSteps = distanceMmToAbsSteps(
-                //     config.motors.b,
-                //     hypot(
-                //         config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
-                //         referenceMCS.yMm
-                //     )
-                // ) - reference.bSteps;
-
                 // let's have triangle MotorA-MotorB-Sled, then:
                 // a is MotorA-Sled, i.e. chain length a
                 // b is MotorA-Sled, i.e. chain length b
@@ -201,6 +183,12 @@ module.exports = async ({
 
             checkSpindlePosition(model);
             checkTarget(model, mapping);
+        },
+
+        calibrateSled(model, xMm, yMm) {
+            delete model.sled.originSteps;
+            config.lastPosition.xMm = xMm;
+            config.lastPosition.yMm = yMm;
         }
 
     }
