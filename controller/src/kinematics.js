@@ -9,11 +9,11 @@ module.exports = async ({
         return motorConfig.encoderPpr * motorConfig.gearRatio / motorConfig.mmPerRev;
     }
 
-    function distanceMmToAbsSteps(motorConfig, distanceMm) {
+    function distanceMmToSteps(motorConfig, distanceMm) {
         return distanceMm * stepsPerMm(motorConfig);
     }
 
-    function absStepsToDistanceMm(motorConfig, steps) {
+    function stepsToDistanceMm(motorConfig, steps) {
         return steps / stepsPerMm(motorConfig);
     }
 
@@ -31,36 +31,36 @@ module.exports = async ({
         }
     }
 
-    let mapping = {
+    let mappings = {
 
         trigonometry: {
 
-            stepsToPosition(steps, reference) {
+            stepsToPosition(steps) {
 
-                let referenceMCS = userToMachineCS(reference);
+                // let referenceMCS = userToMachineCS(reference);
 
-                let referenceASteps = distanceMmToAbsSteps(
-                    config.motors.a,
-                    hypot(
-                        config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - reference.aSteps;
+                // let referenceASteps = distanceMmToAbsSteps(
+                //     config.motors.a,
+                //     hypot(
+                //         config.beam.motorsDistanceMm / 2 + referenceMCS.xMm,
+                //         referenceMCS.yMm
+                //     )
+                // ) - reference.aSteps;
 
-                let referenceBSteps = distanceMmToAbsSteps(
-                    config.motors.b,
-                    hypot(
-                        config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
-                        referenceMCS.yMm
-                    )
-                ) - reference.bSteps;
+                // let referenceBSteps = distanceMmToAbsSteps(
+                //     config.motors.b,
+                //     hypot(
+                //         config.beam.motorsDistanceMm / 2 - referenceMCS.xMm,
+                //         referenceMCS.yMm
+                //     )
+                // ) - reference.bSteps;
 
                 // let's have triangle MotorA-MotorB-Sled, then:
                 // a is MotorA-Sled, i.e. chain length a
                 // b is MotorA-Sled, i.e. chain length b
                 // aa is identical to MotorA-MotorB, going from MotorA to intersection with vertical from Sled
-                let a = absStepsToDistanceMm(config.motors.a, referenceASteps + steps.a);
-                let b = absStepsToDistanceMm(config.motors.b, referenceBSteps + steps.b);
+                let a = stepsToDistanceMm(config.motors.a, steps.a);
+                let b = stepsToDistanceMm(config.motors.b, steps.b);
                 let aa = (pow2(a) - pow2(b) + pow2(config.beam.motorsDistanceMm)) / (2 * config.beam.motorsDistanceMm);
 
                 return machineToUserCS({
@@ -72,10 +72,10 @@ module.exports = async ({
             positionToSteps(positionUCS) {
                 let positionMCS = userToMachineCS(positionUCS);
                 return {
-                    aSteps: distanceMmToAbsSteps(config.motors.a, hypot(config.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm)),
-                    bSteps: distanceMmToAbsSteps(config.motors.b, hypot(config.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm))
+                    a: distanceMmToSteps(config.motors.a, hypot(config.beam.motorsDistanceMm / 2 + positionMCS.xMm, positionMCS.yMm)),
+                    b: distanceMmToSteps(config.motors.b, hypot(config.beam.motorsDistanceMm / 2 - positionMCS.xMm, positionMCS.yMm))
                 };
-                
+
             }
 
         }
@@ -107,7 +107,7 @@ module.exports = async ({
         }
     }
 
-    function checkTarget(model) {
+    function checkTarget(model, mapping) {
 
         if (
             Number.isFinite(model.sled.xMm) &&
@@ -116,14 +116,14 @@ module.exports = async ({
             model.target
         ) {
 
-            let targetChains = mapping[model.mapping].positionToSteps(model.target);
-            let sledChains = mapping[model.mapping].positionToSteps(model.sled);
+            let targetChains = mapping.positionToSteps(model.target);
+            let sledChains = mapping.positionToSteps(model.sled);
 
             for (let m of ["a", "b", "z"]) {
 
                 let offsetMm = m === "z" ?
                     model.spindle.zMm - model.target.zMm :
-                    absStepsToDistanceMm(config.motors[m], targetChains[m + "Steps"] - sledChains[m + "Steps"]);
+                    stepsToDistanceMm(config.motors[m], targetChains[m] - sledChains[m]);
 
                 let motor = model.motors[m];
 
@@ -162,26 +162,30 @@ module.exports = async ({
 
         async updateKinematics(model) {
 
-            let steps = model.motors.a.state && model.motors.b.state && {
+            let mapping = mappings[model.mapping];
+
+            let absSteps = model.motors.a.state && model.motors.b.state && {
                 a: model.motors.a.state.steps,
                 b: model.motors.b.state.steps
             };
 
             if (
-                !model.sled.reference &&
-                steps &&
+                !model.sled.originSteps &&
+                absSteps &&
                 Number.isFinite(config.lastPosition.xMm) &&
                 Number.isFinite(config.lastPosition.yMm)
             ) {
-                model.sled.reference = {
-                    xMm: config.lastPosition.xMm,
-                    yMm: config.lastPosition.yMm,
-                    aSteps: steps.a,
-                    bSteps: steps.b
+                let lastSteps = mapping.positionToSteps(config.lastPosition);
+                model.sled.originSteps = {
+                    a: absSteps.a - lastSteps.a,
+                    b: absSteps.b - lastSteps.b,
                 };
             }
 
-            let sledPosition = steps && model.sled.reference && mapping[model.mapping].stepsToPosition(steps, model.sled.reference);
+            let sledPosition = absSteps && model.sled.originSteps && mapping.stepsToPosition({
+                a:  model.sled.originSteps.a - absSteps.a,
+                b:  model.sled.originSteps.b - absSteps.b
+            });
 
             if (sledPosition) {
                 model.sled.xMm = sledPosition.xMm;
@@ -196,7 +200,7 @@ module.exports = async ({
             }
 
             checkSpindlePosition(model);
-            checkTarget(model);
+            checkTarget(model, mapping);
         }
 
     }
