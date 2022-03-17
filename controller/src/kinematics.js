@@ -63,7 +63,7 @@ module.exports = async ({
         }
     }
 
-    function checkSpindlePosition(model) {
+    function calculateSpindlePosition(model) {
         if (model.motors.z.state) {
 
             if (!Number.isFinite(model.spindle.zMm) &&
@@ -89,31 +89,64 @@ module.exports = async ({
         }
     }
 
-    function checkTarget(model, mapping) {
+    function calculateSledPosition(model) {
+        for (let m of ["a", "b", "z"]) {
+            prevMotorOffMm[m] = model.motors[m].offMm;
+            model.motors[m].offMm = 0;
+        }
+
+        let mapping = mappings[model.mapping];
+
+        let absSteps = model.motors.a.state && model.motors.b.state && {
+            a: model.motors.a.state.steps,
+            b: model.motors.b.state.steps
+        };
 
         if (
-            Number.isFinite(model.sled.xMm) &&
-            Number.isFinite(model.sled.yMm) &&
-            Number.isFinite(model.spindle.zMm) &&
-            model.target
+            !model.sled.originSteps &&
+            absSteps &&
+            config.lastPosition.sled
         ) {
+            let lastSteps = mapping.positionToSteps(config.lastPosition.sled);
+            model.sled.originSteps = {
+                a: absSteps.a - lastSteps.a,
+                b: absSteps.b - lastSteps.b,
+            };
+        }
 
+        model.sled.position = absSteps && model.sled.originSteps && mapping.stepsToPosition({
+            a: model.sled.originSteps.a - absSteps.a,
+            b: model.sled.originSteps.b - absSteps.b
+        });
+
+        config.lastPosition.sled = model.sled.position && { ...model.sled.position };
+
+        if (model.sled.position && model.target) {
             let targetChains = mapping.positionToSteps(model.target);
-            let sledChains = mapping.positionToSteps(model.sled);
+            let sledChains = mapping.positionToSteps(model.sled.position);
 
-            for (let m of ["a", "b", "z"]) {
+            for (let m of ["a", "b"]) {
+                let offMm = stepsToDistanceMm(config.motors[m], targetChains[m] - sledChains[m]);
+                model.motors[m].offMm = offMm;
+            }
+        } else {
+            for (let m of ["a", "b"]) {
+                delete model.motors[m].offMm;
+            }
+        }
+    }
 
-                let offsetMm = m === "z" ?
-                    model.spindle.zMm - model.target.zMm :
-                    stepsToDistanceMm(config.motors[m], targetChains[m] - sledChains[m]);
+    function calculateMotorDuties(model) {
+        for (let m of ["a", "b", "z"]) {
 
-                let motor = model.motors[m];
+            let motor = model.motors[m];
 
+            if (Number.isFinite(motor.offMm)) {
                 let duty = 0;
 
-                if (abs(offsetMm) > 0.3) {
+                if (abs(motor.offMm) > 0.3) {
 
-                    let speed = (offsetMm - (motor.offsetMm || 0) / 2) * config.motors[m].offsetToSpeed;
+                    let speed = (motor.offMm - (prevMotorOffMm[m] || 0) / 2) * config.motors[m].offsetToSpeed;
 
                     duty = sign(speed) * min(pow(abs(speed), 1 / 4), 1);
 
@@ -123,14 +156,12 @@ module.exports = async ({
                 }
 
                 motor.duty = duty || 0;
-                motor.offsetMm = offsetMm;
             }
-        } else {
-            for (let m of ["a", "b", "z"]) {
-                delete model.motors[m].offsetMm;
-            }
+
         }
     }
+
+    let prevMotorOffMm = {};
 
     return {
 
@@ -143,52 +174,14 @@ module.exports = async ({
         },
 
         async updateKinematics(model) {
-
-            let mapping = mappings[model.mapping];
-
-            let absSteps = model.motors.a.state && model.motors.b.state && {
-                a: model.motors.a.state.steps,
-                b: model.motors.b.state.steps
-            };
-
-            if (
-                !model.sled.originSteps &&
-                absSteps &&
-                Number.isFinite(config.lastPosition.xMm) &&
-                Number.isFinite(config.lastPosition.yMm)
-            ) {
-                let lastSteps = mapping.positionToSteps(config.lastPosition);
-                model.sled.originSteps = {
-                    a: absSteps.a - lastSteps.a,
-                    b: absSteps.b - lastSteps.b,
-                };
-            }
-
-            let sledPosition = absSteps && model.sled.originSteps && mapping.stepsToPosition({
-                a:  model.sled.originSteps.a - absSteps.a,
-                b:  model.sled.originSteps.b - absSteps.b
-            });
-
-            if (sledPosition) {
-                model.sled.xMm = sledPosition.xMm;
-                model.sled.yMm = sledPosition.yMm;
-                config.lastPosition.xMm = Math.round(model.sled.xMm * 1000) / 1000;
-                config.lastPosition.yMm = Math.round(model.sled.yMm * 1000) / 1000;
-            } else {
-                delete model.sled.xMm;
-                delete model.sled.yMm;
-                delete config.lastPosition.xMm;
-                delete config.lastPosition.yMm;
-            }
-
-            checkSpindlePosition(model);
-            checkTarget(model, mapping);
+            calculateSledPosition(model);
+            calculateSpindlePosition(model);
+            calculateMotorDuties(model);
         },
 
         calibrateSled(model, xMm, yMm) {
             delete model.sled.originSteps;
-            config.lastPosition.xMm = xMm;
-            config.lastPosition.yMm = yMm;
+            config.lastPosition.sled = { xMm, yMm };
         }
 
     }

@@ -58,7 +58,7 @@ module.exports = async ({
 
     async function manualMoveStart(directionX, directionY) {
 
-        if (!Number.isFinite(machineModel.sled.xMm) || !Number.isFinite(machineModel.sled.yMm)) {
+        if (!machineModel.sled.position) {
             throw new Error(`Unknown sled position`);
         }
 
@@ -66,8 +66,8 @@ module.exports = async ({
 
         await router.run([{
             code: rapidMove ? "G0" : "G1",
-            x: machineModel.sled.xMm + 10000 * directionX,
-            y: machineModel.sled.yMm + 10000 * directionY,
+            x: machineModel.sled.position.xMm + 10000 * directionX,
+            y: machineModel.sled.position.yMm + 10000 * directionY,
             f: rapidMove ? config.model.speed.xyRapidMmPerMin : config.model.speed.xyDefaultMmPerMin
         }]);
 
@@ -121,11 +121,11 @@ module.exports = async ({
                 },
 
                 async resetUserOrigin() {
-                    if (Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm)) {
-                        if (config.model.userOrigin.xMm === machineModel.sled.xMm && config.model.userOrigin.yMm === machineModel.sled.yMm) {
+                    if (machineModel.sled.position) {
+                        if (config.model.userOrigin.xMm === machineModel.sled.position.xMm && config.model.userOrigin.yMm === machineModel.sled.position.yMm) {
                             config.model.userOrigin = {xMm: 0, yMm: 0};
                         } else {
-                            config.model.userOrigin = {xMm: machineModel.sled.xMm, yMm: machineModel.sled.yMm};
+                            config.model.userOrigin = {xMm: machineModel.sled.position.xMm, yMm: machineModel.sled.position.yMm};
                         }
                     }
                 },

@@ -16,8 +16,8 @@ wg.pages.home = {
 
         function updateScene() {
 
-            let sledX = machineModel.sled.xMm;
-            let sledY = machineModel.sled.yMm;
+            let sledX = machineModel.sled.position && machineModel.sled.position.xMm;
+            let sledY = machineModel.sled.position && machineModel.sled.position.yMm;
 
             $("button.not-busy").toggleClass("disabled", machineModel.busy);
 
@@ -82,7 +82,7 @@ wg.pages.home = {
             });
 
             $(".scene .chain, .scene .sled").attr({
-                visibility: (Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm)) ? "visible" : "hidden"
+                visibility: machineModel.sled.position ? "visible" : "hidden"
             });
 
             $(".scene .chain.a").attr({
@@ -110,7 +110,7 @@ wg.pages.home = {
                     x1: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
                     y1: 0,
                     x2: motor.side * (configModel.beam.motorsDistanceMm / 2 - 100),
-                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].offsetMm || 0)
+                    y2: configModel.workspace.heightMm / 2 * (machineModel.motors[motor.name].offMm || 0)
                 });
             }
 
@@ -166,9 +166,9 @@ wg.pages.home = {
             $(".page.home .controls .job").css("display", jobModel.length ? "flex" : "none");
 
             let previewSvg = $("#previewSvg").empty();
-            let pos = {
-                x: machineModel.sled.xMm,
-                y: machineModel.sled.yMm
+            let pos = machineModel.sled.position && {
+                x: machineModel.sled.position.xMm,
+                y: machineModel.sled.position.yMm
             }
 
             for (let command of jobModel) {
@@ -307,7 +307,7 @@ wg.pages.home = {
                 })
         ]);
 
-        let calibrated = Number.isFinite(machineModel.sled.xMm) && Number.isFinite(machineModel.sled.yMm) && Number.isFinite(machineModel.spindle.zMm);
+        let calibrated = machineModel.sled.position !== undefined && Number.isFinite(machineModel.spindle.zMm);
         $(".page.home .controls .abchains .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .calibration .group-content").toggleClass("hidden", calibrated);
         $(".page.home .controls .xyaxis .group-content").toggleClass("hidden", !calibrated);

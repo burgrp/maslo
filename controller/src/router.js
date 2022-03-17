@@ -192,7 +192,7 @@ module.exports = ({ machine, config }) => {
 
                 try {
 
-                    if (!Number.isFinite(machineModel.sled.xMm) || !Number.isFinite(machineModel.sled.yMm)) {
+                    if (!machineModel.sled.position) {
                         throw new Error("Unknown sled position");
                     }
 
@@ -201,8 +201,8 @@ module.exports = ({ machine, config }) => {
                     }
 
                     let queue = [{
-                        x: machineModel.sled.xMm,
-                        y: machineModel.sled.yMm,
+                        x: machineModel.sled.position.xMm,
+                        y: machineModel.sled.position.yMm,
                         z: machineModel.spindle.zMm,
                         f: min(config.speed.xyRapidMmPerMin, config.speed.xyDefaultMmPerMin, config.speed.zMmPerMin)
                     }];
